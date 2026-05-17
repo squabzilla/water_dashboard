@@ -12,6 +12,15 @@ The goal of this is to create an interactive web-based GIS dashboard to explore 
     -   [Vite]
     -   [React]
 
+***NOTE***:  
+The original proof-of-concept front-end was created using `Step 8` through `Step 11` from `proof_of_concept.md`.  
+Given how tiny and limited in scope the proof-of-concept front-end was, we have decided to remove it entirely.
+The front-end will be recreated once the database portion of the backend is complete,  
+and we are actually in a position to incorporate our planned features into our front-end dashboard.  
+Note that the original proof-of-concept front-end still exists in the `git` history,  
+and can also be recreated using the previously mentioned `Step 8` through `Step 11` from `proof_of_concept.md`.  
+In addition, the frontend `README.md` and `.gitignore` are still being kept for potential future reference.  
+
 ## Back-End
 -   [Python] using [FastAPI]
 

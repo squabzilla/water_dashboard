@@ -1,3 +1,15 @@
+# Deprecation note:
+
+This README was created based on the proof-of-concept mapping web-app described in `Step 8` through `Step 11` from `proof_of_concept.md`.  
+However, given how tiny and limited in scope the proof-of-concept front-end was, the decision was made to remove it\* entirely.  
+(\*"it" being the proof-of-concept front-end.)  
+The front-end will be recreated once the database portion of the backend is complete,  
+and we are actually in a position to incorporate our planned features into our front-end dashboard.  
+The frontend `README.md` and `.gitignore` are still being kept for potential future reference.  
+Note that the original proof-of-concept front-end still exists in the `git` history,  
+and can also be recreated using the previously mentioned `Step 8` through `Step 11` from `proof_of_concept.md`.  
+In addition, the frontend `README.md` and `.gitignore` are still being kept for potential future reference.  
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
