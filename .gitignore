@@ -1,0 +1,16 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# environment - sensitive stuff
+.env
+
+# container data - easier to just recreate at the scene
+poddata/
+
+# Virtual environments
+.venv
