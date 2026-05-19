@@ -82,9 +82,19 @@ def stations__fetch():
     }
 
     # actual API call - make request, do response.wait-for-update, return the response data
+    
+    # sends an HTTP GET request to the URL
+    # NOTE: everything is stored in response - status code, headers, body
     response = httpx.get(url, params=params)
+    # checks that status code is "200" which means everything is ok
     response.raise_for_status()
-    all_stations = response.json()["features"]
+    # turn raw response body text into Python dictionary
+    all_stations = response.json()
+    # grab only items from "features" in said dictionary, 
+    # since API returns a GeoJSON `FeatureCollection` that wraps actualy data inside "features" key
+    all_stations = all_stations["features"]
+    # NOTE: could also do that in one step
+    # all_stations = response.json()["features"]
     return all_stations
 
 
