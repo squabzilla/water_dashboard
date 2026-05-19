@@ -141,7 +141,7 @@ def stations__distance_calc(all_stations):
         single_station["properties"]["distance_km"] = float(round(distance["value"]/1000, 2)) 
         # NOTE: putting the "distance_km" attribute under "properties"
     all_stations.sort(key=lambda station: station["properties"]["distance_km"])
-    return stations
+    return all_stations
     # NOTE:
     # a valid use for lambda! since the .sort() method takes a function as an argument,
     # it's easier to write the `lambda` function of `station: station["properties"]["distance_km"]`
