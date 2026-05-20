@@ -4,6 +4,7 @@
 #
 # the goal of this script is to get a list of relevant weather stations in calgary for our purposes,
 # calling the api of official canadian climate data
+# API = "https://api.weather.gc.ca/collections/climate-stations/items"
 # Steps:
 # 1. get weather stations in the calgary area
 # 2. calc distance between each station and calgary tower (used as semi-arbitary POINT for Calgary),
