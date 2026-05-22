@@ -1,0 +1,14 @@
+# the file name `postgres-data.volume` tells it to create an "object" named `postgres-data` of type `volume`
+[Unit]
+Description=Permanently mounted volume for persistent storage, since containers are usually ephermeral
+# human readable meta-data for `systemd` that shows up under `systemctl status` for output and logs
+# TECHNICALLY not required in the same way that documentation isn't TECHNICALLY required for code (to run)
+
+[Volume]
+Label=project=calgary-watermains
+# human readable meta-data for `podman` viewable under `podman volume ls`, again not TECHNICALLY required
+
+[Install]
+WantedBy=default.target
+# tells `systemd` to include this as part of startup, part of what gives us boot persistence
+# the other half of enabling boot persistence is the shell-commands/bash-scripts used to start this whole thing

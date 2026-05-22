@@ -1,0 +1,71 @@
+# the file name `postgres.container` tells it to create an "object" named `postgres` of type `container`
+[Unit]
+Description=PostGIS Database for Calgary Watermains project
+# human readable meta-data for `systemd` that shows up under `systemctl status` for output and logs
+# TECHNICALLY not required in the same way that documentation isn't TECHNICALLY required for code (to run)
+
+
+[Container]
+Image=docker.io/postgis/postgis:16-3.5
+# container image to use - `docker.io` is official docker registiry, `postgis/postgis` is the image,
+# and `16-3.5` is pinned tag so that we use a consistent version, so that new updates don't break anything 
+ContainerName=postgres
+# give it a name I can reference instead of having to use random assortment of characters
+
+# bug fixing:
+PodmanArgs=--cgroups=enabled --log-driver=journald
+# explanation:
+# --cgroups=enabled overrides Quadlet's default `--cgroups=split` which requires cgroup v2
+# WSL2 runs cgroup v1 by default, so this is necessary for rootless Podman to work correctly
+# --log-driver=journald sends container logs to systemd journal, viewable via `journalctl`
+
+# adding user info so credentials work
+Environment=POSTGRES_USER=${POSTGRES_USER}
+Environment=POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+
+PublishPort=127.0.0.1:5433:5432
+# port it goes to; `127.0.0.1` is IPv4 loopback address, so it's only accessible from local machine and not internet
+# `:5433:5432` means it uses port 5433 on external host machine, but inside the container uses port 5432
+# using 5433 externally to avoid a port conflict between containerized PSQL, and dev-machine-installed PSQL
+
+Environment=POSTGRES_DB=calgary_watermains
+# the postgis/postgis image automatically runs CREATE EXTENSION postgis (and related extensions)
+# on whichever database is named in POSTGRES_DB, confirmed working
+
+Volume=postgres-data.volume:/var/lib/postgresql/data:Z
+# tells it where to store the data (or "mount the volume" I guess)
+# `postgres-data.volume` means it's referencing the stuff our `.volume` file makes,
+# and `/var/lib/postgresql/data:Z` is the inside-container-path where PSQL stores data
+# `:Z` at end apparently makes it work with `SELinux` systems? is also apparently harmless on non-SELinux systems
+
+
+HealthCmd=pg_isready -d calgary_watermains -U ${POSTGRES_USER}
+# `pg_isready` is a Postgres utility that checks if the server is accepting connections
+# `-d calgary_watermains` checks our specific database was created successfully, not just that Postgres started
+# `-U` (or user) omitted on purpose - this [Container] can't access environment variables to obtain user info
+# BUT, we can still connect as default user and check if it's getting connections
+HealthInterval=10s
+# how often podman checks results
+HealthTimeout=5s
+# how long podman waits until it declares the scouts MIA
+HealthRetries=5
+# how many consecutive scouting groups can go MIA before it decides there's a serious problem
+HealthStartPeriod=30s
+# startup-time where failed health checks are kinda irrelevant because not everything has booted up
+
+
+[Service]
+# section passed to systemd to do the things
+Restart=on-failure
+# restart process if bad stuff happens
+TimeoutStartSec=120
+# how long between systemd telling service to start, and systemd deciding the service is dead because it's not moving
+
+EnvironmentFile=%h/.config/water_dashboard/.env
+# tells systemd where to find .env file - note that `%h` tells systemd to head to user's home directory
+
+
+[Install]
+WantedBy=default.target
+# tells `systemd` to include this as part of startup, part of what gives us boot persistence
+# the other half of enabling boot persistence is the shell-commands/bash-scripts used to start this whole thing

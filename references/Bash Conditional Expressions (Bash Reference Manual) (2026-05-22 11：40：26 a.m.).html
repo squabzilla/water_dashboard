@@ -1,0 +1,240 @@
+<!DOCTYPE html> <html><!--
+ Page saved with SingleFile 
+ url: https://www.gnu.org/software/bash/manual/html_node/Bash-Conditional-Expressions.html 
+ saved date: Fri May 22 2026 11:40:26 GMT-0600 (Mountain Daylight Time)
+--><!-- Created by GNU Texinfo 7.2, https://www.gnu.org/software/texinfo/ --><meta charset=utf-8>
+<title>Bash Conditional Expressions (Bash Reference Manual)</title>
+<meta name=description content="Bash Conditional Expressions (Bash Reference Manual)">
+<meta name=keywords content="Bash Conditional Expressions (Bash Reference Manual)">
+<meta name=resource-type content=document>
+<meta name=distribution content=global>
+<meta name=Generator content=makeinfo>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<link href=https://www.gnu.org/software/bash/manual/html_node/index.html rel=start title=Top>
+<link href=https://www.gnu.org/software/bash/manual/html_node/Indexes.html rel=index title=Indexes>
+<link href=https://www.gnu.org/software/bash/manual/html_node/index.html#SEC_Contents rel=contents title="Table of Contents">
+<link href=https://www.gnu.org/software/bash/manual/html_node/Bash-Features.html rel=up title="Bash Features">
+<link href=https://www.gnu.org/software/bash/manual/html_node/Shell-Arithmetic.html rel=next title="Shell Arithmetic">
+<link href=https://www.gnu.org/software/bash/manual/html_node/Interactive-Shells.html rel=prev title="Interactive Shells">
+<style><!--a.copiable-link{visibility:hidden;text-decoration:none;line-height:0em}span:hover a.copiable-link{visibility:visible}--></style>
+<style>html,body{font-size:16px;text-align:left;text-decoration:none;color:#000}html{background-color:#e7e7e7}body{margin:0 auto 2em;padding:.5em 1em 1em 1em;background-color:white;border:.1em solid #c0c0c0}p,dl,dt,dd,h3{padding:0}h3{font-size:1.30em;margin:1.6em 0 0.87em 0}h3{font-weight:bold}h3{color:#333}dt{color:#222}p{margin:1em 0}hr{margin:1.5em 0;background:#d5bb7d;border-color:#d5bb7d}dl{margin:1em 0}dt{margin:.5em 0}dd{margin:.5em 0 1em 3%}dd p{margin:.5em 0}a[href]{color:#005090}a[href]:visited{color:#100070}a[href]:active,a[href]:hover{color:#100070;text-decoration:none}h1 a[href]:visited,h2 a[href]:visited,h3 a[href]:visited,h4 a[href]:visited{color:#005090}h1 a[href]:hover,h2 a[href]:hover,h3 a[href]:hover,h4 a[href]:hover{color:#100070}var{font-style:italic}small{font-size:.9em}var,code{font-weight:inherit}q:before,q:after{content:""}@media (min-width:45em){body{padding:.5em 2em 1em 2em}}.nav-panel p{line-height:2em;margin:2em 0}.node a:hover,.header a:hover{background:#f2efe4}table[class*="printindex"] tr:hover td[class*="index-entry"],table[class*="printindex"] tr:hover td[class*="index-entry"]~td,table[class*="printindex"] tr:hover td[class*="index-subentry"],table[class*="printindex"] tr:hover td[class*="index-subentry"]~td{background:#f9f6ed}td[class*="index-subentry"]:before{content:"⇾";font-weight:bold;margin-right:.6em}p,dt,dd,code{line-height:1.5em}.section{font-family:Fira Sans,sans-serif}a{text-decoration:none;outline-style:none}a:hover{text-decoration:underline}body{max-width:50em}</style>
+<meta name=referrer content=no-referrer><link type=image/x-icon rel="shortcut icon" href=data:image/vnd.microsoft.icon;base64,AAABAAEAEhIAAAEACADYBQAAFgAAACgAAAASAAAAJAAAAAEACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgYGAAkJCQALCwsAExMTACEhIQAkJCQAJycnADMzMwA5OTkAOjo6AD09PQA/Pz8AQEBAAEZGRgBHR0cASkpKAE9PTwBSUlIAW1tbAGFhYQBmZmYAbW1tAHFxcQBzc3MAd3d3AHl5eQB+fn4Af39/AIGBgQCEhIQAh4eHAIyMjACNjY0Aj4+PAJCQkACRkZEAlZWVAJeXlwCampoAm5ubAJycnAChoaEAoqKiAKWlpQCnp6cAqKioAK2trQCvr68AsLCwALGxsQCysrIAs7OzALa2tgC7u7sAvb29AL+/vwDBwcEAwsLCAMPDwwDExMQAxcXFAMbGxgDHx8cAycnJAMrKygDLy8sAzMzMAM3NzQDOzs4A0NDQANHR0QDT09MA1NTUANXV1QDW1tYA19fXANjY2ADZ2dkA2traANzc3ADd3d0A39/fAOHh4QDi4uIA4+PjAOTk5ADm5uYA6OjoAOnp6QDr6+sA7OzsAO3t7QDu7u4A7+/vAPHx8QDz8/MA9PT0APX19QD29vYA9/f3APj4+AD5+fkA+/v7APz8/AD+/v4A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAampqampqampqampqampqampqAABqampqampqalQQAQdmampqamoAAGpqampqamFqFiUaMmpqampqagAAampqampDaDQSaltLampqampqAABqampqUVleImpqQCQxampqamoAAGpqamo5aihgakBEPCpQampqagAAampqajteUWpmR2ppUUFqampqAABqamceHj5gaFhWJ1hqP2pqamoAAGpqajRqRkhdajRIVDY0SVpqagAAampYOlVqLGplX2piKmNITmpqAABqV0MPI2pqWwxKZRE9agY5TGoAAGpPAxUIZFwXajhYH1UiDQQwagAAakAJV0oOGC8uTTk7HBRXLSFqAABqNRNcakMIAAAoNwILVGpKGmoAAGpQBVtqalQjIz0mIFJqaiUjagAAakwZGjlQRVdqampYSkczCkNqAABqak8rHRtCVmpqalxBKSNTZ2oAAGpqampqampqampqampqampqagAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA><link rel=canonical href=https://www.gnu.org/software/bash/manual/html_node/Bash-Conditional-Expressions.html><meta http-equiv=content-security-policy content="default-src 'none'; font-src 'self' data:; img-src 'self' data:; style-src 'unsafe-inline'; media-src 'self' data:; script-src 'unsafe-inline' data:; object-src 'self' data:; frame-src 'self' data:;"></head>
+<body lang=en>
+<div class=section-level-extent id=Bash-Conditional-Expressions>
+<div class=nav-panel>
+<p>
+Next: <a href=https://www.gnu.org/software/bash/manual/html_node/Shell-Arithmetic.html accesskey=n rel=next>Shell Arithmetic</a>, Previous: <a href=https://www.gnu.org/software/bash/manual/html_node/Interactive-Shells.html accesskey=p rel=prev>Interactive Shells</a>, Up: <a href=https://www.gnu.org/software/bash/manual/html_node/Bash-Features.html accesskey=u rel=up>Bash Features</a> &nbsp; [<a href=https://www.gnu.org/software/bash/manual/html_node/index.html#SEC_Contents title="Table of contents" rel=contents>Contents</a>][<a href=https://www.gnu.org/software/bash/manual/html_node/Indexes.html title=Index rel=index>Index</a>]</p>
+</div>
+<hr>
+<h3 class=section id=Bash-Conditional-Expressions-1><span>6.4 Bash Conditional Expressions<a class=copiable-link href=#Bash-Conditional-Expressions-1> ¶</a></span></h3>
+<a class=index-entry-id id=index-expressions_002c-conditional></a>
+<p>Conditional expressions are used by the <code class=code>[[</code> compound command
+(see <a class=pxref href=https://www.gnu.org/software/bash/manual/html_node/Conditional-Constructs.html>Conditional Constructs</a>)
+and the <code class=code>test</code> and <code class=code>[</code> builtin commands
+(see <a class=pxref href=https://www.gnu.org/software/bash/manual/html_node/Bourne-Shell-Builtins.html>Bourne Shell Builtins</a>).
+The <code class=code>test</code>
+and <code class=code>[</code> commands determine their behavior based on the number
+of arguments; see the descriptions of those commands for any other
+command-specific actions.
+</p>
+<p>Expressions may be unary or binary,
+and are formed from the primaries listed below.
+Unary expressions are often used to examine the status of a file
+or shell variable.
+Binary operators are used for string, numeric, and file attribute
+comparisons.
+</p>
+<p>Bash handles several filenames specially when they are used in
+expressions.
+If the operating system on which Bash is running provides these
+special files, Bash uses them; otherwise it emulates them
+internally with this behavior:
+If the <var class=var>file</var> argument to one of the primaries is of the form
+<samp class=file>/dev/fd/<var class=var>N</var></samp>, then Bash checks file descriptor <var class=var>N</var>.
+If the <var class=var>file</var> argument to one of the primaries is one of
+<samp class=file>/dev/stdin</samp>, <samp class=file>/dev/stdout</samp>, or <samp class=file>/dev/stderr</samp>,
+Bash checks file descriptor 0, 1, or 2, respectively.
+</p>
+<p>When used with <code class=code>[[</code>, the ‘<samp class=samp>&lt;</samp>’ and ‘<samp class=samp>&gt;</samp>’ operators sort
+lexicographically using the current locale.
+The <code class=code>test</code> command uses ASCII ordering.
+</p>
+<p>Unless otherwise specified, primaries that operate on files follow symbolic
+links and operate on the target of the link, rather than the link itself.
+</p>
+<dl class=table>
+<dt><code class=code>-a <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists.
+</p>
+</dd>
+<dt><code class=code>-b <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is a block special file.
+</p>
+</dd>
+<dt><code class=code>-c <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is a character special file.
+</p>
+</dd>
+<dt><code class=code>-d <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is a directory.
+</p>
+</dd>
+<dt><code class=code>-e <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists.
+</p>
+</dd>
+<dt><code class=code>-f <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is a regular file.
+</p>
+</dd>
+<dt><code class=code>-g <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and its set-group-id bit is set.
+</p>
+</dd>
+<dt><code class=code>-h <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is a symbolic link.
+</p>
+</dd>
+<dt><code class=code>-k <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and its "sticky" bit is set.
+</p>
+</dd>
+<dt><code class=code>-p <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is a named pipe (FIFO).
+</p>
+</dd>
+<dt><code class=code>-r <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is readable.
+</p>
+</dd>
+<dt><code class=code>-s <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and has a size greater than zero.
+</p>
+</dd>
+<dt><code class=code>-t <var class=var>fd</var></code></dt>
+<dd><p>True if file descriptor <var class=var>fd</var> is open and refers to a terminal.
+</p>
+</dd>
+<dt><code class=code>-u <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and its set-user-id bit is set.
+</p>
+</dd>
+<dt><code class=code>-w <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is writable.
+</p>
+</dd>
+<dt><code class=code>-x <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is executable.
+</p>
+</dd>
+<dt><code class=code>-G <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is owned by the effective group id.
+</p>
+</dd>
+<dt><code class=code>-L <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is a symbolic link.
+</p>
+</dd>
+<dt><code class=code>-N <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and has been modified since it was last
+accessed.
+</p>
+</dd>
+<dt><code class=code>-O <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is owned by the effective user id.
+</p>
+</dd>
+<dt><code class=code>-S <var class=var>file</var></code></dt>
+<dd><p>True if <var class=var>file</var> exists and is a socket.
+</p>
+</dd>
+<dt><code class=code><var class=var>file1</var> -ef <var class=var>file2</var></code></dt>
+<dd><p>True if <var class=var>file1</var> and <var class=var>file2</var> refer to the same device and
+inode numbers.
+</p>
+</dd>
+<dt><code class=code><var class=var>file1</var> -nt <var class=var>file2</var></code></dt>
+<dd><p>True if <var class=var>file1</var> is newer (according to modification date)
+than <var class=var>file2</var>, or if <var class=var>file1</var> exists and <var class=var>file2</var> does not.
+</p>
+</dd>
+<dt><code class=code><var class=var>file1</var> -ot <var class=var>file2</var></code></dt>
+<dd><p>True if <var class=var>file1</var> is older than <var class=var>file2</var>,
+or if <var class=var>file2</var> exists and <var class=var>file1</var> does not.
+</p>
+</dd>
+<dt><code class=code>-o <var class=var>optname</var></code></dt>
+<dd><p>True if the shell option <var class=var>optname</var> is enabled.
+The list of options appears in the description of the <samp class=option>-o</samp>
+option to the <code class=code>set</code> builtin (see <a class=pxref href=https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html>The Set Builtin</a>).
+</p>
+</dd>
+<dt><code class=code>-v <var class=var>varname</var></code></dt>
+<dd><p>True if the shell variable <var class=var>varname</var> is set (has been assigned a value).
+If <var class=var>varname</var> is an indexed
+array variable name subscripted by ‘<samp class=samp>@</samp>’ or ‘<samp class=samp>*</samp>’,
+this returns true if the array has any set elements.
+If <var class=var>varname</var> is an associative
+array variable name subscripted by ‘<samp class=samp>@</samp>’ or ‘<samp class=samp>*</samp>’,
+this returns true if an element with that key is set.
+</p>
+</dd>
+<dt><code class=code>-R <var class=var>varname</var></code></dt>
+<dd><p>True if the shell variable <var class=var>varname</var> is set and is a name reference.
+</p>
+</dd>
+<dt><code class=code>-z <var class=var>string</var></code></dt>
+<dd><p>True if the length of <var class=var>string</var> is zero.
+</p>
+</dd>
+<dt><code class=code>-n <var class=var>string</var></code></dt>
+<dt><code class=code><var class=var>string</var></code></dt>
+<dd><p>True if the length of <var class=var>string</var> is non-zero.
+</p>
+</dd>
+<dt><code class=code><var class=var>string1</var> == <var class=var>string2</var></code></dt>
+<dt><code class=code><var class=var>string1</var> = <var class=var>string2</var></code></dt>
+<dd><p>True if the strings are equal.
+When used with the <code class=code>[[</code> command, this performs pattern matching as
+described above (see <a class=pxref href=https://www.gnu.org/software/bash/manual/html_node/Conditional-Constructs.html>Conditional Constructs</a>).
+</p>
+<p>‘<samp class=samp>=</samp>’ should be used with the <code class=code>test</code> command for
+<small class=sc>POSIX</small>
+conformance.
+</p>
+</dd>
+<dt><code class=code><var class=var>string1</var> != <var class=var>string2</var></code></dt>
+<dd><p>True if the strings are not equal.
+</p>
+</dd>
+<dt><code class=code><var class=var>string1</var> &lt; <var class=var>string2</var></code></dt>
+<dd><p>True if <var class=var>string1</var> sorts before <var class=var>string2</var> lexicographically.
+</p>
+</dd>
+<dt><code class=code><var class=var>string1</var> &gt; <var class=var>string2</var></code></dt>
+<dd><p>True if <var class=var>string1</var> sorts after <var class=var>string2</var> lexicographically.
+</p>
+</dd>
+<dt><code class=code><var class=var>arg1</var> OP <var class=var>arg2</var></code></dt>
+<dd><p><code class=code>OP</code> is one of 
+‘<samp class=samp>-eq</samp>’, ‘<samp class=samp>-ne</samp>’, ‘<samp class=samp>-lt</samp>’, ‘<samp class=samp>-le</samp>’, ‘<samp class=samp>-gt</samp>’, or ‘<samp class=samp>-ge</samp>’.
+These arithmetic binary operators return true if <var class=var>arg1</var>
+is equal to, not equal to, less than, less than or equal to,
+greater than, or greater than or equal to <var class=var>arg2</var>,
+respectively. <var class=var>Arg1</var> and <var class=var>arg2</var>
+may be positive or negative integers.
+When used with the <code class=code>[[</code> command, <var class=var>arg1</var> and <var class=var>arg2</var>
+are evaluated as arithmetic expressions (see <a class=pxref href=https://www.gnu.org/software/bash/manual/html_node/Shell-Arithmetic.html>Shell Arithmetic</a>).
+Since the expansions the <code class=code>[[</code> command performs on
+<var class=var>arg1</var> and <var class=var>arg2</var>
+can potentially result in empty strings,
+arithmetic expression evaluation treats
+those as expressions that evaluate to 0.
+</p></dd>
+</dl>
+</div>
+<hr>
+<div class=nav-panel>
+<p>
+Next: <a href=https://www.gnu.org/software/bash/manual/html_node/Shell-Arithmetic.html>Shell Arithmetic</a>, Previous: <a href=https://www.gnu.org/software/bash/manual/html_node/Interactive-Shells.html>Interactive Shells</a>, Up: <a href=https://www.gnu.org/software/bash/manual/html_node/Bash-Features.html>Bash Features</a> &nbsp; [<a href=https://www.gnu.org/software/bash/manual/html_node/index.html#SEC_Contents title="Table of contents" rel=contents>Contents</a>][<a href=https://www.gnu.org/software/bash/manual/html_node/Indexes.html title=Index rel=index>Index</a>]</p>
+</div>

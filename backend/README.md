@@ -11,13 +11,13 @@ The output text file containing human-readable information about the weather sta
 `pyproject.toml` `uv.lock` `__pycache__`  
 Configuration files for UV python environment.  
   
-`update_historical.py`  
+`fetch_historical.py`  
 Runs-once-ever backfill script of daily weather data from 2000-01-01 to current day. Run once.  
   
-`update_daily.py`  
+`fetch_daily.py`  
 Runs-once-per-day script, fetches and updates most recent daily reading (probably yesterday's.)  
   
-`update_hourly.py`  
+`fetch_hourly.py`  
 Runs-once-every-hour script, fetches latest hourly reading, inserts it, prunes old records.  
 We only want hourly records for past week, to prevent overly large archive.  
   

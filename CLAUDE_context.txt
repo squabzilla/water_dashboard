@@ -1,0 +1,48 @@
+Sure! You can paste this at the start of a new chat:
+
+---
+
+**Project: Calgary Water Main GIS Dashboard**
+A web-based GIS dashboard exploring water main incidents in Calgary. Tech stack: FastAPI (Python) backend, MapLibre + React/TypeScript frontend, PostGIS database running in a Podman container.
+
+**Infrastructure (complete):**
+- Single Podman container running `docker.io/postgis/postgis:16-3.5` (named `postgres`), managed by Podman Quadlets via systemd
+- Container exposes PostGIS on `127.0.0.1:5433` (external) / `5432` (internal) — bound to loopback only, not publicly accessible
+- Persistent data stored in a named Podman volume (`postgres-data`), managed separately from the project folder
+- Credentials stored in `~/.config/water_dashboard/.env`, never in the repo — `.env.example` documents required variables (`POSTGRES_USER`, `POSTGRES_PASSWORD`)
+- Quadlet files live in `database/quadlets/` in the repo: `postgres.container` and `postgres-data.volume`
+- `deploy.sh` symlinks Quadlet files into `~/.config/containers/systemd/`, validates `.env`, and starts the service — idempotent, safe to re-run for updates
+- `stop_deployment.sh` stops the service and disables boot persistence while preserving volume data and symlinks
+- WSL2 on Windows with systemd enabled — requires `PodmanArgs=--cgroups=enabled --log-driver=journald` in `postgres.container` to work around WSL2's cgroup v1 default
+- pgAdmin not containerized — connect via Windows-side pgAdmin or psql directly to `localhost:5433`
+- Python package manager is `uv`, Node manager is `fnm`
+- Intended production deployment: DigitalOcean Droplet (raw Linux VM), same Quadlet setup, with `sudo loginctl enable-linger $USER` for boot persistence
+
+**Database (complete):**
+- Database named `calgary_watermains`, created automatically by the `postgis/postgis` image on first run
+- PostGIS 3.5.2 initialized automatically, confirmed: `postgis`, `postgis_topology`, `postgis_tiger_geocoder`, `fuzzystrmatch`, `plpgsql` all present
+
+**Weather data (in progress):**
+- Using Environment Canada's API (`https://api.weather.gc.ca`)
+- Identified one relevant weather station: **CALGARY INT'L CS**, `CLIMATE_IDENTIFIER: 3031094`, 8.42 km from Calgary Tower
+- Station has daily data from 1999-05-01 and hourly data from 2008-12-22, both current to May 2026
+- Station metadata saved to `backend/weather_stations.json`
+- Script that found this station is at `backend/explore_stations.py`
+
+**Next task: weather data ingestion**
+Three scripts to write, all in `backend/`:
+1. `ingest_historical.py` — one-time backfill of daily data from 2000-01-01 to today
+2. `update_daily.py` — runs once per day, fetches and upserts yesterday's daily reading
+3. `update_hourly.py` — runs every hour, fetches latest hourly reading, inserts it, prunes old records
+
+**Proposed database tables:**
+- `weather_station` — station metadata from `weather_stations.json`
+- `climate_daily_raw` — raw daily observations per station
+- `climate_hourly_raw` — raw hourly observations, rolling window only
+- `climate_daily_agg` and `climate_hourly_agg` — aggregated tables in case multiple stations are added later
+
+**Key files to attach to new chat:**
+- `backend/pyproject.toml`
+- `backend/explore_stations.py`
+- `backend/weather_stations.json`
+- `database/quadlets/postgres.container` (for infrastructure context if needed)

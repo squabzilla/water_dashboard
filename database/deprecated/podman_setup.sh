@@ -1,7 +1,20 @@
 #!/bin/bash
 
-# code to make executable:
+# code to make this file executable:
 # chmod +x podman_setup.sh
+
+# some error handling stuff
+set -euo pipefail
+# Explanation:
+#
+# `set -e` - exit immediately if any command returns an error code, instead of plowing ahead
+#
+# `set -u` - treat unset variables as errors
+#
+# `set -o pipefail` - in pipelines specifically, such as `cmd1 | cmd2 | cmd3`, 
+# only the exit (error) code of the LAST command is reported. This makes pipeline fail
+# if ANY command in it fails, not just the last one.
+# This isn't relevant to my script at the moment, but it's good general practice & future-proofing
 
 # Load environment variables
 source .env
@@ -30,5 +43,3 @@ podman run -d --pod postgis --name pgadmin \
   -e PGADMIN_DEFAULT_PASSWORD=$PGADMIN_PASSWORD \
   -v ./poddata/pgadmin:/var/lib/pgadmin:Z \
   docker.io/dpage/pgadmin4
-
-printf "hello world \n"
