@@ -52,7 +52,28 @@ This GIS visualization divides the city of Calgary by communities - however, a t
 
 Eventually, I would like to have functionality that when you click a `Community` or `Water Pressure Zone`, the user is given information about that area.
 
-## Page 3 - Rain & Seasonal Precipitation
+
+
+## Page 3 - Weather
+Layers:
+-   City Boundary
+-   Community Boundaries
+-   Water Main Incidents (I would like an API to regularly check for new water main incidents, and update the database if there are any)
+-   City Temperature layer
+-   Okay, so I can use StatsCan Weather Data to get temperature, rainfall, snow, etc.
+
+
+
+## Page 4 - Rain & Seasonal Precipitation - NO LONGER PART OF MVP
+
+***NOTE***:  
+While I really want this piece to show off geospatial analysis and visualization,  
+it's enough work - and enough of a separate, isolated piece of work -  
+that I don't want it in the MVP.  
+
+You can keep working on improving the dashboard after it's created, but limit scope of initial project release.
+
+
 Layers:
 -   City Boundary
 -   Community Boundaries
@@ -68,12 +89,15 @@ based on the average rainfall at each Rainfall Gauge location during a user-sele
 
 Hopefully we will also be able to create some visualizations examining the relationship/correlation between Water Main Incidents, and rainfall.
 
-## Page 4 - Temperature & Seasonal Conditions
-Layers:
--   City Boundary
--   Community Boundaries
--   Water Main Incidents (I would like an API to regularly check for new water main incidents, and update the database if there are any)
--   City Temperature layer
+DOWNLOADING DATA: I should just download like the compressed CSV of historical data, not query the API for up-to-date stuff.
+
+I mean, this will - by default - go to the **Come Hell or High Water** flood year anyways.
+
+So this one will only examine the rainfall season of previous years, not current years.
+
+That means I can focus on pre-processing the data, and not need to reprocess it with every new reading of current year lol.
+
+
 
 ---
 
