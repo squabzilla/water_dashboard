@@ -40,6 +40,9 @@ import httpx # used for calling API
 #from dateutil.parser import parse # used for properly formatting DATE data into datetime variables
 import json # used for handling export of json data
 
+# custom library!
+from backend.progress_bar import update_progress_bar
+
 
 
 ####################################################################################################
@@ -142,10 +145,25 @@ def weather_fetch():
     }
     # NOTE: number of results from 2000-01Jan-01 to 2026-05May-27:
     # 26*365+31+28+31+30+28 = 9638...plus like 6 leap years...? = 9644
+
+    # let's run a quick query to determine total number of items
+    params["limit"] = 1 # set limit to 1 for our quick call
+    response = httpx.get(url, params=params) # api call
+    params["limit"] = 100 # reset limit back to what it should be
+    response.raise_for_status() # make sure status is good
+    response_output = response.json() # turn results into json
+    response_expected = response_output["numberMatched"] # get expected number of responses
     
     # loop thru results with pagination!
     # fuck everything, this is being dumb, I'm just gonna loop thru year/month combos
     # because I know that'll actually fucking work
+
+    # setup progress bar for it tho
+    total_iterations = len(years) * len(months)
+    prefix = "Fetching historical weather data"
+    count = 0
+    update_progress_bar(iteration=count, total=total_iterations, prefix=prefix)
+
     for year in years:
         for month in months:
             
@@ -158,6 +176,14 @@ def weather_fetch():
             
             data = response_output.get("features",[]) # get items from "features" key, returns empty list (square-brackets) is key missing
             all_data.extend(data) # add `data` to `all_data`, extend works better than append for REASONS
+
+            # update progress bar
+            count += 1
+            update_progress_bar(iteration=count, total=total_iterations, prefix=prefix)
+    print("") # newline print after progress bar is done
+
+    # lets confirm our results match...
+    print(f"Expected responses: {response_expected}; actual: {len(all_data)}")
 
     # gdf = gpd.GeoDataFrame.from_features(response_output["features"]) # this apparently converts to geojson lol
     gdf = gpd.GeoDataFrame.from_features(all_data) # I already selected the "features" key while looping thru data
