@@ -17,19 +17,23 @@ Runs-once-ever backfill script of daily weather data from 2000-01-01 to current 
 `fetch_daily.py`  
 Runs-once-per-day script, fetches and updates most recent daily reading (probably yesterday's.)  
   
-`fetch_hourly.py`  
+`fetch_current.py`  
 Runs-once-every-hour script, fetches latest hourly reading, inserts it, prunes old records.  
 We only want hourly records for past week, to prevent overly large archive.  
   
-`data`  
-Folder containing GeoJSONs from above scripts.  
+~~`data`~~  
+~~Folder containing GeoJSONs from above scripts.~~  
+Nevermind, I'm not going to do this.
   
-`update_psql.py`  
-This script handles the logic for inserting the data from the data-gathering scripts,  
-\- namely `ingest_historical.py`, `update_daily.py`, and `update_hourly.py` -  
-and inserts it into psql database.  
-Aside from the fact that I'll reuse that psql-insertion-logic in multiple scripts,  
-it also means I can verify the API retrieval portion and database-insertion portion separately. 
+~~`update_psql.py`  ~~
+~~This script handles the logic for inserting the data from the data-gathering scripts,~~  
+~~\- namely `ingest_historical.py`, `update_daily.py`, and `update_hourly.py` -~~  
+~~and inserts it into psql database.~~  
+~~Aside from the fact that I'll reuse that psql-insertion-logic in multiple scripts,~~  
+~~it also means I can verify the API retrieval portion and database-insertion portion separately. ~~  
+Nevermind, the data gathering scripts will insert stuff directly.
+
+
 
 
 I really ought to list the data APIs I'm querying at some point (and why)
@@ -73,11 +77,13 @@ Data fetching scripts:
 `fetch_shapes` scripts will collect one-off shapes we aren't planning to udpate, like city boundaries  
 *(yes, I know city boundaries update like yearly or something, but MVP won't care about this)*
 `fetch_current` scripts will be ran every 5-15 minutes (to be decided later) to keep current, up-to-date data
+`fetch_daily` is useful for things to be ran daily  
+\- I should make a `daily` version of all the `historical` scripts to keep them updated to current time.
 
 Note that `fetch_historical` and `fetch_current` will overlap; we will want both historical archives, and current up-to-date data for some items.
 
 
-## Fetch Historical datasets:
+## Fetch Historical / Daily datasets:
  - Water main breaks
  - Historical rainfall
  - Official weather data
@@ -94,3 +100,8 @@ Note that `fetch_historical` and `fetch_current` will overlap; we will want both
  - Water main breaks
  - Official Weather data
  - *(later, not part of MVP)* Current rainfall
+
+## JSON Files
+During test & development, some API data was saves as JSON file for reference.  
+While these files aren't going to be used in code anywhere,  
+inspecting them is often useful to better understand the data we're trying to grab.
