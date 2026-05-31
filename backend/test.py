@@ -26,7 +26,8 @@ API_SECRET_KEY = os.getenv("API_SECRET_KEY")
 APP_TOKEN = os.getenv("APP_TOKEN")
 
 
-url = r"https://data.calgary.ca/api/v3/views/erra-cqp9/query.geojson"
+url = r"https://data.calgary.ca/api/v3/views/erra-cqp9/query.geojson" # city boundary
+#      "https://data.calgary.ca/api/v3/views/erra-cqp9/query.json"
 
 
 auth = (API_KEY, API_SECRET_KEY)
@@ -44,7 +45,7 @@ gdf = gpd.GeoDataFrame.from_features(response_output["features"]) # this apparen
 # NOTE: newer geojsons don't have a CRS, and assume EPSG 4326 is CRS
 if gdf.crs is None:
     gdf = gdf.set_crs("EPSG:4326")
-print(f"CRS: {gdf.crs}")
+# print(f"CRS: {gdf.crs}")
 
 #print(gdf.head())
 
@@ -53,7 +54,7 @@ output_path = Path(PROJECT_ROOT) / "backend" / "data" / "calgary_boundary.geojso
 #gdf.to_file(output_path, driver="GeoJSON", index=False)
 
 
-print(f"DATABASE: `calgary_watermains`; POSTGRES_USER: `{POSTGRES_USER}`; POSTGRES_PASSWORD: `{POSTGRES_PASSWORD}`")
+# print(f"DATABASE: `calgary_watermains`; POSTGRES_USER: `{POSTGRES_USER}`; POSTGRES_PASSWORD: `{POSTGRES_PASSWORD}`")
 
 # NOTE: `POSTGRES_DB=calgary_watermains` in podman stuff, so assume 'your_database' = 'calgary_watermains'
 database_name = 'calgary_watermains'

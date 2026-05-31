@@ -1,0 +1,160 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "id": "3031094.2025.7.16",
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -114.00029722222222,
+                    51.10944722222222
+                ]
+            },
+            "properties": {
+                "CLIMATE_IDENTIFIER": "3031094",
+                "LOCAL_DATE": "2025-07-16 00:00:00",
+                "LOCAL_YEAR": 2025,
+                "LOCAL_MONTH": 7,
+                "LOCAL_DAY": 16,
+                "MEAN_TEMPERATURE": 13.1,
+                "MIN_TEMPERATURE": 6.1,
+                "MAX_TEMPERATURE": 20.2,
+                "TOTAL_PRECIPITATION": 0,
+                "TOTAL_RAIN": null,
+                "TOTAL_SNOW": null
+            }
+        },
+        {
+            "id": "3031094.2025.7.15",
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -114.00029722222222,
+                    51.10944722222222
+                ]
+            },
+            "properties": {
+                "CLIMATE_IDENTIFIER": "3031094",
+                "LOCAL_DATE": "2025-07-15 00:00:00",
+                "LOCAL_YEAR": 2025,
+                "LOCAL_MONTH": 7,
+                "LOCAL_DAY": 15,
+                "MEAN_TEMPERATURE": 13.6,
+                "MIN_TEMPERATURE": 9.2,
+                "MAX_TEMPERATURE": 18,
+                "TOTAL_PRECIPITATION": 0.5,
+                "TOTAL_RAIN": null,
+                "TOTAL_SNOW": null
+            }
+        },
+        {
+            "id": "3031094.2025.7.8",
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -114.00029722222222,
+                    51.10944722222222
+                ]
+            },
+            "properties": {
+                "CLIMATE_IDENTIFIER": "3031094",
+                "LOCAL_DATE": "2025-07-08 00:00:00",
+                "LOCAL_YEAR": 2025,
+                "LOCAL_MONTH": 7,
+                "LOCAL_DAY": 8,
+                "MEAN_TEMPERATURE": 23.2,
+                "MIN_TEMPERATURE": 14.6,
+                "MAX_TEMPERATURE": 31.8,
+                "TOTAL_PRECIPITATION": 0,
+                "TOTAL_RAIN": null,
+                "TOTAL_SNOW": null
+            }
+        },
+        {
+            "id": "3031094.2025.7.12",
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -114.00029722222222,
+                    51.10944722222222
+                ]
+            },
+            "properties": {
+                "CLIMATE_IDENTIFIER": "3031094",
+                "LOCAL_DATE": "2025-07-12 00:00:00",
+                "LOCAL_YEAR": 2025,
+                "LOCAL_MONTH": 7,
+                "LOCAL_DAY": 12,
+                "MEAN_TEMPERATURE": 21.5,
+                "MIN_TEMPERATURE": 14.5,
+                "MAX_TEMPERATURE": 28.5,
+                "TOTAL_PRECIPITATION": 0,
+                "TOTAL_RAIN": null,
+                "TOTAL_SNOW": null
+            }
+        },
+        {
+            "id": "3031094.2025.7.14",
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    -114.00029722222222,
+                    51.10944722222222
+                ]
+            },
+            "properties": {
+                "CLIMATE_IDENTIFIER": "3031094",
+                "LOCAL_DATE": "2025-07-14 00:00:00",
+                "LOCAL_YEAR": 2025,
+                "LOCAL_MONTH": 7,
+                "LOCAL_DAY": 14,
+                "MEAN_TEMPERATURE": 12.3,
+                "MIN_TEMPERATURE": 10.1,
+                "MAX_TEMPERATURE": 14.4,
+                "TOTAL_PRECIPITATION": 38.8,
+                "TOTAL_RAIN": null,
+                "TOTAL_SNOW": null
+            }
+        }
+    ],
+    "numberMatched": 9193,
+    "numberReturned": 5,
+    "links": [
+        {
+            "type": "application/geo+json",
+            "rel": "self",
+            "title": "This document as GeoJSON",
+            "href": "https://api.weather.gc.ca/collections/climate-daily/items?f=json&limit=5&CLIMATE_IDENTIFIER=3031094&datetime=2000-01-01T00%3A00%3A00Z%2F..&properties=CLIMATE_IDENTIFIER,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,MEAN_TEMPERATURE,MIN_TEMPERATURE,MAX_TEMPERATURE,TOTAL_PRECIPITATION,TOTAL_RAIN,TOTAL_SNOW"
+        },
+        {
+            "rel": "alternate",
+            "type": "application/ld+json",
+            "title": "This document as RDF (JSON-LD)",
+            "href": "https://api.weather.gc.ca/collections/climate-daily/items?f=jsonld&limit=5&CLIMATE_IDENTIFIER=3031094&datetime=2000-01-01T00%3A00%3A00Z%2F..&properties=CLIMATE_IDENTIFIER,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,MEAN_TEMPERATURE,MIN_TEMPERATURE,MAX_TEMPERATURE,TOTAL_PRECIPITATION,TOTAL_RAIN,TOTAL_SNOW"
+        },
+        {
+            "type": "text/html",
+            "rel": "alternate",
+            "title": "This document as HTML",
+            "href": "https://api.weather.gc.ca/collections/climate-daily/items?f=html&limit=5&CLIMATE_IDENTIFIER=3031094&datetime=2000-01-01T00%3A00%3A00Z%2F..&properties=CLIMATE_IDENTIFIER,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,MEAN_TEMPERATURE,MIN_TEMPERATURE,MAX_TEMPERATURE,TOTAL_PRECIPITATION,TOTAL_RAIN,TOTAL_SNOW"
+        },
+        {
+            "type": "application/geo+json",
+            "rel": "next",
+            "title": "Items (next)",
+            "href": "https://api.weather.gc.ca/collections/climate-daily/items?offset=5&limit=5&CLIMATE_IDENTIFIER=3031094&datetime=2000-01-01T00%3A00%3A00Z%2F..&properties=CLIMATE_IDENTIFIER,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,MEAN_TEMPERATURE,MIN_TEMPERATURE,MAX_TEMPERATURE,TOTAL_PRECIPITATION,TOTAL_RAIN,TOTAL_SNOW"
+        },
+        {
+            "type": "application/json",
+            "title": "Climate - Daily Observations",
+            "rel": "collection",
+            "href": "https://api.weather.gc.ca/collections/climate-daily"
+        }
+    ],
+    "timeStamp": "2026-05-31T20:47:23.225954Z"
+}

@@ -1,5 +1,5 @@
 ####################################################################################################
-# file name: update_hourly.py
+# file name: fetch_current.py
 # author: William Hovdestad
 #
 # The goal of this script is to retrieve hourly temperature data from the following weather station:

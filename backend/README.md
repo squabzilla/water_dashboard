@@ -30,3 +30,67 @@ This script handles the logic for inserting the data from the data-gathering scr
 and inserts it into psql database.  
 Aside from the fact that I'll reuse that psql-insertion-logic in multiple scripts,  
 it also means I can verify the API retrieval portion and database-insertion portion separately. 
+
+
+I really ought to list the data APIs I'm querying at some point (and why)
+
+Datasets:
+
+Water Main Breaks (update regularly)
+	Link: https://data.calgary.ca/Environment/Water-Main-Breaks/dpcu-jr23/about_data   
+
+Public Water Main
+	Link: https://data.calgary.ca/Services-and-Amenities/Public-Water-Main/w6h9-w33i/about_data
+
+City Boundary
+	Link: https://data.calgary.ca/Base-Maps/City-Boundary/erra-cqp9/about_data
+
+Communities
+	Link: https://data.calgary.ca/Base-Maps/Community-District-Boundaries/surr-xmvs/about_data
+
+Water Pressure Zones
+	Link: https://data.calgary.ca/Environment/Water-Pressure-Zones/xn3q-y49u/about_data
+
+Current rainfall (update regularly)
+	Link: https://data.calgary.ca/Environment/Current-Year-Rainfall/c7sr-67sr/about_data
+
+Historical rainfall
+	Link: https://data.calgary.ca/Environment/Historical-Rainfall/d9kv-swk3/about_data
+
+Rainfall Gauge Locations
+	Link: https://data.calgary.ca/Base-Maps/Rain-Gauge-locations/x9fe-3zah/about_data
+
+Climate/temperature data  (update regularly)
+	Link: (uh, complicated?)
+
+Hydrology
+	Link: https://data.calgary.ca/Environment/Hydrology/47bt-eefd/about_data
+
+
+
+Data fetching scripts:  
+`fetch_historical` scripts will collect historical data from 2000-01-01 to current date  
+`fetch_shapes` scripts will collect one-off shapes we aren't planning to udpate, like city boundaries  
+*(yes, I know city boundaries update like yearly or something, but MVP won't care about this)*
+`fetch_current` scripts will be ran every 5-15 minutes (to be decided later) to keep current, up-to-date data
+
+Note that `fetch_historical` and `fetch_current` will overlap; we will want both historical archives, and current up-to-date data for some items.
+
+
+## Fetch Historical datasets:
+ - Water main breaks
+ - Historical rainfall
+ - Official weather data
+
+## Fetch Shapes datasets:
+ - Public Water Main
+ - City Boundary
+ - Communities
+ - Water pressure zones
+ - Rainfall Gauge locations
+ - Hydrology
+
+## Fetch Current datasets:
+ - Water main breaks
+ - Official Weather data
+ - *(later, not part of MVP)* Current rainfall
