@@ -44,12 +44,3 @@ from dotenv import load_dotenv
 ### starting real code here lol
 
 print(f"Project root:\n{PROJECT_ROOT}")
-
-load_dotenv()
-print("loaded dot env")
-
-POSTGRES_USER = os.getenv('POSTGRES_USER')
-#POSTGRES_USER = os.environ.get('POSTGRES_USER')
-#POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
-
-print(POSTGRES_USER)

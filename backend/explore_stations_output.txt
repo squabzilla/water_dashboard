@@ -3,6 +3,6 @@
 Valid stations:
 
 STATION_NAME: CALGARY INT'L CS; CLIMATE_IDENTIFIER: 3031094;
-Custom `is_active`         check: True; LAST_DATE: 2026-05-17 12:30:08;
+Custom `is_active`         check: True; LAST_DATE: 2026-05-30 12:30:14;
 Custom `has_hourly`        check: True; HAS_HOURLY_DATA: Y;
 Custom `valid_daily_start` check: True; DLY_FIRST_DATE: 1999-05-01 00:00:00;
