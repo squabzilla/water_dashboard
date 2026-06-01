@@ -1,5 +1,5 @@
 ########################################################################################################################
-# file name: constant_table_names.py
+# file name: helper_PSQL.py
 # author: William Hovdestad
 #
 # The purpose of this file is for standardized "constant" variables for my PSQL postgis table names.
@@ -32,6 +32,7 @@ import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
 from sqlalchemy import create_engine # stuff needed to connect with postgis database
+from sqlalchemy import String, Date, SmallInteger, Float
 import geopandas as gpd # geospatial library, used for GeoDataFrames
 
 # setup environment directory which contains the `.env` file
@@ -41,6 +42,35 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 ########################################################################################################################
 ### section 1: global variables
+
+# station I'm using for weather data, might as well make it global variable
+STATION_CLIMATE_IDENTIFIER = "3031094"
+# this is the weather station that has all the data in the correct time-range for this project
+
+# long string of weather properties I want
+WEATHER_PROPERTIES = "CLIMATE_IDENTIFIER,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,MEAN_TEMPERATURE,MIN_TEMPERATURE,MAX_TEMPERATURE,TOTAL_PRECIPITATION,TOTAL_RAIN,TOTAL_SNOW"
+# NOTE: my list of WEATHER_PROPERTIES are comma separated, BUT LAST ONE DOESN'T HAVE COMMA
+
+# okay, I need to define the types for these; 
+# this site: https://api.weather.gc.ca/openapi?f=html#/climate-daily/getClimate-dailySchema 
+# gets me the info, I just need to make a dict - or mapping-proxy-type so its immutable
+DAILY_CLIMATE_DATA_TYPES = MappingProxyType({
+    "CLIMATE_IDENTIFIER": String,
+    "LOCAL_DATE": Date,
+    "LOCAL_YEAR": SmallInteger,
+    "LOCAL_MONTH": SmallInteger,
+    "LOCAL_DAY": SmallInteger,
+    "MEAN_TEMPERATURE": Float,
+    "MIN_TEMPERATURE": Float,
+    "MAX_TEMPERATURE": Float,
+    "TOTAL_PRECIPITATION": Float,
+    "TOTAL_RAIN": Float,
+    "TOTAL_SNOW": Float,
+})
+# NOTE: I could generate this from API call, but it's probably easier to do it manually
+# I'm not querying enough different APIs that have a separate schema API to be worth automating it
+# I just need to set dtypes when I need to make sure that newly-queried hourly/daily data matches existing historical data
+# especially if there's no data for that period, so GeoPandas arbitrarily decides what to assign a column with NULL
 
 load_dotenv(env_dir) # get my environment variables
 
@@ -72,10 +102,18 @@ CONFIG = Config(
 @dataclass(frozen=True) # set up unchanging, constants dataclass for these variables
 class DatabaseTables:
     weather_data: str = "weather_data"
+    weather_data_staging: str = "weather_data_staging"
     weather_stations: str = "weather_stations"
-
 # initialize TABLE_NAMES variable of type `DatabaseTables` class
 TABLE_NAMES = DatabaseTables()
+
+# setup DatabaseCols class, initialize default variables so its less work to add more later
+# note that I'm only putting columns in here if I need to use those columns in code somewhere
+class DatabaseCols:
+    datetime_station: str = "DATETIME_STATION"
+# initialize TABLE_COLS variable of type `DatabaseCols` class
+TABLE_COLS = DatabaseCols()
+
 
 # set default text value for sqlalchemy engine initialization
 ENGINE_TEXT = f"postgresql+psycopg://{CONFIG.postgres_user}:{CONFIG.postgres_password}@{CONFIG.postgres_host}:{CONFIG.postgres_port}/{CONFIG.database_name}"
