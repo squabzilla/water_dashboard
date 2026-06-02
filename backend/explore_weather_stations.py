@@ -16,6 +16,25 @@
 
 
 ####################################################################################################
+### script-setup 0: project-root-setup
+import os
+import sys
+from pathlib import Path
+# set PROJECT_ROOT so libraries from cousin folders import properly
+# note that I want the main directory and file is `scripts`, a sub-directory of main,
+#  so I need grand-parent folder instead of simply parent-folder
+
+# gets file-path, (hopefully) resolves relative path issues, gets grand-parent folder
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+# sets working directory to project root - there may be redundancy here but oh well lol
+os.chdir(PROJECT_ROOT)
+# Ensure repository code is importable when this wrapper is run directly.
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+
+
+####################################################################################################
 ### script-setup 1: library imports
 import geopandas as gpd # geospatial library, used for distance calculations
 from shapely.geometry import Point # used to properly format lat/long values for use by GeoPandas
@@ -297,7 +316,8 @@ for s in filtered:
     # break
 
 # write data to .txt file
-with open("explore_stations_output.txt", "w") as f:
+output_txt = Path(PROJECT_ROOT) / "backend" / "weather_stations_output.txt"
+with open(output_txt, "w") as f:
     f.writelines(output_data_list)
 
 
@@ -312,5 +332,6 @@ print("")
 
 ####################################################################################################
 ### step 5.2 - save our data as json, to make output data easier to use in the future
-with open("weather_stations.json", "w") as f:
+output_json = Path(PROJECT_ROOT) / "backend" / "weather_stations.json"
+with open(output_json, "w") as f:
     json.dump(filtered, f, indent=2)
