@@ -316,7 +316,7 @@ for s in filtered:
     # break
 
 # write data to .txt file
-output_txt = Path(PROJECT_ROOT) / "backend" / "weather_stations_output.txt"
+output_txt = Path(PROJECT_ROOT) / "backend" / "test_data" / "weather_stations_output.txt"
 with open(output_txt, "w") as f:
     f.writelines(output_data_list)
 
@@ -332,6 +332,6 @@ print("")
 
 ####################################################################################################
 ### step 5.2 - save our data as json, to make output data easier to use in the future
-output_json = Path(PROJECT_ROOT) / "backend" / "weather_stations.json"
+output_json = Path(PROJECT_ROOT) / "backend" / "test_data" / "weather_stations.json"
 with open(output_json, "w") as f:
     json.dump(filtered, f, indent=2)

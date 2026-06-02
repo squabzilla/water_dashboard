@@ -336,7 +336,7 @@ for s in filtered:
     break
 
 # write data to .txt file
-#txt_output = Path(PROJECT_ROOT) / "backend" / "hydro_stations_output.txt "
+#txt_output = Path(PROJECT_ROOT) / "backend" / "test_data" / "hydro_stations_output.txt "
 #with open("explore_stations_output.txt", "w") as f:
     f.writelines(output_data_list)
 
@@ -356,7 +356,7 @@ print("")
     #json.dump(filtered, f, indent=2)
 
 gdf_single_station = gdf_stations.head(1).copy()
-output_single_station = Path(PROJECT_ROOT) / "backend" / "hydro_stations_gejson_output.geojson"
+output_single_station = Path(PROJECT_ROOT) / "backend" / "test_data" / "hydro_stations_gejson_output.geojson"
 
 gdf_single_station.to_file(output_single_station, driver="GeoJSON")
 
