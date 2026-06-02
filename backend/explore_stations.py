@@ -1,5 +1,5 @@
 ####################################################################################################
-# file name: explore_stations.py
+# file name: explore_weather_stations.py
 # author: William Hovdestad
 #
 # the goal of this script is to get a list of relevant weather stations in calgary for our purposes,
@@ -109,18 +109,20 @@ def stations__fetch():
 # NOTE: assuming desired output CRS is 'EPSG:3776' for use in City-of-Calgary-area
 # NOTE: this function is deliberately very GENERIC because I'll probably want to re-use it later
 # NOTE: make sure it's "EPSG", not "ESPG"
-def __calc_distance(lat_1, long_1, lat_2, long_2, output_crs='EPSG:3776'):
+def __calc_distance(lat_1, long_1, lat_2, long_2, distance_crs='EPSG:3776'):
     # NOTE: X = long, Y = lat
     point_1, point_2 = Point(long_1, lat_1), Point(long_2, lat_2)
     # NOTE: `Point` Attributes: x, y, z, m - float
 
-    # turn points into geodataframes
+    # turn points into geodataframes - default CRS for points will be EPSG 4326, so set them to that
     df_1 = gpd.GeoDataFrame({'geometry': [point_1]}, crs='EPSG:4326')
     df_2 = gpd.GeoDataFrame({'geometry': [point_2]}, crs='EPSG:4326')
 
-    # convert them to desired output coordinate system
-    df_1 = df_1.to_crs(output_crs)
-    df_2 = df_2.to_crs(output_crs)
+    # NOTE: default geojson crs is EPSG 4326 - but that has distance in degrees,
+    # so a distance calculation gives me degrees, not km
+    # EPSG3776 seems like best CRS for Calgary area, and gives distance in km
+    df_1 = df_1.to_crs(distance_crs)
+    df_2 = df_2.to_crs(distance_crs)
 
     # calculate distance
     series_distance = df_1.distance(df_2)
@@ -292,7 +294,7 @@ for s in filtered:
     station_line_3 = f"Custom `has_hourly`        check: {__has_hourly(s)}; HAS_HOURLY_DATA: {s["properties"]["HAS_HOURLY_DATA"]};\n"
     station_line_4 = f"Custom `valid_daily_start` check: {__valid_daily_start(s)}; DLY_FIRST_DATE: {s["properties"]["DLY_FIRST_DATE"]};\n"
     output_data_list.extend([station_delimiter_newline, station_line_1, station_line_2, station_line_3, station_line_4])
-    break
+    # break
 
 # write data to .txt file
 with open("explore_stations_output.txt", "w") as f:
