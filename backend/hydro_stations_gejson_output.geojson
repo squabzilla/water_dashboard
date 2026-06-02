@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "hydro_stations_gejson_output",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "STATION_NAME": "BOW RIVER AT CALGARY", "IDENTIFIER": "05BH004", "STATION_NUMBER": "05BH004", "PROV_TERR_STATE_LOC": "AB", "STATUS_EN": "Active", "STATUS_FR": "En service", "CONTRIBUTOR_EN": "WATER SURVEY OF CANADA (DOE) (CANADA)", "CONTRIBUTOR_FR": "RELEVES HYDROLOGIQUES DU CANADA (MDE) (CANADA)", "VERTICAL_DATUM": "ASSUMED DATUM", "REAL_TIME": 1, "RHBN": 0, "DRAINAGE_AREA_GROSS": 7874.0, "DRAINAGE_AREA_EFFECT": 7742.0, "distance_km": 1.01 }, "geometry": { "type": "Point", "coordinates": [ -114.051460266113281, 51.050270080566406 ] } }
+]
+}
