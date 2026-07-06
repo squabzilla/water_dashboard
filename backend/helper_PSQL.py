@@ -48,7 +48,8 @@ STATION_CLIMATE_IDENTIFIER = "3031094"
 # this is the weather station that has all the data in the correct time-range for this project
 
 # long string of weather properties I want
-WEATHER_PROPERTIES = "CLIMATE_IDENTIFIER,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,MEAN_TEMPERATURE,MIN_TEMPERATURE,MAX_TEMPERATURE,TOTAL_PRECIPITATION,TOTAL_RAIN,TOTAL_SNOW"
+DAILY_WEATHER_PROPERTIES =\
+"CLIMATE_IDENTIFIER,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,MEAN_TEMPERATURE,MIN_TEMPERATURE,MAX_TEMPERATURE,TOTAL_PRECIPITATION,TOTAL_RAIN,TOTAL_SNOW"
 # NOTE: my list of WEATHER_PROPERTIES are comma separated, BUT LAST ONE DOESN'T HAVE COMMA
 
 # okay, I need to define the types for these; 
@@ -71,6 +72,26 @@ DAILY_CLIMATE_DATA_TYPES = MappingProxyType({
 # I'm not querying enough different APIs that have a separate schema API to be worth automating it
 # I just need to set dtypes when I need to make sure that newly-queried hourly/daily data matches existing historical data
 # especially if there's no data for that period, so GeoPandas arbitrarily decides what to assign a column with NULL
+
+HOURLY_WEATHER_PROPERTIES =\
+"CLIMATE_IDENTIFIER,UTC_DATE,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,LOCAL_HOUR,TEMP,PRECIP_AMOUNT,RELATIVE_HUMIDITY,WINDCHILL,WIND_DIRECTION,WIND_SPEED,WEATHER_ENG_DESC"
+
+HOURLY_CLIMATE_DATA_TYPES = MappingProxyType({
+    "CLIMATE_IDENTIFIER": String,
+    "UTC_DATE": Date,
+    "LOCAL_DATE": Date,
+    "LOCAL_YEAR": SmallInteger,
+    "LOCAL_MONTH": SmallInteger,
+    "LOCAL_DAY": SmallInteger,
+    "LOCAL_HOUR": SmallInteger,
+    "TEMP": Float,
+    "PRECIP_AMOUNT": Float,
+    "RELATIVE_HUMIDITY": Float,
+    "WINDCHILL": Float,
+    "WIND_DIRECTION": String,
+    "WIND_SPEED": Float,
+    "WEATHER_ENG_DESC": String,
+})
 
 load_dotenv(env_dir) # get my environment variables
 
@@ -101,8 +122,10 @@ CONFIG = Config(
 # setup DatabaseTables class, initialize default variables so its less work to add more later
 @dataclass(frozen=True) # set up unchanging, constants dataclass for these variables
 class DatabaseTables:
-    weather_data: str = "weather_data"
-    weather_data_staging: str = "weather_data_staging"
+    weather_data_daily: str = "weather_data_daily"
+    weather_data_daily_staging: str = "weather_data_staging"
+    weather_data_hourly: str = "weather_data_hourly"
+    weather_data_hourly_staging: str = "weather_data_hourly_staging"
     weather_stations: str = "weather_stations"
 # initialize TABLE_NAMES variable of type `DatabaseTables` class
 TABLE_NAMES = DatabaseTables()
