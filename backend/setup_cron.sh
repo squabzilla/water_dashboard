@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # remember we need chmod +x script.sh to make executable!
 
+
+
 ########################################################################################################################
 # file name: setup_cron.sh
 # author: William Hovdestad
 #
 # The goal of this script is to setup a cron job to run scripts at scheduled times - be it daily or hourly.
 # Having a Bash script setup these jobs is part of making this repo more portable, and easy to run on another machine.
+
+
 
 ########################################################################################################################
 ### setup - create some variables, set configuration options
@@ -21,6 +25,8 @@ set -euo pipefail
 # if ANY command in it fails, not just the last one.
 # This isn't relevant to my script at the moment, but it's good general practice & future-proofing
 
+
+
 ########################################################################################################################
 ### config
 
@@ -31,14 +37,18 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # complicated line, *ensuring* we get the directory the script is located in
 # that's because the path to the script directory varies by where the git repo was cloned into
 
+# gets path of UV bin
+UV_BIN="$(which uv)" 
 
-UV_BIN="$(which uv)" # gets path of UV bin
-LOG_FILE="$SCRIPT_DIR/fetch_daily.log" # making a log file is probably useful lol
+### python scripts we wanna schedule jobs for go here!
+PY_SCRIPT__FETCH_DAILY_WEATHER="$SCRIPT_DIR/fetch_daily_weather.py" # gets path of python script
+PY_SCRIPT__FETCH_HOURLY_WEATHER="$SCRIPT_DIR/fetch_hourly_weather.py"
 
-# python scripts we wanna schedule jobs for go here!
-PYTHON_SCRIPT_1="$SCRIPT_DIR/fetch_daily_weather.py" # gets path of python script
+### Log files - since making a log file is probably useful lol
+LOG__FETCH_DAILY_WEATHER="$SCRIPT_DIR/fetch_daily_weather.log"
+LOG__FETCH_HOURLY_WEATHER="$SCRIPT_DIR/fetch_hourly_weather.log" 
 
-########################################################################################################################
+###############################################
 ### cron explanation part 1 - time-code command
 # * * * * * command
 # order is:
@@ -47,10 +57,11 @@ PYTHON_SCRIPT_1="$SCRIPT_DIR/fetch_daily_weather.py" # gets path of python scrip
 # so every day at 2am is:  `0 2 * * *`
 # and every hour would be: `0 * * * *`
 
+### cron-variables to implement our desired cron frequency
 CRON_SCHEDULE_DAILY="0 2 * * *"
 CRON_SCHEDULE_HOURLY="0 * * * *"
 
-########################################################################################################################
+####################
 ### verify uv exists
 if [ -z "$UV_BIN" ]; then
 # this statement checks if "$UV_BIN" matches the `-z` flag, which is the empty-string
@@ -58,10 +69,13 @@ echo "Error: 'uv' not found in PATH. Install it first."
 exit 1
 fi
 
-########################################################################################################################
-### creationg and explanation of full cron-job-entry-command that we'll be running if everything is good
 
-CRON_JOB_1="$CRON_SCHEDULE_DAILY cd $SCRIPT_DIR && $UV_BIN run $PYTHON_SCRIPT_1 >> $LOG_FILE 2>&1"
+
+########################################################################################################################
+### creation and explanation of full cron-job-entry-command that we'll be running if everything is good
+
+CRON_JOB__FETCH_DAILY_WEATHER="$CRON_SCHEDULE_DAILY cd $SCRIPT_DIR && $UV_BIN run $PY_SCRIPT__FETCH_DAILY_WEATHER >> $LOG__FETCH_DAILY_WEATHER 2>&1"
+CRON_JOB__FETCH_HOURLY_WEATHER="$CRON_SCHEDULE_HOURLY cd $SCRIPT_DIR && $UV_BIN run $PY_SCRIPT__FETCH_HOURLY_WEATHER >> $LOG__FETCH_HOURLY_WEATHER 2>&1"
 # explanation:
 # `CRON_JOB_1="..."` just assigns everything to the variable `CRON_JOB_1`
 # `$CRON_SCHEDULE_DAILY` calls the variable containing code for WHEN cron runs the job
@@ -86,41 +100,78 @@ CRON_JOB_1="$CRON_SCHEDULE_DAILY cd $SCRIPT_DIR && $UV_BIN run $PYTHON_SCRIPT_1 
 
 
 ########################################################################################################################
-### other cron commands go here
-# (placeholder)
+### Create parallel arrays for the py-scripts and cron-scripts, so I can loop through them
+### NOTE:
+### While I'd prefer some sort of array-of-array structure so I can pair the relevant PyScripts and CronJobs,
+### Bash doesn't support multidimensional arrays like this.
+### So parallel arrays is the cleanest way to do this.
+
+# script/cron-job 1: FETCH_DAILY_WEATHER
+PYSCRIPT_1="$PY_SCRIPT__FETCH_DAILY_WEATHER"
+CRON_JOB_1="$CRON_JOB__FETCH_DAILY_WEATHER"
+
+# script/cron-job 2: FETCH_HOURLY_WEATHER
+PYSCRIPT_2="$PY_SCRIPT__FETCH_HOURLY_WEATHER"
+CRON_JOB_2="$CRON_JOB__FETCH_HOURLY_WEATHER"
+
+PYSCRIPTS=("$PYSCRIPT_1" "$PYSCRIPT_2")
+CRON_JOBS=("$CRON_JOB_1" "$CRON_JOB_2")
 
 
 
 ########################################################################################################################
-### if-statements, to ensure idempotency, or in other words: 
-### making sure running `setup_cron.sh` won't create duplicate cron entries
-if crontab -l 2>/dev/null | grep -qF "$PYTHON_SCRIPT_1"; then
-echo "Cron job already exists — skipping."
-# explanation of "if" statement:
-# `crontab -l` prints users crontab things, but gives an error if nothing is found, which is dumb?
-# so `2>/dev/null` redirects the error to a special null file that ignores it, and lets us ignore it
-# `|` pipes stdout from `crontab -l` into next thing, which is:
-# `grep -qF "$PYTHON_SCRIPT_1"` - grep searches PYTHON_SCRIPT_1 for stuff (searches previous thing that was piped into it)
-# -q makes grep output quiet since we don't need it to print success/failure; -F means "regular string not regex" because oh god regex a filepath? GG
-else
-(crontab -l 2>/dev/null; echo "$CRON_JOB_1") | crontab -
-# explanation of else statement:
-# `crontab -l 2>/dev/null` is the same thing that prints our existing cron jobs, but ignores "wah no cron file exists" error
-# `;` is a command separator, so that `echo "$CRON_JOB_1"` happens after first half, 
-# and the brackets combined these into a sub-shell, so the output can be piped together
-# and the reason to pipe them together is:
-# CRON HAS NO APPEND FLAG
-# so we pipe everything in the brackets (using `|`) into `crontab -`, with the trailing-hyphen telling crontab to use `stdin`,
-# rather than using interactive text editor
-# USEFUL REFERENCE:
-# https://unix.stackexchange.com/questions/322900/is-it-possible-to-write-to-the-crontab-from-a-multipurpose-script 
+### for-loop, to loop through all of our scripts
 
-# oh, uh, I guess add an echo statement to tell user shit?
-echo "Cron job installed:"
-echo "  $CRON_JOB_1"
-fi
+### START OF FOR-LOOP HERE ##################################
+for i in "${!PYSCRIPTS[@]}"; do
+# NOTE:
+# `PYSCRIPTS[@]` refers to all elements of the array `PYSCRIPTS`
+# the `${...}` syntax is the parameter/array expansion syntax
+# (remember that `$` tells bash to treat the following thing as a variable, not a string
+# add the exclamation mark `!`, and changing `${VARNAME[@]}` to `${!VARNAME[@]}` gets is the indices/keys instead of the values
+# by getting the index value, it means we can loop through both scripts in parallel
+    
+    TEMP_PYSCRIPT="${PYSCRIPTS[$i]}" # <- this syntax gets us the i'th value from the array PYSCRIPTS
+    TEMP_CRON_JOB="${CRON_JOBS[$i]}" # <- this syntax gets us the i'th value from the array CRON_JOBS
 
+    ### if-statements, to ensure idempotency, or in other words: 
+    ### making sure running `setup_cron.sh` won't create duplicate cron entries
+    ### START OF IF STATEMENT HERE ##############################
+    if crontab -l 2>/dev/null | grep -qF "$TEMP_PYSCRIPT"; then
 
+        echo "Cron job already exists — skipping."
+        # explanation of "if" statement:
+        # `crontab -l` prints users crontab things, but gives an error if nothing is found, which is dumb?
+        # so `2>/dev/null` redirects the error to a special null file that ignores it, and lets us ignore it
+        # `|` pipes stdout from `crontab -l` into next thing, which is:
+        # `grep -qF "$TEMP_PYSCRIPT"` - grep searches TEMP_PYSCRIPT for stuff (searches previous thing that was piped into it)
+        # -q makes grep output quiet since we don't need it to print success/failure;
+        # -F means "regular string not regex" because oh god regex a filepath? GG
+
+        else
+        (crontab -l 2>/dev/null; echo "$TEMP_CRON_JOB") | crontab -
+        # explanation of else statement:
+        # `crontab -l 2>/dev/null` is the same thing that prints our existing cron jobs, but ignores "wah no cron file exists" error
+        # `;` is a command separator, so that `echo "$TEMP_CRON_JOB"` happens after first half, 
+        # and the brackets combined these into a sub-shell, so the output can be piped together
+        # and the reason to pipe them together is:
+        # CRON HAS NO APPEND FLAG
+        # so we pipe everything in the brackets (using `|`) into `crontab -`, with the trailing-hyphen telling crontab to use `stdin`,
+        # rather than using interactive text editor
+        # USEFUL REFERENCE:
+        # https://unix.stackexchange.com/questions/322900/is-it-possible-to-write-to-the-crontab-from-a-multipurpose-script 
+
+        # oh, uh, I guess add an echo statement to tell user shit?
+        echo "Cron job installed:"
+        echo "  $TEMP_CRON_JOB"
+
+    ###  END OF IF STATEMENT HERE  ##############################
+    fi
+
+###  END OF FOR-LOOP HERE  ##################################
+done
+echo "Viewing existing CRON jobs:"
+crontab -l
 
 ########################################################################################################################
 ### other if-statements go here I guess lol
