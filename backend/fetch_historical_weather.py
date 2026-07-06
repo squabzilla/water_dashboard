@@ -44,7 +44,7 @@ import json # used for handling export of json data
 from backend.helper_progress_bar import update_progress_bar
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
-    STATION_CLIMATE_IDENTIFIER, WEATHER_PROPERTIES, TABLE_NAMES, TABLE_COLS, DAILY_CLIMATE_DATA_TYPES
+    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, TABLE_NAMES, TABLE_COLS, DAILY_CLIMATE_DATA_TYPES
 
 
 
@@ -108,7 +108,7 @@ params = {
     "limit": limit,
     "CLIMATE_IDENTIFIER": STATION_CLIMATE_IDENTIFIER,
     "datetime": "2000-01-01T00:00:00Z/..", # per documentation, this should filter it to dates 2000-01-01 and higher
-    "properties": WEATHER_PROPERTIES, # filter to specific properties I want from station
+    "properties": DAILY_WEATHER_PROPERTIES, # filter to specific properties I want from station
 }
 
 
@@ -175,7 +175,7 @@ gdf_weather_data = set_geojson_crs(gdf_weather_data)
 # next, create unique column and double-check uniqueness
 gdf_weather_data[TABLE_COLS.datetime_station] = gdf_weather_data["CLIMATE_IDENTIFIER"] + "-" + gdf_weather_data["LOCAL_DATE"] # merge stuff
 if not gdf_weather_data["DATETIME_STATION"].is_unique: # check uniqueness:'
-    raise CustomErrorMessage(f"ERROR - duplicate station-datetime combinations found in weather data. Aborting.")
+    raise CustomErrorMessage(f"ERROR - duplicate station-datetime combinations found in historical weather data. Aborting.")
 
 
 ################################
@@ -205,16 +205,16 @@ engine = default_SQL_engine()
 gdf_weather_station.to_postgis(TABLE_NAMES.weather_stations, engine, if_exists="replace", index=False)
 # NOTE: not setting dtype on the weather station; I only really care about dtype if I need to prevent a type-mismatch
 # when adding new hourly/daily data to an existing database table
-gdf_weather_data.to_postgis(TABLE_NAMES.weather_data, engine, if_exists="replace", index=False,
+gdf_weather_data.to_postgis(TABLE_NAMES.weather_data_daily, engine, if_exists="replace", index=False,
                             dtype=dict(DAILY_CLIMATE_DATA_TYPES) # unwrap to a regular dict for the function call
                             )
 
 # add uniqueness constraint to `TABLE_COLS.datetime_station` after table creation
 sql_command = f"""
-ALTER TABLE {TABLE_NAMES.weather_data}
+ALTER TABLE {TABLE_NAMES.weather_data_daily}
 ADD CONSTRAINT uq_datetime_station UNIQUE ("{TABLE_COLS.datetime_station}");
 """
 with engine.begin() as conn:
     conn.execute(text(sql_command))
 
-print(f"Added weather-station-data and climate-data for weather station {STATION_CLIMATE_IDENTIFIER}")
+print(f"Added weather-station-data and daily-climate-data for weather station {STATION_CLIMATE_IDENTIFIER}")

@@ -46,7 +46,7 @@ import json # used for handling export of json data
 # custom modules!
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
-    STATION_CLIMATE_IDENTIFIER, WEATHER_PROPERTIES, TABLE_NAMES, TABLE_COLS, DAILY_CLIMATE_DATA_TYPES
+    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, TABLE_NAMES, TABLE_COLS, DAILY_CLIMATE_DATA_TYPES
 
 
 
@@ -65,7 +65,7 @@ params = {
     "limit": 100, # this should actually be irrelevant since theoretically I'm only getting like 8 items
     "CLIMATE_IDENTIFIER": STATION_CLIMATE_IDENTIFIER,
     "datetime": datetime_param,
-    "properties": WEATHER_PROPERTIES, # filter to specific properties I want from station
+    "properties": DAILY_WEATHER_PROPERTIES, # filter to specific properties I want from station
 }
 
 # make the API call!
@@ -81,7 +81,7 @@ gdf = set_geojson_crs(gdf)
 # next, create unique column and double-check uniqueness
 gdf[TABLE_COLS.datetime_station] = gdf["CLIMATE_IDENTIFIER"] + "-" + gdf["LOCAL_DATE"] # merge stuff
 if not gdf["DATETIME_STATION"].is_unique: # check uniqueness:'
-    raise CustomErrorMessage(f"ERROR - duplicate station-datetime combinations found in weather data. Aborting.")
+    raise CustomErrorMessage(f"ERROR - duplicate station-datetime combinations found in daily weather data. Aborting.")
 
 
 
@@ -92,14 +92,14 @@ if not gdf["DATETIME_STATION"].is_unique: # check uniqueness:'
 engine = default_SQL_engine()
 
 # Write gdf_new to a temporary staging table
-gdf.to_postgis(TABLE_NAMES.weather_data_staging, engine, if_exists="replace", index=False,
+gdf.to_postgis(TABLE_NAMES.weather_data_daily_staging, engine, if_exists="replace", index=False,
                             dtype=dict(DAILY_CLIMATE_DATA_TYPES) # unwrap to a regular dict for the function call
                             )
 
 # SQL command to insert only rows from staging that doesn't exist in main table
 sql_command = f"""
-INSERT INTO {TABLE_NAMES.weather_data}
-SELECT * FROM {TABLE_NAMES.weather_data_staging}
+INSERT INTO {TABLE_NAMES.weather_data_daily}
+SELECT * FROM {TABLE_NAMES.weather_data_daily_staging}
 ON CONFLICT ("{TABLE_COLS.datetime_station}") DO NOTHING;
 """
 with engine.connect() as conn:
@@ -111,7 +111,7 @@ with engine.connect() as conn:
 
 # SQL command to delete staging table
 sql_command = f"""
-DROP TABLE IF EXISTS {TABLE_NAMES.weather_data_staging};
+DROP TABLE IF EXISTS {TABLE_NAMES.weather_data_daily_staging};
 """
 with engine.begin() as conn:
     conn.execute(text(sql_command))
