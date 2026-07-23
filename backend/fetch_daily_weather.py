@@ -46,7 +46,7 @@ import json # used for handling export of json data
 # custom modules!
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
-    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, TABLE_NAMES, TABLE_COLS, DAILY_CLIMATE_DATA_TYPES
+    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DailyWeatherCols, DatabaseTables#, CUSTOM_TABLE_COLS
 
 
 
@@ -69,7 +69,7 @@ params = {
 }
 
 # make the API call!
-response = httpx.get(url, params=params) # api call
+response = httpx.get(url, params=params, timeout=30.0) # api call
 response.raise_for_status() # make sure status is good
 response_output = response.json() # turn results into json
 
@@ -79,8 +79,9 @@ gdf = gpd.GeoDataFrame.from_features(response_output["features"]) # this apparen
 gdf = set_geojson_crs(gdf)
 
 # next, create unique column and double-check uniqueness
-gdf[TABLE_COLS.datetime_station] = gdf["CLIMATE_IDENTIFIER"] + "-" + gdf["LOCAL_DATE"] # merge stuff
-if not gdf["DATETIME_STATION"].is_unique: # check uniqueness:'
+gdf[DailyWeatherCols.datetime_station] = \
+    gdf[DailyWeatherCols.climate_identifier] + "-" + gdf[DailyWeatherCols.local_date] # merge stuff
+if not gdf[DailyWeatherCols.datetime_station].is_unique: # check uniqueness:'
     raise CustomErrorMessage(f"ERROR - duplicate station-datetime combinations found in daily weather data. Aborting.")
 
 
@@ -91,16 +92,26 @@ if not gdf["DATETIME_STATION"].is_unique: # check uniqueness:'
 # set engine
 engine = default_SQL_engine()
 
+
+
 # Write gdf_new to a temporary staging table
-gdf.to_postgis(TABLE_NAMES.weather_data_daily_staging, engine, if_exists="replace", index=False,
-                            dtype=dict(DAILY_CLIMATE_DATA_TYPES) # unwrap to a regular dict for the function call
+gdf.to_postgis(DatabaseTables.weather_data_daily_staging, engine, if_exists="replace", index=False,
+                            dtype=dict(DAILY_WEATHER_DATA_TYPES) # unwrap to a regular dict for the function call
                             )
+# make sure column is unique
+sql_command = f"""
+ALTER TABLE {DatabaseTables.weather_data_daily_staging}
+DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_daily_staging}_{DailyWeatherCols.datetime_station};
+ALTER TABLE {DatabaseTables.weather_data_daily_staging}
+ADD CONSTRAINT uq_{DatabaseTables.weather_data_daily_staging}_{DailyWeatherCols.datetime_station} UNIQUE ("{DailyWeatherCols.datetime_station}");
+"""
+with engine.begin() as conn: conn.execute(text(sql_command))
 
 # SQL command to insert only rows from staging that doesn't exist in main table
 sql_command = f"""
-INSERT INTO {TABLE_NAMES.weather_data_daily}
-SELECT * FROM {TABLE_NAMES.weather_data_daily_staging}
-ON CONFLICT ("{TABLE_COLS.datetime_station}") DO NOTHING;
+INSERT INTO {DatabaseTables.weather_data_daily}
+SELECT * FROM {DatabaseTables.weather_data_daily_staging}
+ON CONFLICT ("{DailyWeatherCols.datetime_station}") DO NOTHING;
 """
 with engine.connect() as conn:
     conn.execute(text(sql_command))
@@ -109,12 +120,14 @@ with engine.connect() as conn:
 # useful if I just want to read data, or test things without risking blowing up the database lol
 # there's also advanced stuff you can do with a "non-default transaction isolation level" stuff
 
-# SQL command to delete staging table
+# SQL command to delete the staging table constraint, and then the entire staging table itself
+# Is that needed? I don't know. Probably not. But I don't wanna worry about ghost constraints lol
 sql_command = f"""
-DROP TABLE IF EXISTS {TABLE_NAMES.weather_data_daily_staging};
+ALTER TABLE {DatabaseTables.weather_data_daily_staging}
+DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_daily_staging}_{DailyWeatherCols.datetime_station};
+DROP TABLE IF EXISTS {DatabaseTables.weather_data_daily_staging};
 """
-with engine.begin() as conn:
-    conn.execute(text(sql_command))
+with engine.begin() as conn: conn.execute(text(sql_command))
 # NOTE: this one just executes and commits my changes to DB without needing to explicitly say so
 
 # SQL commands to be used in QGIS-testing

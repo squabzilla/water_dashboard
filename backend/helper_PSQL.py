@@ -25,14 +25,18 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
-from dotenv import load_dotenv # used for loading environment variables
-from dataclasses import dataclass # for making immutable classes, used for my CONFIG variables (user, login, API, etc.)
-from types import MappingProxyType # for making immutable dicts, used for making immutable dict of table names
+#from dotenv import load_dotenv # used for loading environment variables
+#from dataclasses import dataclass # for making immutable classes, used for my CONFIG variables (user, login, API, etc.)
+from types import MappingProxyType # for making immutable dicts, used for making immutable dict of column-types
+
+from enum import StrEnum # Base class for creating enumerated constants that are also subclasses of str. (Notes)
+# https://docs.python.org/3/library/enum.html#enum.StrEnum
+
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
 from sqlalchemy import create_engine # stuff needed to connect with postgis database
-from sqlalchemy import String, Date, SmallInteger, Float
+from sqlalchemy import String, Date, DateTime, SmallInteger, Float
 import geopandas as gpd # geospatial library, used for GeoDataFrames
 
 # setup environment directory which contains the `.env` file
@@ -41,58 +45,180 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 
 ########################################################################################################################
-### section 1: global variables
+### section 1: global variables for helper-function
 
 # station I'm using for weather data, might as well make it global variable
 STATION_CLIMATE_IDENTIFIER = "3031094"
 # this is the weather station that has all the data in the correct time-range for this project
 
-# long string of weather properties I want
-DAILY_WEATHER_PROPERTIES =\
-"CLIMATE_IDENTIFIER,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,MEAN_TEMPERATURE,MIN_TEMPERATURE,MAX_TEMPERATURE,TOTAL_PRECIPITATION,TOTAL_RAIN,TOTAL_SNOW"
+DATETIME_STATION = "DATETIME_STATION"
+# I reference this a few times, lets make it a global variable
+
+"""
+# setup DatabaseTables class, initialize default variables so its less work to add more later
+@dataclass(frozen=True) # set up unchanging, constants dataclass for these variables
+class DatabaseTables:
+    weather_data_daily: str = "weather_data_daily"
+    weather_data_daily_staging: str = "weather_data_staging"
+    weather_data_hourly: str = "weather_data_hourly"
+    weather_data_hourly_staging: str = "weather_data_hourly_staging"
+    weather_stations: str = "weather_stations"
+# initialize TABLE_NAMES variable of type `DatabaseTables` class
+TABLE_NAMES = DatabaseTables()
+"""
+class DatabaseTables(StrEnum):
+    weather_data_daily = "weather_data_daily"
+    weather_data_daily_staging = "weather_data_staging"
+    weather_data_hourly = "weather_data_hourly"
+    weather_data_hourly_staging = "weather_data_hourly_staging"
+    weather_stations = "weather_stations"
+
+
+
+########################################################################################################################
+### section 2: variables related to daily-weather
+
+# setup DatabaseCols class, initialize default variables so its less work to add more later
+# note that I'm only putting columns in here if I need to use those columns in code somewhere
+# basically helps me reference specific column names without using magic numbers
+
+# NOTE: Explanation of what the hell I'm doing
+# I'm making a custom class with the columns for each table, setting default values in class definition,
+# and declaring an object of that class
+#
+# Would it be better to make a more general class definition for table-columns (like, in general),
+# and declare an object of that class - with values matching the specific table-columns you're using?
+# I mean, honestly, probably
+# BUT that's not what I'm doing here
+#
+# ANYWAYS, this means I'm not relying on "magic strings"
+# and that I'll get syntax errors if I mess up column references, 
+# instead of potential confusion where I try to reference the same column with two ALMOST-BUT-NOT-QUITE identical names
+
+class DailyWeatherCols(StrEnum):
+    climate_identifier = "CLIMATE_IDENTIFIER"
+    local_date = "LOCAL_DATE"
+    mean_temperature = "MEAN_TEMPERATURE"
+    min_temperature = "MIN_TEMPERATURE"
+    max_temperature = "MAX_TEMPERATURE"
+    total_precipitation = "TOTAL_PRECIPITATION"
+    total_rain = "TOTAL_RAIN"
+    total_snow = "TOTAL_SNOW"
+    datetime_station = DATETIME_STATION
+
+# now we want the list of values in that DAILY_WEATHER_COLS class/object I have
+# so loop through my class to get a long string of comma-seperated weather properties I want,
+# as I'll need that for API input later
+DAILY_WEATHER_PROPERTIES = ""
+for item in DailyWeatherCols:
+    if item == DATETIME_STATION: continue
+    # NOTE: the "HOURLY_WEATHER_PROPERTIES" is input for API call, whereas DATETIME_STATION is derived data, so does not exist in API
+    DAILY_WEATHER_PROPERTIES += item + "," # add item and comma after item
+# NOTE: remove the last comma or everything breaks
+DAILY_WEATHER_PROPERTIES = DAILY_WEATHER_PROPERTIES[:-1]
 # NOTE: my list of WEATHER_PROPERTIES are comma separated, BUT LAST ONE DOESN'T HAVE COMMA
 
 # okay, I need to define the types for these; 
 # this site: https://api.weather.gc.ca/openapi?f=html#/climate-daily/getClimate-dailySchema 
 # gets me the info, I just need to make a dict - or mapping-proxy-type so its immutable
-DAILY_CLIMATE_DATA_TYPES = MappingProxyType({
-    "CLIMATE_IDENTIFIER": String,
-    "LOCAL_DATE": Date,
-    "LOCAL_YEAR": SmallInteger,
-    "LOCAL_MONTH": SmallInteger,
-    "LOCAL_DAY": SmallInteger,
-    "MEAN_TEMPERATURE": Float,
-    "MIN_TEMPERATURE": Float,
-    "MAX_TEMPERATURE": Float,
-    "TOTAL_PRECIPITATION": Float,
-    "TOTAL_RAIN": Float,
-    "TOTAL_SNOW": Float,
+
+# class of DailyWeatherCols data-types
+DAILY_WEATHER_DATA_TYPES = MappingProxyType({
+    DailyWeatherCols.climate_identifier: String(10), # this should realistically have less than 10 characters
+    DailyWeatherCols.local_date: Date,
+    DailyWeatherCols.mean_temperature: Float,
+    DailyWeatherCols.min_temperature: Float,
+    DailyWeatherCols.max_temperature: Float,
+    DailyWeatherCols.total_precipitation: Float,
+    DailyWeatherCols.total_rain: Float,
+    DailyWeatherCols.total_snow: Float,
+    DailyWeatherCols.datetime_station: String(30),
 })
 # NOTE: I could generate this from API call, but it's probably easier to do it manually
 # I'm not querying enough different APIs that have a separate schema API to be worth automating it
 # I just need to set dtypes when I need to make sure that newly-queried hourly/daily data matches existing historical data
 # especially if there's no data for that period, so GeoPandas arbitrarily decides what to assign a column with NULL
 
-HOURLY_WEATHER_PROPERTIES =\
-"CLIMATE_IDENTIFIER,UTC_DATE,LOCAL_DATE,LOCAL_YEAR,LOCAL_MONTH,LOCAL_DAY,LOCAL_HOUR,TEMP,PRECIP_AMOUNT,RELATIVE_HUMIDITY,WINDCHILL,WIND_DIRECTION,WIND_SPEED,WEATHER_ENG_DESC"
 
-HOURLY_CLIMATE_DATA_TYPES = MappingProxyType({
-    "CLIMATE_IDENTIFIER": String,
-    "UTC_DATE": Date,
-    "LOCAL_DATE": Date,
-    "LOCAL_YEAR": SmallInteger,
-    "LOCAL_MONTH": SmallInteger,
-    "LOCAL_DAY": SmallInteger,
-    "LOCAL_HOUR": SmallInteger,
-    "TEMP": Float,
-    "PRECIP_AMOUNT": Float,
-    "RELATIVE_HUMIDITY": Float,
-    "WINDCHILL": Float,
-    "WIND_DIRECTION": String,
-    "WIND_SPEED": Float,
-    "WEATHER_ENG_DESC": String,
+
+########################################################################################################################
+### section 3: variables related to hourly-weather
+
+# class of HourlyWeatherCols column-names
+# NOTE: adding `DATETIME_STATION: String,` to end, for custom unique-identifier of table
+class HourlyWeatherCols(StrEnum):
+    climate_identifier = "CLIMATE_IDENTIFIER"
+    utc_date = "UTC_DATE"
+    local_date = "LOCAL_DATE"
+    temp = "TEMP"
+    precip_amount = "PRECIP_AMOUNT"
+    relative_humidity = "RELATIVE_HUMIDITY"
+    windchill = "WINDCHILL"
+    wind_direction = "WIND_DIRECTION"
+    wind_speed = "WIND_SPEED"
+    weather_eng_desc = "WEATHER_ENG_DESC"
+    datetime_station = DATETIME_STATION
+
+# create text-description of HourlyWeatherCols
+HOURLY_WEATHER_PROPERTIES = ""
+for item in HourlyWeatherCols:
+    if item == DATETIME_STATION: continue
+    # NOTE: the "HOURLY_WEATHER_PROPERTIES" is input for API call, whereas DATETIME_STATION is derived data, so does not exist in API
+    HOURLY_WEATHER_PROPERTIES += item + "," # add item and comma after item
+# NOTE: remove the last comma or everything breaks
+HOURLY_WEATHER_PROPERTIES = HOURLY_WEATHER_PROPERTIES[:-1]
+
+# mapping-proxy-type of HourlyWeatherCols data-types
+HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
+    HourlyWeatherCols.climate_identifier: String(10), # this should realistically have less than 10 characters
+    HourlyWeatherCols.utc_date: DateTime(timezone=False), # turns out this is a datetime variable???
+    HourlyWeatherCols.local_date: DateTime(timezone=False), # turns out this is a datetime variable???
+    HourlyWeatherCols.temp: Float,
+    HourlyWeatherCols.precip_amount: Float,
+    HourlyWeatherCols.relative_humidity: Float,
+    HourlyWeatherCols.windchill: Float,
+    HourlyWeatherCols.wind_direction: String,
+    HourlyWeatherCols.wind_speed: Float,
+    HourlyWeatherCols.weather_eng_desc: String, # long-ass description doesn't have limit lol
+    HourlyWeatherCols.datetime_station: String(30), # datetime + climate identifier should be less than 30
 })
 
+
+
+########################################################################################################################
+### section 4: variables related to sql-connection
+
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL, Engine
+
+class DBConfig(BaseSettings):
+    model_config = SettingsConfigDict(frozen=True, env_file=env_dir)
+    postgres_user: str
+    postgres_password: SecretStr
+    api_key: SecretStr
+    api_secret_key: SecretStr
+    app_token: SecretStr
+    postgres_host: str = "localhost"
+    postgres_port: int = 5433 # using 5433 instead of 5432 so I don't get port conflict on local machine from native vs containerized PSQL install
+    database_name: str = "calgary_watermains"
+
+DATABASE_CONFIG = DBConfig()
+
+
+def default_SQL_engine(config: DBConfig = DATABASE_CONFIG) -> Engine:
+    url = URL.create(
+        drivername="postgresql+psycopg",
+        username=config.postgres_user,
+        password=config.postgres_password.get_secret_value(),
+        host=config.postgres_host,
+        port=config.postgres_port,
+        database=config.database_name,
+    )
+    engine = create_engine(url)
+    return engine
+
+"""
 load_dotenv(env_dir) # get my environment variables
 
 # setup config class
@@ -119,27 +245,9 @@ CONFIG = Config(
     database_name = "calgary_watermains",
 )
 
-# setup DatabaseTables class, initialize default variables so its less work to add more later
-@dataclass(frozen=True) # set up unchanging, constants dataclass for these variables
-class DatabaseTables:
-    weather_data_daily: str = "weather_data_daily"
-    weather_data_daily_staging: str = "weather_data_staging"
-    weather_data_hourly: str = "weather_data_hourly"
-    weather_data_hourly_staging: str = "weather_data_hourly_staging"
-    weather_stations: str = "weather_stations"
-# initialize TABLE_NAMES variable of type `DatabaseTables` class
-TABLE_NAMES = DatabaseTables()
-
-# setup DatabaseCols class, initialize default variables so its less work to add more later
-# note that I'm only putting columns in here if I need to use those columns in code somewhere
-class DatabaseCols:
-    datetime_station: str = "DATETIME_STATION"
-# initialize TABLE_COLS variable of type `DatabaseCols` class
-TABLE_COLS = DatabaseCols()
-
-
 # set default text value for sqlalchemy engine initialization
 ENGINE_TEXT = f"postgresql+psycopg://{CONFIG.postgres_user}:{CONFIG.postgres_password}@{CONFIG.postgres_host}:{CONFIG.postgres_port}/{CONFIG.database_name}"
+
 
 # function to create engine
 # doing as function instead of creating actual engine here as constant variable, 
@@ -149,6 +257,7 @@ ENGINE_TEXT = f"postgresql+psycopg://{CONFIG.postgres_user}:{CONFIG.postgres_pas
 def default_SQL_engine(text = ENGINE_TEXT):
     engine = create_engine(text)
     return engine
+"""
 
 # NOTE: newer geojsons don't have a CRS, and assume EPSG 4326 is CRS
 def set_geojson_crs(gdf):

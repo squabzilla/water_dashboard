@@ -44,7 +44,7 @@ import json # used for handling export of json data
 from backend.helper_progress_bar import update_progress_bar
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
-    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, TABLE_NAMES, TABLE_COLS, DAILY_CLIMATE_DATA_TYPES
+    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DailyWeatherCols, DatabaseTables#, CUSTOM_TABLE_COLS
 
 
 
@@ -62,7 +62,7 @@ params = {"CLIMATE_IDENTIFIER": STATION_CLIMATE_IDENTIFIER}
 
 # sends an HTTP GET request to the URL
 # NOTE: everything is stored in response - status code, headers, body
-response = httpx.get(url, params=params)
+response = httpx.get(url, params=params, timeout=30.0)
 
 # checks that status code is "200" which means everything is ok
 response.raise_for_status()
@@ -84,7 +84,7 @@ gdf_weather_station = set_geojson_crs(gdf_weather_station)
 
 
 ########################################################################################################################
-### section 2: let's actually fetch the weather data for the relevant station lol
+### section 2: let's actually fetch the daily weather data for the relevant station lol
 ### because I can't get pagination to work properly in the API call, 
 ### I'm just gonna loop through every year-month combo in the date range I want
 
@@ -110,7 +110,6 @@ params = {
     "datetime": "2000-01-01T00:00:00Z/..", # per documentation, this should filter it to dates 2000-01-01 and higher
     "properties": DAILY_WEATHER_PROPERTIES, # filter to specific properties I want from station
 }
-
 
 ####################################################################
 # section 2.2 - run a quick query to determine total number of items
@@ -144,7 +143,7 @@ for year in years:
         params["LOCAL_YEAR"] = year
         params["LOCAL_MONTH"] = month
 
-        response = httpx.get(url, params=params) # api call
+        response = httpx.get(url, params=params, timeout=60.0) # api call
         response.raise_for_status() # make sure status is good
         response_output = response.json() # turn results into json
         
@@ -168,13 +167,15 @@ print("") # newline print after progress bar is done
 print(f"Expected responses: {response_expected}; actual: {len(all_data)}")
 
 # gdf = gpd.GeoDataFrame.from_features(response_output["features"]) # this apparently converts to geojson lol
-gdf_weather_data = gpd.GeoDataFrame.from_features(all_data) # I already selected the "features" key while looping thru data
+gdf_daily_weather_data = gpd.GeoDataFrame.from_features(all_data) # I already selected the "features" key while looping thru data
 
 # first, set the crs - NOTE: newer geojsons don't have a CRS, and assume EPSG 4326 is CRS
-gdf_weather_data = set_geojson_crs(gdf_weather_data)
+gdf_daily_weather_data = set_geojson_crs(gdf_daily_weather_data)
 # next, create unique column and double-check uniqueness
-gdf_weather_data[TABLE_COLS.datetime_station] = gdf_weather_data["CLIMATE_IDENTIFIER"] + "-" + gdf_weather_data["LOCAL_DATE"] # merge stuff
-if not gdf_weather_data["DATETIME_STATION"].is_unique: # check uniqueness:'
+gdf_daily_weather_data[DailyWeatherCols.datetime_station] =\
+    gdf_daily_weather_data[DailyWeatherCols.climate_identifier] + "-" + \
+    gdf_daily_weather_data[DailyWeatherCols.local_date] # merge stuff
+if not gdf_daily_weather_data[DailyWeatherCols.datetime_station].is_unique: # check uniqueness:'
     raise CustomErrorMessage(f"ERROR - duplicate station-datetime combinations found in historical weather data. Aborting.")
 
 
@@ -202,19 +203,153 @@ if not gdf_weather_data["DATETIME_STATION"].is_unique: # check uniqueness:'
 # set engine
 engine = default_SQL_engine()
 
-gdf_weather_station.to_postgis(TABLE_NAMES.weather_stations, engine, if_exists="replace", index=False)
+# add weather station data to PostGIS
+gdf_weather_station.to_postgis(DatabaseTables.weather_stations, engine, if_exists="replace", index=False)
+
+# Add daily-weather-data to PostGIS
 # NOTE: not setting dtype on the weather station; I only really care about dtype if I need to prevent a type-mismatch
 # when adding new hourly/daily data to an existing database table
-gdf_weather_data.to_postgis(TABLE_NAMES.weather_data_daily, engine, if_exists="replace", index=False,
-                            dtype=dict(DAILY_CLIMATE_DATA_TYPES) # unwrap to a regular dict for the function call
+gdf_daily_weather_data.to_postgis(DatabaseTables.weather_data_daily, engine, if_exists="replace", index=False,
+                            dtype=dict(DAILY_WEATHER_DATA_TYPES) # unwrap to a regular dict for the function call
                             )
 
 # add uniqueness constraint to `TABLE_COLS.datetime_station` after table creation
 sql_command = f"""
-ALTER TABLE {TABLE_NAMES.weather_data_daily}
-ADD CONSTRAINT uq_datetime_station UNIQUE ("{TABLE_COLS.datetime_station}");
+ALTER TABLE {DatabaseTables.weather_data_daily}
+DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_daily}_{DailyWeatherCols.datetime_station};
+ALTER TABLE {DatabaseTables.weather_data_daily}
+ADD CONSTRAINT uq_{DatabaseTables.weather_data_daily}_{DailyWeatherCols.datetime_station} UNIQUE ("{DailyWeatherCols.datetime_station}");
 """
 with engine.begin() as conn:
     conn.execute(text(sql_command))
 
 print(f"Added weather-station-data and daily-climate-data for weather station {STATION_CLIMATE_IDENTIFIER}")
+
+
+
+########################################################################################################################
+### section 4 - let's initialize other tables we will want, specifically my HOURLY_WEATHER_DATA table
+### remember that we just made the DAILY_WEATHER_DATA table in the previous step
+
+# TODO:
+# Rebuild this so it basically does the fetch from my "fetch_hourly_weather.py" script
+# except it just exports the entire geodataframe to TABLE_NAMES.weather_data_hourly
+# that will properly initialize TABLE_NAMES.weather_data_hourly so I can stage changes to it
+
+from backend.helper_PSQL import HOURLY_WEATHER_DATA_TYPES, HourlyWeatherCols # import dict of weather types we want
+from sqlalchemy.dialects import postgresql # also tell SQLAlchemy we're using postgresql I guess
+from datetime import date, datetime, time, timedelta # for getting current date
+from zoneinfo import ZoneInfo # for time zones
+from backend.helper_PSQL import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, HourlyWeatherCols
+
+# set engine
+engine = default_SQL_engine()
+
+# set variables for table_name and unique_column_name
+table_name = DatabaseTables.weather_data_hourly
+unique_col = HourlyWeatherCols.datetime_station
+
+###############################################
+# code to fetch and add a daily weather table #
+###############################################
+# url of API
+url = "https://api.weather.gc.ca/collections/climate-hourly/items"
+
+# get proper datetime string to use! first, subtract 1 week from current date
+my_time_zone = ZoneInfo("America/Edmonton")
+today_date = datetime.now(my_time_zone).date() # gets today's date as datetime so I can include timezone, then make it date
+day_minus_seven = today_date - timedelta(days=7) # subtract 7 days from current date
+# now, convert it to proper parameter to API call
+datetime_param = str(day_minus_seven) + "T00:00:00Z/.."
+# NOTE: This gives me 12:00am from 7 days ago
+
+# now, setup my parameters variable
+params = {
+    "limit": 250, # 8 * 25 = 200, I'm getting at most last 8 days * 24 hrs, so this should be good
+    "CLIMATE_IDENTIFIER": STATION_CLIMATE_IDENTIFIER,
+    "datetime": datetime_param,
+    "properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
+}
+
+# make the API call!
+response = httpx.get(url, params=params, timeout=30.0) # api call
+response.raise_for_status() # make sure status is good
+response_output = response.json() # turn results into json
+
+# convert to geojson
+gdf = gpd.GeoDataFrame.from_features(response_output["features"]) # this apparently converts to geojson lol
+# set CRS - newer geojsons don't have a CRS, and assume EPSG 4326 is CRS
+gdf = set_geojson_crs(gdf)
+
+# next, create unique column and double-check uniqueness
+gdf[HourlyWeatherCols.datetime_station] = gdf[HourlyWeatherCols.climate_identifier] + "-" + gdf[HourlyWeatherCols.local_date] # merge stuff
+# if not gdf["DATETIME_STATION"].is_unique: # check uniqueness:'
+if not gdf[HourlyWeatherCols.datetime_station].is_unique: # check uniqueness:'
+    raise CustomErrorMessage(f"ERROR - duplicate station-datetime combinations found in hourly weather data. Aborting.")
+
+### section 2 - save our data
+
+engine = default_SQL_engine()
+
+gdf.to_postgis(DatabaseTables.weather_data_hourly, engine, if_exists="replace", index=False,
+                            dtype=dict(HOURLY_WEATHER_DATA_TYPES) # unwrap to a regular dict for the function call
+                            )
+
+### NOTE: gotta add constraint now 
+
+# make sure column is unique
+sql_command = f"""
+ALTER TABLE {DatabaseTables.weather_data_hourly}
+DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_hourly}_{HourlyWeatherCols.datetime_station};
+ALTER TABLE {DatabaseTables.weather_data_hourly}
+ADD CONSTRAINT uq_{DatabaseTables.weather_data_hourly}_{HourlyWeatherCols.datetime_station} UNIQUE ("{HourlyWeatherCols.datetime_station}");
+"""
+with engine.begin() as conn: conn.execute(text(sql_command))
+
+
+
+########################################################################################################################
+# shit that didn't work
+
+###########################################################
+# code to add table with all conditions, if doesn't exist #
+###########################################################
+"""
+lines = []
+dialect = postgresql.dialect()
+for col_name, dtype in HOURLY_WEATHER_DATA_TYPES.items():
+    #print(f"col_name: {col_name};\t dtype: {dtype}")
+    type_instance = dtype() if isinstance(dtype, type) else dtype
+
+#   NOTE - Explanation:
+#   If dtype is a class (like Integer) -> call it (dtype()) to instantiate it -> now you have Integer()
+#   If dtype is already an instance (like String(50)) -> leave it alone, it's already usable
+#   HOURLY_WEATHER_DATA_TYPES = {
+#       "station_id": Integer,           # class - no parentheses
+#       "station_name": String(50),      # instance - has parentheses (needed, since length is an argument)
+#       "recorded_at": DateTime,         # class - no parentheses
+#   }
+
+
+    type_sql = type_instance.compile(dialect=dialect)
+    lines.append(f'    "{col_name}" {type_sql}')
+
+# command to join all the table criteria together
+columns_sql = ",\n".join(lines)
+
+# Command to make table if it doesn't exist
+sql_create_table = f'CREATE TABLE IF NOT EXISTS "{table_name}" (\n{columns_sql}\n);'
+with engine.begin() as conn: conn.execute(text(sql_command))
+# Command to drop constraint if it exists
+sql_drop_constraint =\
+    f'\nALTER TABLE {DatabaseTables.weather_data_hourly} DROP CONSTRAINT IF EXISTS uq_{table_name}_{unique_col};'
+# Command to add the constraint back
+sql_add_constraint =\
+    f'\nALTER TABLE {table_name} ADD CONSTRAINT uq_{table_name}_{unique_col} UNIQUE ("{unique_col}");'
+
+# Combine all of them together
+sql_command = sql_create_table + sql_drop_constraint + sql_add_constraint
+
+# execute it all muahahahaha
+with engine.begin() as conn: conn.execute(text(sql_command))
+"""
