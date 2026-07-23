@@ -59,7 +59,6 @@ Otherwise I might have problems if I deploy it, and the deployment server ends u
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 
 # gets file-path, (hopefully) resolves relative path issues, gets grand-parent folder
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -90,7 +89,7 @@ import json # used for handling export of json data
 # custom modules!
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
-    STATION_CLIMATE_IDENTIFIER, HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, HourlyWeatherCols, DatabaseTables#, CUSTOM_TABLE_COLS#, HOURLY_CLIMATE_DATA_TYPES
+    STATION_CLIMATE_IDENTIFIER, HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, HourlyWeatherCols, DatabaseTables
 
 
 

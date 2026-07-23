@@ -32,7 +32,6 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 ########################################################################################################################
 ### script-setup 2: library imports
 from datetime import date, timedelta # for getting current date
-from zoneinfo import ZoneInfo # for time zones
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
@@ -46,7 +45,7 @@ import json # used for handling export of json data
 # custom modules!
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
-    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DailyWeatherCols, DatabaseTables#, CUSTOM_TABLE_COLS
+    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DailyWeatherCols, DatabaseTables
 
 
 
@@ -92,13 +91,12 @@ if not gdf[DailyWeatherCols.datetime_station].is_unique: # check uniqueness:'
 # set engine
 engine = default_SQL_engine()
 
-
-
 # Write gdf_new to a temporary staging table
 gdf.to_postgis(DatabaseTables.weather_data_daily_staging, engine, if_exists="replace", index=False,
                             dtype=dict(DAILY_WEATHER_DATA_TYPES) # unwrap to a regular dict for the function call
                             )
-# make sure column is unique
+
+# add uniqueness constraint
 sql_command = f"""
 ALTER TABLE {DatabaseTables.weather_data_daily_staging}
 DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_daily_staging}_{DailyWeatherCols.datetime_station};
@@ -129,15 +127,3 @@ DROP TABLE IF EXISTS {DatabaseTables.weather_data_daily_staging};
 """
 with engine.begin() as conn: conn.execute(text(sql_command))
 # NOTE: this one just executes and commits my changes to DB without needing to explicitly say so
-
-# SQL commands to be used in QGIS-testing
-# first one deletes 3 most recent records
-# second one selects 3 most recent records
-# so I can select 3 most recent records, then delete 3 most recent records, select 3 most recent records again to observe change
-sql_command = f"""
-DELETE FROM "public"."weather_data" WHERE "LOCAL_DATE" IN (
-SELECT "LOCAL_DATE" FROM "public"."weather_data" ORDER BY "LOCAL_DATE" DESC LIMIT 3
-)
-
-SELECT * FROM "public"."weather_data" ORDER BY "LOCAL_DATE" DESC LIMIT 3
-"""

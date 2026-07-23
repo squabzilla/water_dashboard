@@ -39,10 +39,7 @@ import httpx # used for calling API
 import json # used for handling export of json data
 
 # custom modules!
-from backend.helper_progress_bar import update_progress_bar
-from backend.helper_error import CustomErrorMessage
-from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
-    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DailyWeatherCols, DatabaseTables#, CUSTOM_TABLE_COLS
+from backend.helper_PSQL import default_SQL_engine, set_geojson_crs, STATION_CLIMATE_IDENTIFIER, DatabaseTables
 
 
 

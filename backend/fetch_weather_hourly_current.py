@@ -91,7 +91,7 @@ import json # used for handling export of json data
 # custom modules!
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
-    STATION_CLIMATE_IDENTIFIER, HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, HourlyWeatherCols, DatabaseTables#, CUSTOM_TABLE_COLS#, HOURLY_CLIMATE_DATA_TYPES
+    STATION_CLIMATE_IDENTIFIER, HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, HourlyWeatherCols, DatabaseTables
 
 
 
