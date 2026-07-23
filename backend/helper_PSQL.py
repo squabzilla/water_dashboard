@@ -17,6 +17,9 @@ Hardcoding those means editing the Python file itself between dev and prod, whic
 Worth moving POSTGRES_HOST, POSTGRES_PORT, and DATABASE_NAME into .env too (keeping the current values only as fallback defaults) once you're closer to deploying.
 """
 
+# TODO:
+# Clean up this file lol
+
 ########################################################################################################################
 ### script-setup 1: project-root-setup
 import os

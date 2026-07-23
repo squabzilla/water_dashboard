@@ -60,7 +60,6 @@ Otherwise I might have problems if I deploy it, and the deployment server ends u
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 
 # gets file-path, (hopefully) resolves relative path issues, gets grand-parent folder
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
