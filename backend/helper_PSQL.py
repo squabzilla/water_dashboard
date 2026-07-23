@@ -5,7 +5,17 @@
 # The purpose of this file is for standardized "constant" variables for my PSQL postgis table names.
 # That way, I can ensure consistency in the use of table names across all the various Python files.
 
-
+# TODO:
+# need to modify .env file so `postgres_host`, `post_gres_port` and `database_name` aren't hardcoded
+# - see line 196 at `class DBConfig(BaseSettings):`
+# note from Claude about this:
+"""
+One thing worth reconsidering: postgres_host, postgres_port, and database_name are hardcoded as class defaults rather than pulled from .env.
+That's fine for now since your DB is local, but you've mentioned a DigitalOcean droplet as your deployment target for this project - 
+once you deploy, the host almost certainly won't be localhost and the port likely won't be 5433 (no native/containerized conflict to dodge on a droplet).
+Hardcoding those means editing the Python file itself between dev and prod, which is exactly the problem pydantic-settings is meant to avoid.
+Worth moving POSTGRES_HOST, POSTGRES_PORT, and DATABASE_NAME into .env too (keeping the current values only as fallback defaults) once you're closer to deploying.
+"""
 
 ########################################################################################################################
 ### script-setup 1: project-root-setup
