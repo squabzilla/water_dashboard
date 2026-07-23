@@ -2,10 +2,10 @@
 # file name: fetch_daily_weather.py
 # author: William Hovdestad
 #
-# The goal of this script is to fetch daily weather for the past 7 days.
+# # The goal of this script is to fetch daily weather, to keep our PostGIS DailyWeather table up-to-date.
 # This script is to be ran every day, to keep our data updated.
 # It grabs the past 7 days just to be thorough (in case a day was missed somehow),
-# but realistically only the past day is needed.
+# but theoretically, only the past day should be needed.
 # It should only insert data that does not already exist in the database.
 
 

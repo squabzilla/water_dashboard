@@ -47,10 +47,27 @@ echo "Error: 'uv' not found in PATH. Install it first."
 exit 1
 fi
 
-echo "starting fetch historical..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_historical_weather.py"
-echo "starting fetch daily..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_daily_weather.py"
-echo "starting fetch hourly..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_hourly_weather.py"
-echo "done"
+#echo "starting fetch historical..."
+#"$UV_BIN" run "$SCRIPT_DIR/fetch_historical_weather.py"
+#echo "starting fetch daily..."
+#"$UV_BIN" run "$SCRIPT_DIR/fetch_daily_weather.py"
+#echo "starting fetch hourly..."
+#"$UV_BIN" run "$SCRIPT_DIR/fetch_hourly_weather.py"
+#echo "done"
+
+echo "starting \`fetch_weatherstation.py\`..."
+"$UV_BIN" run "$SCRIPT_DIR/fetch_weatherstation.py"
+
+echo "starting \`fetch_weather_daily_historical.py\`..."
+"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_daily_historical.py"
+
+echo "starting \`fetch_weather_daily_current.py\`..."
+"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_daily_current.py"
+
+echo "starting \`fetch_weather_hourly_historical.py\`..."
+"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_hourly_historical.py"
+
+echo "starting \`fetch_weather_hourly_current.py\`..."
+"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_hourly_current.py"
+
+echo "Done."

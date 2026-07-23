@@ -41,8 +41,8 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 UV_BIN="$(which uv)" 
 
 ### python scripts we wanna schedule jobs for go here!
-PY_SCRIPT__FETCH_DAILY_WEATHER="$SCRIPT_DIR/fetch_daily_weather.py" # gets path of python script
-PY_SCRIPT__FETCH_HOURLY_WEATHER="$SCRIPT_DIR/fetch_hourly_weather.py"
+PY_SCRIPT__FETCH_DAILY_WEATHER="$SCRIPT_DIR/fetch_weather_daily_current.py" # gets path of python script
+PY_SCRIPT__FETCH_HOURLY_WEATHER="$SCRIPT_DIR/fetch_weather_hourly_current.py"
 
 ### Log files - since making a log file is probably useful lol
 LOG__FETCH_DAILY_WEATHER="$SCRIPT_DIR/fetch_daily_weather.log"
@@ -54,12 +54,20 @@ LOG__FETCH_HOURLY_WEATHER="$SCRIPT_DIR/fetch_hourly_weather.log"
 # order is:
 # <minute (0-59)>   <hour (0-23)>   <day (1-31)>   <month (1-12)>   <day-of-week (0-7)>
 # note - both 0 and 7 count as day-of-week for cron
-# so every day at 2am is:  `0 2 * * *`
+# so every day at 1am is:  `0 1 * * *`
 # and every hour would be: `0 * * * *`
 
 ### cron-variables to implement our desired cron frequency
-CRON_SCHEDULE_DAILY="0 2 * * *"
+CRON_SCHEDULE_DAILY="0 1 * * *"
 CRON_SCHEDULE_HOURLY="0 * * * *"
+# NOTE:
+# The hourly-weather-data API from Environment Canada, used in `fetch_weather_hourly_current.py`
+# Only actually updates DAILY, only providing hourly weather up to the PREVIOUS day - not the current one.
+# So until I make a web-scraper for:
+# https://www.alberta.ca/acis-find-current-weather-data
+# to grab the CURRENT hourly data from that site,
+# my fetch-hourly-weather CRON-job will only run daily - not hourly.
+
 
 ####################
 ### verify uv exists
@@ -75,7 +83,7 @@ fi
 ### creation and explanation of full cron-job-entry-command that we'll be running if everything is good
 
 CRON_JOB__FETCH_DAILY_WEATHER="$CRON_SCHEDULE_DAILY cd $SCRIPT_DIR && $UV_BIN run $PY_SCRIPT__FETCH_DAILY_WEATHER >> $LOG__FETCH_DAILY_WEATHER 2>&1"
-CRON_JOB__FETCH_HOURLY_WEATHER="$CRON_SCHEDULE_HOURLY cd $SCRIPT_DIR && $UV_BIN run $PY_SCRIPT__FETCH_HOURLY_WEATHER >> $LOG__FETCH_HOURLY_WEATHER 2>&1"
+CRON_JOB__FETCH_HOURLY_WEATHER="$CRON_SCHEDULE_DAILY cd $SCRIPT_DIR && $UV_BIN run $PY_SCRIPT__FETCH_HOURLY_WEATHER >> $LOG__FETCH_HOURLY_WEATHER 2>&1"
 # explanation:
 # `CRON_JOB_1="..."` just assigns everything to the variable `CRON_JOB_1`
 # `$CRON_SCHEDULE_DAILY` calls the variable containing code for WHEN cron runs the job

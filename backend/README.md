@@ -105,3 +105,25 @@ Note that `fetch_historical` and `fetch_current` will overlap; we will want both
 During test & development, some API data was saves as JSON file for reference.  
 While these files aren't going to be used in code anywhere,  
 inspecting them is often useful to better understand the data we're trying to grab.
+
+
+## Railfall Data Notes
+While the use of rainfall data is outside our current project scope,  
+we're keeping some notes about it for future use.  
+
+Notes:  
+
+I'd be better off with a Bash script using say WGET to download the (hopefully compressed) CSV archive  
+and then writing Python code to process that archive  
+rather than using an API call  
+tbh, there's a way to write Python code to download an item from a download link too  
+I did that with historical population data for the NZEST project  
+
+## Handling High Amounts of API Data
+Theoretically, doing some form of pagination is  the way to handle high amounts of data via API call.  
+However, in practice, as least with the Environment Canada weather data, pagination wasn't really working.  
+At least, via the actual "pagination" option on the API.  
+What did work was looping through all the years of the data,  
+as each individual year was small enough to query by itself.  
+So looping through time-periods of the data (at least for time-stamped data)  
+was a much more effective-in-practice way of using pagination to handle large amounts of data via API call.

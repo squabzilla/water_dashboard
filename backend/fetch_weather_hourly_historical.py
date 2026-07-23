@@ -1,10 +1,26 @@
 ########################################################################################################################
-# file name: fetch_hourly_weather.py
+# file name: fetch_weather_hourly_historical.py
 # author: William Hovdestad
 #
 # The goal of this script is to retrieve hourly weather data from the following weather station:
 # STATION_NAME: CALGARY INT'L CS; CLIMATE_IDENTIFIER: 3031094;
 # We only want data for the past week, meaning the most recent 7 * 24 = 168 readings.
+#
+# This script is the one that initializes the table in our PostGIS Database.
+# Because this script initializes our table, it's important that table-constraints are added here as well.
+# Later, we will cast `fetch_weather_hourly_current.py` to update the values.
+#
+# Note that both of these use the same logic to retrieve raw data - the only difference 
+# is whether the GeoDataFrame of the data is exported as a new table in PostGIS,
+# or the data is inserted into an existing table.
+# This is because it's easier to initialize a table in PostGIS by just exporting a GDF to POSTGIS
+# then it is to create a table with specifications that precisely match our GDF.
+
+
+
+########################################################################################################################
+### API NOTES                                                                                                        ###
+
 # NOTE: the API we call doesn't have current dates data
 # so we get data for previous 7 days, but not current date
 #
@@ -79,7 +95,7 @@ from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
 
 
 ########################################################################################################################
-### section 1: grab weather data - copying some stuff from `fetch_historical_weather.py`
+### section 1: grab hourly weather data
 
 # url of API
 url = "https://api.weather.gc.ca/collections/climate-hourly/items"
@@ -125,55 +141,23 @@ if not gdf[HourlyWeatherCols.datetime_station].is_unique: # check uniqueness:'
 #print(gdf.shape[0]) # print number of records
 
 
-########################################################################################################################
-### section 2 - save our data, ensuring we only place in NEW values
 
-# set engine
+########################################################################################################################
+### section 3 - actually save our data
+
 engine = default_SQL_engine()
 
-# Write gdf_new to a temporary staging table
-
-gdf.to_postgis(DatabaseTables.weather_data_hourly_staging, engine, if_exists="replace", index=False,
+gdf.to_postgis(DatabaseTables.weather_data_hourly, engine, if_exists="replace", index=False,
                             dtype=dict(HOURLY_WEATHER_DATA_TYPES) # unwrap to a regular dict for the function call
                             )
+
+### NOTE: gotta add constraint now 
+
 # make sure column is unique
 sql_command = f"""
-ALTER TABLE {DatabaseTables.weather_data_hourly_staging}
-DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_hourly_staging}_{HourlyWeatherCols.datetime_station};
-ALTER TABLE {DatabaseTables.weather_data_hourly_staging}
-ADD CONSTRAINT uq_{DatabaseTables.weather_data_hourly_staging}_{HourlyWeatherCols.datetime_station} UNIQUE ("{HourlyWeatherCols.datetime_station}");
+ALTER TABLE {DatabaseTables.weather_data_hourly}
+DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_hourly}_{HourlyWeatherCols.datetime_station};
+ALTER TABLE {DatabaseTables.weather_data_hourly}
+ADD CONSTRAINT uq_{DatabaseTables.weather_data_hourly}_{HourlyWeatherCols.datetime_station} UNIQUE ("{HourlyWeatherCols.datetime_station}");
 """
 with engine.begin() as conn: conn.execute(text(sql_command))
-
-
-# SQL command to insert only rows from staging that doesn't exist in main table
-sql_command = f"""
-INSERT INTO {DatabaseTables.weather_data_hourly}
-SELECT * FROM {DatabaseTables.weather_data_hourly_staging}
-ON CONFLICT ("{HourlyWeatherCols.datetime_station}") DO NOTHING;
-"""
-with engine.begin() as conn: conn.execute(text(sql_command))
-
-# SQL command to delete the staging table constraint, and then the entire staging table itself
-# Is that needed? I don't know. Probably not. But I don't wanna worry about ghost constraints lol
-sql_command = f"""
-ALTER TABLE {DatabaseTables.weather_data_hourly_staging}
-DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_hourly_staging}_{HourlyWeatherCols.datetime_station};
-DROP TABLE IF EXISTS {DatabaseTables.weather_data_hourly_staging};
-"""
-with engine.begin() as conn: conn.execute(text(sql_command))
-
-# SQL command to delete rows from main table prior to days_minus_seven
-# note - it's easier to just have up to a day of extra info, rather than delete records from over PRECISELY 7 * 24hrs ago
-
-cutoff_date = datetime.combine(day_minus_seven, time.min) # gets min time on days_minus_seven, so 12:00am
-
-
-sql_command = f"""
-DELETE FROM {DatabaseTables.weather_data_hourly}
-WHERE "{HourlyWeatherCols.local_date}" < '{cutoff_date}';
-"""
-# NOTE: are you fucking me sideways with a jellyfish why in gods name does the type of fucking quotation mark matter in sql you drunk dumbfuck squirrel
-# NOTE 2: "In PostgreSQL, single quotes (') are used for string literals (text values), while double quotes (") are used for identifiers (table and column names)"
-with engine.begin() as conn: conn.execute(text(sql_command))
-#print(sql_command)
