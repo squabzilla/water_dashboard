@@ -29,6 +29,7 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 ########################################################################################################################
 ### script-setup 2: library imports
+from datetime import datetime # used to get current time
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
@@ -62,7 +63,8 @@ url = "https://api.weather.gc.ca/collections/climate-daily/items"
 
 #### set variables to help use pagination to get all data ####
 limit = 100
-years = range(2000,2027) # years from 2000 thru 2026 (stops at 2027)
+next_year = datetime.now().year + 1 # variable for start of next year
+years = range(2000,next_year) # years from 2000 thru current-year (stops when it hits `next_year` value)
 months = range(1,13) # months from 1 thru 12 (stops at 13)
 all_data = []
 total_records = 1000 # arbitary total records thats higher then limit, properly set later
@@ -78,22 +80,74 @@ params = {
 ####################################################################
 # section 1.2 - run a quick query to determine total number of items
 ####################################################################
+# NOTE:
+# while our "quick call" limits the number of returned objects to just 1 (one),
+# it still returns the meta-data information about how many total objects match our parameters
 
 params["limit"] = 1 # set limit to 1 for our quick call
 response = httpx.get(url, params=params) # api call
-params["limit"] = 100 # reset limit back to what it should be
+params["limit"] = 1000 # reset limit back to what it should be
 response.raise_for_status() # make sure status is good
 response_output = response.json() # turn results into json
 response_expected = response_output["numberMatched"] # get expected number of responses
+page_count = (response_expected / params["limit"]).__ceil__()
 
 # loop thru results with pagination!
-# fuck everything, this is being dumb, I'm just gonna loop thru year/month combos
-# because I know that'll actually fucking work
 
 
 ###########################
 # section 1.3 - DO THE LOOP
 ###########################
+# remember, we're paginating over the API results
+total_iterations = page_count
+prefix = "Fetching historical weather data"
+current_page = 0
+update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
+
+# NOTE:
+# the first time we query the API, we include our parameters in the query
+# however, once we start paginating, we query the API using the "next" link,
+# and DON'T include the parameters!
+# since the "next" link has all the relevant parameters, including pagination, already built in
+def paginate_url(url, current_page, include_params=False, params=params):
+
+    # Set page number, emergency-return if over page number
+    current_page += 1 # increase the page-count to current page - note that we should START at `current_page = 0`
+    if current_page > page_count: return 0 # emergency return just-in-case
+
+    ## API call - note the if/else statement for if we want to include OUR parameters or not
+    if include_params == True: response = httpx.get(url, params=params, timeout=60.0)
+    # api-call with parameters, if include_params = True - for first API call
+    else:  response = httpx.get(url, timeout=60.0) # api call
+    # api-call WITHOUT parameters, if include_params = False - for second API call & onwards
+
+    # rest of the API call
+    response.raise_for_status() # make sure status is good
+    response_output = response.json() # turn results into json
+
+    # get data from API call
+    data = response_output.get("features",[])
+    # get items from "features" key, returns empty list (square-brackets) is key missing
+    all_data.extend(data)
+    # add `data` to `all_data`, extend works better than append for REASONS
+
+    # now let's increase our progress bar, since we just added some data
+    update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
+
+    # now we look for the URL of the "next" page, and call this function again if we find it
+    links = response_output["links"]
+    for item in links:
+        if item["rel"] == "next":
+        # "rel" is like the key for the, uh, 'rank' of the link? as opposed to its title/name?
+            new_url = item["href"]
+            paginate_url(new_url, current_page)
+
+# whew, all that is done! now we can actually CALL our function
+paginate_url(url, current_page=0, include_params=True)
+
+"""
+# NOTE:
+# keeping this for historical/sentimental reasons, code I used before I properly figured out how to paginate
 
 # setup progress bar first tho
 total_iterations = len(years) * len(months)
@@ -121,17 +175,23 @@ for year in years:
         update_progress_bar(iteration=count, total=total_iterations, prefix=prefix)
 print("") # newline print after progress bar is done
 #### DONE THE LOOP ####
+"""
 
 
 ##########################################################
 # section 1.4 - check results, convert to GDF, process GDF
 ##########################################################
-
 # lets confirm our results match...
 print(f"Expected responses: {response_expected}; actual: {len(all_data)}")
+# spit out an error if they don't
+expected_vs_actual_error =\
+f"ERROR - Missmatch between expected number of results ({response_expected}) and actual number ({len(all_data)}). Aborting."
+if response_expected != len(all_data):
+    raise CustomErrorMessage(expected_vs_actual_error)
 
 # gdf = gpd.GeoDataFrame.from_features(response_output["features"]) # this apparently converts to geojson lol
 gdf_daily_weather_data = gpd.GeoDataFrame.from_features(all_data) # I already selected the "features" key while looping thru data
+del all_data # we don't need this anymore
 
 # first, set the crs - NOTE: newer geojsons don't have a CRS, and assume EPSG 4326 is CRS
 gdf_daily_weather_data = set_geojson_crs(gdf_daily_weather_data)
@@ -145,8 +205,7 @@ if not gdf_daily_weather_data[DailyWeatherCols.datetime_station].is_unique: # ch
 
 
 ########################################################################################################################
-### section 3 - actually save our data to use later
-
+### section 2 - actually save our data to use later
 # set engine
 engine = default_SQL_engine()
 
@@ -164,5 +223,4 @@ DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_daily}_{DailyWeatherCo
 ALTER TABLE {DatabaseTables.weather_data_daily}
 ADD CONSTRAINT uq_{DatabaseTables.weather_data_daily}_{DailyWeatherCols.datetime_station} UNIQUE ("{DailyWeatherCols.datetime_station}");
 """
-with engine.begin() as conn:
-    conn.execute(text(sql_command))
+with engine.begin() as conn: conn.execute(text(sql_command))
