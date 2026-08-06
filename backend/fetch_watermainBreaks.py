@@ -111,49 +111,13 @@ with httpx.Client(timeout=30.0) as client:
 page_count = (row_count / page_size).__ceil__()
 
 
-##################################################################
-# section 1.3 - create function to fetch all breaks for given year
-##################################################################
-
-"""
-def fetch_breaks_for_year(year: int, date_column_name: str = "break_date") -> int:
-    soql_query = f"SELECT COUNT(*) WHERE date_extract_y(`{date_column_name}`) >= {year}"
-
-    payload = {
-            "query": soql_query,
-            #"page": {"pageNumber": 1, "pageSize": 1000},
-            "includeSynthetic": False, # prevents auto-generated, made-up columns from showing up, which are annoying
-        }
-
-    with httpx.Client(timeout=30.0) as client:
-            response = client.post(
-                QUERY_URL,
-                json=payload,
-                headers={"X-App-Token": DATABASE_CONFIG.app_token.get_secret_value()},
-                auth=(
-                    DATABASE_CONFIG.api_key.get_secret_value(),
-                    DATABASE_CONFIG.api_secret_key.get_secret_value(),
-                ),
-            )
-            response.raise_for_status()
-            return response.json()[0]["COUNT"]
-
-row_count = fetch_breaks_for_year(start_year)
-#print(f"result count: {row_count)
-"""
-
-
-
-
-
-
 ###########################
 # section 1.3 - DO THE LOOP
 ###########################
 
 # setup progress bar first tho
 total_iterations = page_count
-prefix = "Fetching historical weather data"
+prefix = "Fetching watermain breaks"
 update_progress_bar(iteration=0, total=total_iterations, prefix=prefix) # first iteration is 0
 
 # query to get the actual data itself
@@ -182,7 +146,6 @@ for i in range(page_count):
     update_progress_bar(iteration=page_number, total=total_iterations, prefix=prefix)
 
 # done loop
-print("") # newline print after progress bar is done
 
 # NOTE:
 # example return output:
@@ -196,42 +159,21 @@ print("") # newline print after progress bar is done
 # ]
 
 
-
-
-"""
-# setup progress bar first tho
-total_iterations = len(years)
-prefix = "Fetching historical weather data"
-count = 0
-update_progress_bar(iteration=count, total=total_iterations, prefix=prefix)
-
-for year in years:
-    data = fetch_breaks_for_year(year)
-    all_data.extend(data)
-    # add `data` to `all_data`, extend works better than append for REASONS
-
-    # update progress bar
-    count += 1
-    update_progress_bar(iteration=count, total=total_iterations, prefix=prefix)
-print("") # newline print after progress bar is done
-#### DONE THE LOOP ####
-"""
-
 ##########################################################
 # section 1.5 - check results, convert to GDF, process GDF
 ##########################################################
 # lets confirm our results match...
-print(f"Expected responses: {row_count}; actual: {len(all_data)}")
+print(f" Expected responses: {row_count}; actual: {len(all_data)}")
 # spit out an error if they don't
 expected_vs_actual_error =\
 f"ERROR - Missmatch between expected number of results ({row_count}) and actual number ({len(all_data)}). Aborting."
 if row_count != len(all_data):
     raise CustomErrorMessage(expected_vs_actual_error)
 
+
 # turn our stuff into a pandas dataframe, while we fix it up for GeoDataFrame conversion
 df_all_data = pd.DataFrame(all_data)
 del all_data # we don't need this anymore
-
 
 
 df_all_data[WatermainBreaksCols.point] = df_all_data[WatermainBreaksCols.point].apply(shape)
@@ -239,21 +181,18 @@ df_all_data[WatermainBreaksCols.point] = df_all_data[WatermainBreaksCols.point].
 # assuming objects are formatted in a way that shapely can recognize,
 # and stores those new Point objects in a new "geometry" column
 
-#df_all_data["geometry"] = df_all_data[WatermainBreaksCols.point]
-
 
 # now we can turn it into a proper geojson
 gdf_all_data = gpd.GeoDataFrame(df_all_data, geometry=WatermainBreaksCols.point, crs="EPSG:4326")
 # NOTE: newer geojsons don't have a CRS, and assume EPSG 4326 is CRS
 del df_all_data # we don't need this anymore
 
+
 # add columns for X/Y values of coordinates
 gdf_all_data[WatermainBreaksCols.x] = gdf_all_data[WatermainBreaksCols.point].x
 gdf_all_data[WatermainBreaksCols.y] = gdf_all_data[WatermainBreaksCols.point].y
 
 
-"""print("\nCurrent cols:")
-print(gdf_all_data.columns)"""
 # get rid of unnecessary auto-generated columns
 keep_cols = [col for col in WatermainBreaksCols] # this is what we need to convert `strenum` to list
 keep_cols = [col for col in WATERMAIN_BREAKS_DATA_TYPES]
@@ -272,10 +211,8 @@ print(gdf_all_data.columns,"\n")"""
 ########################################################################################################################
 ### section 2 - actually save our data to use later
 
-
 # set engine
 engine = default_SQL_engine()
-
 
 
 # Add daily-weather-data to PostGIS
@@ -287,12 +224,3 @@ gdf_all_data.to_postgis(DatabaseTables.watermain_breaks, engine, if_exists="repl
 
 #gdf_all_data.to_postgis(DatabaseTables.watermain_breaks, engine, if_exists="replace", index=False)
 #print(gdf_all_data.head(1))
-
-"""
-print("\nWATERMAIN_BREAKS_DATA_TYPES:")
-for item in WATERMAIN_BREAKS_DATA_TYPES: print(item)
-
-keep_cols = [col for col in WATERMAIN_BREAKS_DATA_TYPES] # this is what we need to convert `strenum` to list
-print("\nkeep_cols:")
-for item in keep_cols: print(item)
-"""

@@ -100,7 +100,7 @@ page_count = (response_expected / params["limit"]).__ceil__()
 ###########################
 # remember, we're paginating over the API results
 total_iterations = page_count
-prefix = "Fetching historical weather data"
+prefix = "Fetching historical daily weather data"
 current_page = 0
 update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
 
@@ -182,7 +182,7 @@ print("") # newline print after progress bar is done
 # section 1.4 - check results, convert to GDF, process GDF
 ##########################################################
 # lets confirm our results match...
-print(f"Expected responses: {response_expected}; actual: {len(all_data)}")
+print(f" Expected responses: {response_expected}; actual: {len(all_data)}")
 # spit out an error if they don't
 expected_vs_actual_error =\
 f"ERROR - Missmatch between expected number of results ({response_expected}) and actual number ({len(all_data)}). Aborting."
