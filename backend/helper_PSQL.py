@@ -47,6 +47,7 @@ from enum import StrEnum # Base class for creating enumerated constants that are
 
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
+from geoalchemy2 import Geometry # used for "POINT" type
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
 from sqlalchemy import create_engine # stuff needed to connect with postgis database
 from sqlalchemy import String, Date, DateTime, SmallInteger, Float
@@ -85,6 +86,7 @@ class DatabaseTables(StrEnum):
     weather_data_hourly = "weather_data_hourly"
     weather_data_hourly_staging = "weather_data_hourly_staging"
     weather_stations = "weather_stations"
+    watermain_breaks = "watermain_breaks"
 
 
 
@@ -124,7 +126,7 @@ class DailyWeatherCols(StrEnum):
 # as I'll need that for API input later
 DAILY_WEATHER_PROPERTIES = ""
 for item in DailyWeatherCols:
-    if item == DATETIME_STATION: continue
+    if item == DATETIME_STATION: continue # skip this and don't include DATETIME_STATION in it
     # NOTE: the "HOURLY_WEATHER_PROPERTIES" is input for API call, whereas DATETIME_STATION is derived data, so does not exist in API
     DAILY_WEATHER_PROPERTIES += item + "," # add item and comma after item
 # NOTE: remove the last comma or everything breaks
@@ -199,7 +201,34 @@ HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
 
 
 ########################################################################################################################
-### section 4: variables related to sql-connection
+### section 4: variables related to WatermainBreaks
+
+# class of WatermainBreaksCols column-names - at least ones I'll care about at end
+class WatermainBreaksCols(StrEnum):
+    break_date = "break_date"
+    break_type = "break_type"
+    status = "status"
+    point = "point"
+    x = "x"
+    y = "y"
+
+WATERMAIN_BREAKS_DATA_TYPES = MappingProxyType({
+    WatermainBreaksCols.break_date: Date,
+    WatermainBreaksCols.break_type: String(8),
+    # there are 8 "break_type" values:
+    #  A - Full Circular B - Split C - Corrosion D - Fitting E - Joint F - Diagonal Crack G - Hole S - Saddle
+    # source: https://dev.socrata.com/foundry/data.calgary.ca/dpcu-jr23
+    WatermainBreaksCols.status: String(8),
+    # "status" values are either ACTIVE or RETIRED
+    #"geometry": Geometry('POINT'),
+    WatermainBreaksCols.point: Geometry('POINT'),
+    WatermainBreaksCols.x: Float,
+    WatermainBreaksCols.y: Float,
+})
+
+
+########################################################################################################################
+### section 5: variables related to sql-connection
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
