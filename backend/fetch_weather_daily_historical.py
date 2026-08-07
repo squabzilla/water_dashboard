@@ -29,6 +29,7 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 ########################################################################################################################
 ### script-setup 2: library imports
+import argparse # used for adding command line arguments to script
 from datetime import datetime # used to get current time
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
@@ -45,6 +46,23 @@ from backend.helper_progress_bar import update_progress_bar
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
     STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DailyWeatherCols, DatabaseTables
+
+
+
+########################################################################################################################
+### script-setup 3: print statement for start of script, and current time
+print(f"Script: {__file__} started at {datetime.now()}")
+
+
+
+########################################################################################################################
+### script-setup 4: setup command line arguments for script
+parser = argparse.ArgumentParser()
+parser.add_argument("-s", "--silent", help="silence script output when running",
+                    action="store_true")
+args = parser.parse_args()
+# if not args.silent: # this lets us turn off printing the progress bar if we add -s when running!
+# stuff in this if-statement will only execute if the "-s" argument wasn't passed
 
 
 
@@ -77,6 +95,7 @@ params = {
     "properties": DAILY_WEATHER_PROPERTIES, # filter to specific properties I want from station
 }
 
+
 ####################################################################
 # section 1.2 - run a quick query to determine total number of items
 ####################################################################
@@ -98,11 +117,13 @@ page_count = (response_expected / params["limit"]).__ceil__()
 ###########################
 # section 1.3 - DO THE LOOP
 ###########################
+
 # remember, we're paginating over the API results
 total_iterations = page_count
 prefix = "Fetching historical daily weather data"
 current_page = 0
-update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
+if not args.silent: # this lets us turn off printing the progress bar if we add -s when running!
+    update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
 
 # NOTE:
 # the first time we query the API, we include our parameters in the query
@@ -132,7 +153,8 @@ def paginate_url(url, current_page, include_params=False, params=params):
     # add `data` to `all_data`, extend works better than append for REASONS
 
     # now let's increase our progress bar, since we just added some data
-    update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
+    if not args.silent:
+        update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
 
     # now we look for the URL of the "next" page, and call this function again if we find it
     links = response_output["links"]
@@ -182,7 +204,8 @@ print("") # newline print after progress bar is done
 # section 1.4 - check results, convert to GDF, process GDF
 ##########################################################
 # lets confirm our results match...
-print(f" Expected responses: {response_expected}; actual: {len(all_data)}")
+if not args.silent:
+    print(f" Expected responses: {response_expected}; actual: {len(all_data)}")
 # spit out an error if they don't
 expected_vs_actual_error =\
 f"ERROR - Missmatch between expected number of results ({response_expected}) and actual number ({len(all_data)}). Aborting."
@@ -224,3 +247,9 @@ ALTER TABLE {DatabaseTables.weather_data_daily}
 ADD CONSTRAINT uq_{DatabaseTables.weather_data_daily}_{DailyWeatherCols.datetime_station} UNIQUE ("{DailyWeatherCols.datetime_station}");
 """
 with engine.begin() as conn: conn.execute(text(sql_command))
+
+
+
+########################################################################################################################
+### END - print script finish statement
+print(f"Script: {__file__} completed at {datetime.now()}")

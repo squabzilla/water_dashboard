@@ -29,6 +29,7 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 ########################################################################################################################
 ### script-setup 2: library imports
+import argparse # used for adding command line arguments to script
 from datetime import datetime # used to get current time
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
@@ -46,6 +47,24 @@ import json # used for handling export of json data
 from backend.helper_progress_bar import update_progress_bar
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, DATABASE_CONFIG, DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES
+
+
+
+########################################################################################################################
+### script-setup 3: print statement for start of script, and current time
+print(f"Script: {__file__} started at {datetime.now()}")
+
+
+
+########################################################################################################################
+### script-setup 4: setup command line arguments for script
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-s", "--silent", help="silence script output when running",
+                    action="store_true")
+args = parser.parse_args()
+# if not args.silent: # this lets us turn off printing the progress bar if we add -s when running!
+# stuff in this if-statement will only execute if the "-s" argument wasn't passed
 
 
 
@@ -118,7 +137,8 @@ page_count = (row_count / page_size).__ceil__()
 # setup progress bar first tho
 total_iterations = page_count
 prefix = "Fetching watermain breaks"
-update_progress_bar(iteration=0, total=total_iterations, prefix=prefix) # first iteration is 0
+if not args.silent: # this lets us turn off printing the progress bar if we add -s when running!
+    update_progress_bar(iteration=0, total=total_iterations, prefix=prefix) # first iteration is 0
 
 # query to get the actual data itself
 soql_query = f"""SELECT * WHERE date_extract_y(`{date_column_name}`) >= {start_year} ORDER BY `{date_column_name}`"""
@@ -143,7 +163,8 @@ for i in range(page_count):
     # add `response.json()` to `all_data`, extend works better than append for REASONS
 
     # update progress bar
-    update_progress_bar(iteration=page_number, total=total_iterations, prefix=prefix)
+    if not args.silent:
+        update_progress_bar(iteration=page_number, total=total_iterations, prefix=prefix)
 
 # done loop
 
@@ -163,7 +184,8 @@ for i in range(page_count):
 # section 1.5 - check results, convert to GDF, process GDF
 ##########################################################
 # lets confirm our results match...
-print(f" Expected responses: {row_count}; actual: {len(all_data)}")
+if not args.silent:
+    print(f" Expected responses: {row_count}; actual: {len(all_data)}")
 # spit out an error if they don't
 expected_vs_actual_error =\
 f"ERROR - Missmatch between expected number of results ({row_count}) and actual number ({len(all_data)}). Aborting."
@@ -224,3 +246,9 @@ gdf_all_data.to_postgis(DatabaseTables.watermain_breaks, engine, if_exists="repl
 
 #gdf_all_data.to_postgis(DatabaseTables.watermain_breaks, engine, if_exists="replace", index=False)
 #print(gdf_all_data.head(1))
+
+
+
+########################################################################################################################
+### END - print script finish statement
+print(f"Script: {__file__} completed at {datetime.now()}")
