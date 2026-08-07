@@ -4,6 +4,9 @@
 #
 # The goal of this script is to retrieve hourly weather data from the following weather station:
 # STATION_NAME: CALGARY INT'L CS; CLIMATE_IDENTIFIER: 3031094;
+#
+# The API 
+#
 # We only want data for the past week, meaning the most recent 7 * 24 = 168 readings.
 #
 # This script is designed to insert data into an existing PostGIS table in our database.
@@ -95,6 +98,12 @@ from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
 
 
 ########################################################################################################################
+### script-setup 3: print statement for start of script, and current time
+print(f"Script: {__file__} started at {datetime.now()}")
+
+
+
+########################################################################################################################
 ### section 1: grab hourly weather data
 
 # url of API
@@ -144,15 +153,32 @@ if not gdf[HourlyWeatherCols.datetime_station].is_unique: # check uniqueness:'
 ########################################################################################################################
 ### section 2 - save our data, ensuring we only place in NEW values
 
-# set engine
+################
+# set SQL engine
+################
 engine = default_SQL_engine()
+print("datetime_station example")
+print(gdf[HourlyWeatherCols.datetime_station].head())
+"""
+datetime_station example
+0    3031094-2026-07-29 00:00:00
+1    3031094-2026-07-29 01:00:00
+2    3031094-2026-07-29 02:00:00
+3    3031094-2026-07-29 03:00:00
+4    3031094-2026-07-29 04:00:00
+"""
 
+############################################
 # Write gdf_new to a temporary staging table
-
+############################################
 gdf.to_postgis(DatabaseTables.weather_data_hourly_staging, engine, if_exists="replace", index=False,
                             dtype=dict(HOURLY_WEATHER_DATA_TYPES) # unwrap to a regular dict for the function call
                             )
-# make sure column is unique
+
+
+###############################################
+# make sure unique column is declared as unique
+###############################################
 sql_command = f"""
 ALTER TABLE {DatabaseTables.weather_data_hourly_staging}
 DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_hourly_staging}_{HourlyWeatherCols.datetime_station};
@@ -162,14 +188,41 @@ ADD CONSTRAINT uq_{DatabaseTables.weather_data_hourly_staging}_{HourlyWeatherCol
 with engine.begin() as conn: conn.execute(text(sql_command))
 
 
+###############################################################################
 # SQL command to insert only rows from staging that doesn't exist in main table
+###############################################################################
+
 sql_command = f"""
 INSERT INTO {DatabaseTables.weather_data_hourly}
 SELECT * FROM {DatabaseTables.weather_data_hourly_staging}
-ON CONFLICT ("{HourlyWeatherCols.datetime_station}") DO NOTHING;
+ON CONFLICT ("{HourlyWeatherCols.datetime_station}")
+DO UPDATE SET
+"{HourlyWeatherCols.climate_identifier}" = EXCLUDED."{HourlyWeatherCols.climate_identifier}",
+"{HourlyWeatherCols.utc_date}" = EXCLUDED."{HourlyWeatherCols.utc_date}",
+"{HourlyWeatherCols.local_date}" = EXCLUDED."{HourlyWeatherCols.local_date}",
+"{HourlyWeatherCols.temp}" = EXCLUDED."{HourlyWeatherCols.temp}",
+"{HourlyWeatherCols.precip_amount}" = EXCLUDED."{HourlyWeatherCols.precip_amount}",
+"{HourlyWeatherCols.relative_humidity}" = EXCLUDED."{HourlyWeatherCols.relative_humidity}",
+"{HourlyWeatherCols.windchill}" = EXCLUDED."{HourlyWeatherCols.windchill}",
+"{HourlyWeatherCols.wind_direction}" = EXCLUDED."{HourlyWeatherCols.wind_direction}",
+"{HourlyWeatherCols.wind_speed}" = EXCLUDED."{HourlyWeatherCols.wind_speed}",
+"{HourlyWeatherCols.weather_eng_desc}" = EXCLUDED."{HourlyWeatherCols.weather_eng_desc}",
+"{HourlyWeatherCols.datetime_station}" = EXCLUDED."{HourlyWeatherCols.datetime_station}";
 """
-with engine.begin() as conn: conn.execute(text(sql_command))
+# NOTE: gah why do I have to put every column name in double quotes
 
+with engine.begin() as conn: conn.execute(text(sql_command))
+# NOTE: I can't just say "on conflict, use the newer records",
+# instead, for rows where it can't insert due to a conflict, I need to specify
+# EACH SPECIFIC COLUMN that I want to update INDIVIDUALLY
+# the EXCLUDED keyword references records that were EXCLUDED from the insert due to conflict
+# so on conflict, for each column, use the excluded one instead
+# but there's no "do this for them all" command, gotta specify each one individually :'(
+
+
+####################################################################
+# remove staging table - first the constraint, then the table itself
+####################################################################
 # SQL command to delete the staging table constraint, and then the entire staging table itself
 # Is that needed? I don't know. Probably not. But I don't wanna worry about ghost constraints lol
 sql_command = f"""
@@ -179,11 +232,15 @@ DROP TABLE IF EXISTS {DatabaseTables.weather_data_hourly_staging};
 """
 with engine.begin() as conn: conn.execute(text(sql_command))
 
+
+######################################################################
+# Delete old rows, since I only want hourly records to show last week,
+# Otherwise there's just an overwhelming amount of records to look at.
+######################################################################
+
 # SQL command to delete rows from main table prior to days_minus_seven
 # note - it's easier to just have up to a day of extra info, rather than delete records from over PRECISELY 7 * 24hrs ago
-
 cutoff_date = datetime.combine(day_minus_seven, time.min) # gets min time on days_minus_seven, so 12:00am
-
 
 sql_command = f"""
 DELETE FROM {DatabaseTables.weather_data_hourly}
@@ -192,3 +249,9 @@ WHERE "{HourlyWeatherCols.local_date}" < '{cutoff_date}';
 # NOTE: are you fucking me sideways with a jellyfish why in gods name does the type of fucking quotation mark matter in sql you drunk dumbfuck squirrel
 # NOTE 2: "In PostgreSQL, single quotes (') are used for string literals (text values), while double quotes (") are used for identifiers (table and column names)"
 with engine.begin() as conn: conn.execute(text(sql_command))
+
+
+
+########################################################################################################################
+### END - print script finish statement
+print(f"Script: {__file__} completed at {datetime.now()}")
