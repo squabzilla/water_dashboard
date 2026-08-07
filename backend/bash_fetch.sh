@@ -55,19 +55,26 @@ fi
 #"$UV_BIN" run "$SCRIPT_DIR/fetch_hourly_weather.py"
 #echo "done"
 
-echo "starting \`fetch_weatherstation.py\`..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_weatherstation.py"
+echo "BASH: starting \`fetch_weatherstation.py\`..."
+"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_station.py"
 
-echo "starting \`fetch_weather_daily_historical.py\`..."
+echo "BASH: starting \`fetch_weather_daily_historical.py\`..."
 "$UV_BIN" run "$SCRIPT_DIR/fetch_weather_daily_historical.py"
 
-echo "starting \`fetch_weather_daily_current.py\`..."
+echo "BASH: starting \`fetch_weather_daily_current.py\`..."
 "$UV_BIN" run "$SCRIPT_DIR/fetch_weather_daily_current.py"
 
-echo "starting \`fetch_weather_hourly_historical.py\`..."
+echo "BASH: starting \`fetch_weather_hourly_historical.py\`..."
 "$UV_BIN" run "$SCRIPT_DIR/fetch_weather_hourly_historical.py"
 
-echo "starting \`fetch_weather_hourly_current.py\`..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_hourly_current.py"
+## echo "BASH: starting \`fetch_weather_hourly_current.py\`..."
+## "$UV_BIN" run "$SCRIPT_DIR/fetch_weather_hourly_current.py"
+# doesn't currently exist, this will fetch my real-time data tho
 
-echo "Done."
+echo "BASH: starting \`fetch_weather_hourly_recent.py\`..."
+"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_hourly_recent.py"
+
+echo "BASH: starting \`fetch_watermainBreaks.py\`..."
+"$UV_BIN" run "$SCRIPT_DIR/fetch_watermainBreaks.py"
+
+echo "BASH: Done."
