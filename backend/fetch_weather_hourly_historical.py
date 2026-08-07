@@ -94,6 +94,12 @@ from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
 
 
 ########################################################################################################################
+### script-setup 3: print statement for start of script, and current time
+print(f"Script: {__file__} started at {datetime.now()}")
+
+
+
+########################################################################################################################
 ### section 1: grab hourly weather data
 
 # url of API
@@ -160,3 +166,9 @@ ALTER TABLE {DatabaseTables.weather_data_hourly}
 ADD CONSTRAINT uq_{DatabaseTables.weather_data_hourly}_{HourlyWeatherCols.datetime_station} UNIQUE ("{HourlyWeatherCols.datetime_station}");
 """
 with engine.begin() as conn: conn.execute(text(sql_command))
+
+
+
+########################################################################################################################
+### END - print script finish statement
+print(f"Script: {__file__} completed at {datetime.now()}")

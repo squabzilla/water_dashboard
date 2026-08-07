@@ -28,6 +28,7 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 ########################################################################################################################
 ### script-setup 2: library imports
+from datetime import datetime # used to get current time
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
@@ -40,6 +41,12 @@ import json # used for handling export of json data
 
 # custom modules!
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs, STATION_CLIMATE_IDENTIFIER, DatabaseTables
+
+
+
+########################################################################################################################
+### script-setup 3: print statement for start of script, and current time
+print(f"Script: {__file__} started at {datetime.now()}")
 
 
 
@@ -86,3 +93,9 @@ engine = default_SQL_engine()
 
 # add weather station data to PostGIS
 gdf_weather_station.to_postgis(DatabaseTables.weather_stations, engine, if_exists="replace", index=False)
+
+
+
+########################################################################################################################
+### END - print script finish statement
+print(f"Script: {__file__} completed at {datetime.now()}")

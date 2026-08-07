@@ -30,7 +30,7 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 ########################################################################################################################
 ### script-setup 2: library imports
-from datetime import date, timedelta # for getting current date
+from datetime import date, datetime, timedelta # for getting current date
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
@@ -45,6 +45,12 @@ import json # used for handling export of json data
 from backend.helper_error import CustomErrorMessage
 from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
     STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DailyWeatherCols, DatabaseTables
+
+
+
+########################################################################################################################
+### script-setup 3: print statement for start of script, and current time
+print(f"Script: {__file__} started at {datetime.now()}")
 
 
 
@@ -126,3 +132,9 @@ DROP TABLE IF EXISTS {DatabaseTables.weather_data_daily_staging};
 """
 with engine.begin() as conn: conn.execute(text(sql_command))
 # NOTE: this one just executes and commits my changes to DB without needing to explicitly say so
+
+
+
+########################################################################################################################
+### END - print script finish statement
+print(f"Script: {__file__} completed at {datetime.now()}")
