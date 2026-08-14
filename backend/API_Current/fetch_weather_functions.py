@@ -158,7 +158,7 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
 
 # NOTE: grab all 3 stations IDs - 3031092, 3031093, 3031094, order priority is: 3031094 > 3031092 > 3031093
 
-STATION_CLIMATE_IDENTIFIERS = ("3031092", "3031093")
+STATION_CLIMATE_IDENTIFIERS = ("3031092", "3031093", "3031094")
 # CQL2 string values must be single-quoted
 ids_clause = ", ".join(f"'{sid}'" for sid in STATION_CLIMATE_IDENTIFIERS)
 
@@ -250,12 +250,12 @@ real_time_weather_params = {
 ########################################################################################################################
 ### section 3: actually testing shit
 
-# print("fetching daily weather...")
-# gdf_daily = fetch_MSC_GeoMet_weather(url=daily_weather_url, params=daily_weather_params)
+print("fetching daily weather...")
+gdf_daily = fetch_MSC_GeoMet_weather(url=daily_weather_url, params=daily_weather_params)
 # NOTE: confirmed to work
 
-# print("fetching hourly weather...")
-# gdf_daily = fetch_MSC_GeoMet_weather(url=hourly_weather_url, params=hourly_weather_params)
+print("fetching hourly weather...")
+gdf_daily = fetch_MSC_GeoMet_weather(url=hourly_weather_url, params=hourly_weather_params)
 # NOTE: confirmed to work
 
 print("fetching real-time weather data...")
@@ -266,3 +266,5 @@ print(gdf_real_time.head())
 print("tail")
 print(gdf_real_time.tail())
 print(gdf_real_time.columns)
+
+print("done")

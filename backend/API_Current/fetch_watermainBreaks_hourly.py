@@ -145,7 +145,7 @@ soql_query = f"""SELECT * WHERE date_extract_y(`{date_column_name}`) >= {start_y
 
 # now we loop through our paginated API
 for i in range(page_count):
-    page_number = i + 1
+    page_number = i + 1 # since I want this 1-indexed, not 0-indexed
     # payload - basically the API parameters
     payload = {"query": soql_query,
                "page": {"pageNumber": page_number, "pageSize": page_size},

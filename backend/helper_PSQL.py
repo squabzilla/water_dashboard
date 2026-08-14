@@ -63,6 +63,7 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 STATION_NAME = "CALGARY INT'L A"
 STATION_CLIMATE_IDENTIFIER = "3031094"
+STATION_CLIMATE_IDENTIFIERS = ("3031092", "3031093", "3031094")
 
 
 class DatabaseTables(StrEnum):
