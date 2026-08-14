@@ -335,3 +335,29 @@ print("")
 output_json = Path(PROJECT_ROOT) / "backend" / "test_data" / "weather_stations.json"
 with open(output_json, "w") as f:
     json.dump(filtered, f, indent=2)
+
+
+
+####################################################################################################
+### step 6 - we're actually gonna make a dataframe of all our weather_stations, save to csv,
+###          and manually examine them ourself
+
+
+import pandas as pd
+temp_stations = []
+for s in stations:
+    temp_stations.append(s["properties"])
+    #temp_row = s['properties']
+df_stations = pd.DataFrame(temp_stations)
+print("df_station head:")
+print(df_stations.head(1))
+for col in df_stations.columns:
+    print(col)
+
+select_cols =\
+['STN_ID','STATION_NAME','CLIMATE_IDENTIFIER','FIRST_DATE','LAST_DATE','HLY_FIRST_DATE',\
+ 'HLY_LAST_DATE','DLY_FIRST_DATE','DLY_LAST_DATE','MLY_FIRST_DATE','MLY_LAST_DATE',\
+ 'HAS_MONTHLY_SUMMARY','HAS_NORMALS_DATA','HAS_HOURLY_DATA','distance_km']
+df_stations = df_stations[select_cols]
+output_csv = Path(PROJECT_ROOT) / "backend" / "test_data" / "CSV_weather_stations.csv"
+df_stations.to_csv(output_csv, index=False)

@@ -50,7 +50,7 @@ import sqlalchemy # stuff needed to connect with postgis database
 from geoalchemy2 import Geometry # used for "POINT" type
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
 from sqlalchemy import create_engine # stuff needed to connect with postgis database
-from sqlalchemy import String, Date, DateTime, SmallInteger, Float
+from sqlalchemy import String, Date, DateTime, SmallInteger, Integer, Float, Boolean
 import geopandas as gpd # geospatial library, used for GeoDataFrames
 
 # setup environment directory which contains the `.env` file
@@ -59,29 +59,15 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 
 ########################################################################################################################
-### section 1: global variables for helper-function
+### section 1: variables for tables, and main station for weather data
 
-# station I'm using for weather data, might as well make it global variable
+STATION_NAME = "CALGARY INT'L A"
 STATION_CLIMATE_IDENTIFIER = "3031094"
-# this is the weather station that has all the data in the correct time-range for this project
 
-DATETIME_STATION = "DATETIME_STATION"
-# I reference this a few times, lets make it a global variable
 
-"""
-# setup DatabaseTables class, initialize default variables so its less work to add more later
-@dataclass(frozen=True) # set up unchanging, constants dataclass for these variables
-class DatabaseTables:
-    weather_data_daily: str = "weather_data_daily"
-    weather_data_daily_staging: str = "weather_data_staging"
-    weather_data_hourly: str = "weather_data_hourly"
-    weather_data_hourly_staging: str = "weather_data_hourly_staging"
-    weather_stations: str = "weather_stations"
-# initialize TABLE_NAMES variable of type `DatabaseTables` class
-TABLE_NAMES = DatabaseTables()
-"""
 class DatabaseTables(StrEnum):
     weather_data_daily = "weather_data_daily"
+    weather_data_daily_2 = "weather_data_daily_2"
     weather_data_daily_staging = "weather_data_staging"
     weather_data_hourly = "weather_data_hourly"
     weather_data_hourly_staging = "weather_data_hourly_staging"
@@ -91,7 +77,7 @@ class DatabaseTables(StrEnum):
 
 
 ########################################################################################################################
-### section 2: variables related to daily-weather
+### section 2: variables related to weather
 
 # setup DatabaseCols class, initialize default variables so its less work to add more later
 # note that I'm only putting columns in here if I need to use those columns in code somewhere
@@ -111,6 +97,7 @@ class DatabaseTables(StrEnum):
 # instead of potential confusion where I try to reference the same column with two ALMOST-BUT-NOT-QUITE identical names
 
 class DailyWeatherCols(StrEnum):
+    station_name = "STATION_NAME"
     climate_identifier = "CLIMATE_IDENTIFIER"
     local_date = "LOCAL_DATE"
     mean_temperature = "MEAN_TEMPERATURE"
@@ -119,19 +106,11 @@ class DailyWeatherCols(StrEnum):
     total_precipitation = "TOTAL_PRECIPITATION"
     total_rain = "TOTAL_RAIN"
     total_snow = "TOTAL_SNOW"
-    datetime_station = DATETIME_STATION
+    station_id = "STN_ID"
+# now we want the list of values in that DAILY_WEATHER_COLS class/object I have, as a comma-seperated text-string
+DAILY_WEATHER_PROPERTIES = ','.join(DailyWeatherCols)
 
-# now we want the list of values in that DAILY_WEATHER_COLS class/object I have
-# so loop through my class to get a long string of comma-seperated weather properties I want,
-# as I'll need that for API input later
-DAILY_WEATHER_PROPERTIES = ""
-for item in DailyWeatherCols:
-    if item == DATETIME_STATION: continue # skip this and don't include DATETIME_STATION in it
-    # NOTE: the "HOURLY_WEATHER_PROPERTIES" is input for API call, whereas DATETIME_STATION is derived data, so does not exist in API
-    DAILY_WEATHER_PROPERTIES += item + "," # add item and comma after item
-# NOTE: remove the last comma or everything breaks
-DAILY_WEATHER_PROPERTIES = DAILY_WEATHER_PROPERTIES[:-1]
-# NOTE: my list of WEATHER_PROPERTIES are comma separated, BUT LAST ONE DOESN'T HAVE COMMA
+# class HourlyWeatherCols(StrEnum)
 
 # okay, I need to define the types for these; 
 # this site: https://api.weather.gc.ca/openapi?f=html#/climate-daily/getClimate-dailySchema 
@@ -139,7 +118,10 @@ DAILY_WEATHER_PROPERTIES = DAILY_WEATHER_PROPERTIES[:-1]
 
 # class of DailyWeatherCols data-types
 DAILY_WEATHER_DATA_TYPES = MappingProxyType({
-    DailyWeatherCols.climate_identifier: String(10), # this should realistically have less than 10 characters
+    # DailyWeatherCols.climate_identifier: String(10), # this should realistically have less than 10 characters
+    # NOTE: turns out I don't want this for final database lol
+    DailyWeatherCols.station_name: String(30), # name should be string less than 30 chars
+    DailyWeatherCols.climate_identifier: Integer,
     DailyWeatherCols.local_date: Date,
     DailyWeatherCols.mean_temperature: Float,
     DailyWeatherCols.min_temperature: Float,
@@ -147,7 +129,7 @@ DAILY_WEATHER_DATA_TYPES = MappingProxyType({
     DailyWeatherCols.total_precipitation: Float,
     DailyWeatherCols.total_rain: Float,
     DailyWeatherCols.total_snow: Float,
-    DailyWeatherCols.datetime_station: String(30),
+    #DailyWeatherCols.station_3031094: Boolean,#(default=False),
 })
 # NOTE: I could generate this from API call, but it's probably easier to do it manually
 # I'm not querying enough different APIs that have a separate schema API to be worth automating it
@@ -162,6 +144,7 @@ DAILY_WEATHER_DATA_TYPES = MappingProxyType({
 # class of HourlyWeatherCols column-names
 # NOTE: adding `DATETIME_STATION: String,` to end, for custom unique-identifier of table
 class HourlyWeatherCols(StrEnum):
+    station_name = "STATION_NAME"
     climate_identifier = "CLIMATE_IDENTIFIER"
     utc_date = "UTC_DATE"
     local_date = "LOCAL_DATE"
@@ -172,19 +155,22 @@ class HourlyWeatherCols(StrEnum):
     wind_direction = "WIND_DIRECTION"
     wind_speed = "WIND_SPEED"
     weather_eng_desc = "WEATHER_ENG_DESC"
-    datetime_station = DATETIME_STATION
+    # datetime_station = DATETIME_STATION
 
 # create text-description of HourlyWeatherCols
+"""
 HOURLY_WEATHER_PROPERTIES = ""
 for item in HourlyWeatherCols:
-    if item == DATETIME_STATION: continue
+    # if item == DATETIME_STATION: continue
     # NOTE: the "HOURLY_WEATHER_PROPERTIES" is input for API call, whereas DATETIME_STATION is derived data, so does not exist in API
     HOURLY_WEATHER_PROPERTIES += item + "," # add item and comma after item
 # NOTE: remove the last comma or everything breaks
-HOURLY_WEATHER_PROPERTIES = HOURLY_WEATHER_PROPERTIES[:-1]
+HOURLY_WEATHER_PROPERTIES = HOURLY_WEATHER_PROPERTIES[:-1]"""
+HOURLY_WEATHER_PROPERTIES=','.join(HourlyWeatherCols)
 
 # mapping-proxy-type of HourlyWeatherCols data-types
 HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
+    HourlyWeatherCols.station_name: String(30), # name should be string less than 30 chars
     HourlyWeatherCols.climate_identifier: String(10), # this should realistically have less than 10 characters
     HourlyWeatherCols.utc_date: DateTime(timezone=False), # turns out this is a datetime variable???
     HourlyWeatherCols.local_date: DateTime(timezone=False), # turns out this is a datetime variable???
@@ -195,7 +181,7 @@ HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
     HourlyWeatherCols.wind_direction: String,
     HourlyWeatherCols.wind_speed: Float,
     HourlyWeatherCols.weather_eng_desc: String, # long-ass description doesn't have limit lol
-    HourlyWeatherCols.datetime_station: String(30), # datetime + climate identifier should be less than 30
+    # HourlyWeatherCols.datetime_station: String(30), # datetime + climate identifier should be less than 30
 })
 
 

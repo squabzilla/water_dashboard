@@ -3,7 +3,7 @@
 # author: William Hovdestad
 #
 # The goal of this script is to retrieve daily weather data from the following weather station:
-# STATION_NAME: CALGARY INT'L CS; CLIMATE_IDENTIFIER: 3031094;
+# STATION_NAME: CALGARY INTL A; CLIMATE-IDENTIFIERS: 3031092 (older) & 3031093 (newer)
 # This script wants to fetch historical data from Jan-01-2000 up to current date.
 # Because this is looking at daily data, we shouldn't need to worry about timezones.
 
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 # gets file-path, (hopefully) resolves relative path issues, gets grand-parent folder
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # sets working directory to project root - there may be redundancy here but oh well lol
 os.chdir(PROJECT_ROOT)
 # Ensure repository code is importable when this wrapper is run directly.
@@ -35,6 +35,8 @@ import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
 from sqlalchemy import create_engine # stuff needed to connect with postgis database
+import numpy as np # because I guess `np.nan` is better than `pd.NA` for no-data-values in Pandas?
+import pandas as pd # just for merging dataframes, otherwise we use geopandas lol
 import geopandas as gpd # geospatial library, used for GeoDataFrames
 #from shapely.geometry import Point # used to properly format lat/long values for use by GeoPandas
 import httpx # used for calling API
@@ -44,7 +46,7 @@ import json # used for handling export of json data
 # custom modules!
 from backend.helper_progress_bar import update_progress_bar
 from backend.helper_error import CustomErrorMessage
-from backend.helper_PSQL import default_SQL_engine, set_geojson_crs,\
+from backend.helper_PSQL import default_SQL_engine, set_geojson_crs, STATION_NAME, \
     STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DailyWeatherCols, DatabaseTables
 
 
@@ -67,32 +69,45 @@ args = parser.parse_args()
 
 
 ########################################################################################################################
-### section 1: loop-through and fetch historical daily weather data
-### because I can't get pagination to work properly in the API call, 
-### I'm just gonna loop through every year-month combo in the date range I want
+### section 1: paginate through API, using recursive-function to paginate
 
-
-########################################################
-# section 1.1 - set up variables for the looped-API call
-########################################################
+#############################################
+# section 1.0 - set up variables for API call
+#############################################
 
 # url of API
 url = "https://api.weather.gc.ca/collections/climate-daily/items"
 
-#### set variables to help use pagination to get all data ####
-limit = 100
-next_year = datetime.now().year + 1 # variable for start of next year
-years = range(2000,next_year) # years from 2000 thru current-year (stops when it hits `next_year` value)
-months = range(1,13) # months from 1 thru 12 (stops at 13)
+# STATION_NAME = "CALGARY INT'L A"
+
+
+########################################################
+# section 1.1 - create function for API call
+########################################################
+
+# def fetch_daily_climate_items(stn_name, url=url):
 all_data = []
 total_records = 1000 # arbitary total records thats higher then limit, properly set later
-
 # put parameters together in one dictionary
 params = {
-    "limit": limit,
-    "CLIMATE_IDENTIFIER": STATION_CLIMATE_IDENTIFIER,
-    "datetime": "2000-01-01T00:00:00Z/..", # per documentation, this should filter it to dates 2000-01-01 and higher
+    "limit": 1000,
+    # "CLIMATE_IDENTIFIER": STATION_CLIMATE_IDENTIFIER,
+    #"CLIMATE_IDENTIFIER": stn_clim_id,
+    "STATION_NAME": STATION_NAME,
+    "datetime": "2000-01-01T00:00:00Z/..", # per documentation, this should filter it to dates 1956-01-01 and higher
+    # NOTE: first recorded watermain break is 1956/01/01
     "properties": DAILY_WEATHER_PROPERTIES, # filter to specific properties I want from station
+}
+
+STATION_CLIMATE_IDENTIFIERS = ("3031092", "3031093")
+# CQL2 string values must be single-quoted
+ids_clause = ", ".join(f"'{sid}'" for sid in STATION_CLIMATE_IDENTIFIERS)
+
+params = {
+    "limit": 1000,
+    "filter": f"properties.CLIMATE_IDENTIFIER IN ({ids_clause})",
+    "datetime": "2000-01-01T00:00:00Z/..", # per documentation, this should filter it to dates 1956-01-01 and higher
+    "properties": DAILY_WEATHER_PROPERTIES,
 }
 
 
@@ -111,19 +126,28 @@ response_output = response.json() # turn results into json
 response_expected = response_output["numberMatched"] # get expected number of responses
 page_count = (response_expected / params["limit"]).__ceil__()
 
+matches = response_output['numberMatched']
+if matches == 0:
+    raise CustomErrorMessage("ERROR - no matches found. Aborting.")
+
 # loop thru results with pagination!
 
 
-###########################
-# section 1.3 - DO THE LOOP
-###########################
+####################################################
+# section 1.3 - setup variables for progress bar lol
+####################################################
 
 # remember, we're paginating over the API results
 total_iterations = page_count
-prefix = "Fetching historical daily weather data"
+prefix = f"Fetching daily weather records..."
 current_page = 0
 if not args.silent: # this lets us turn off printing the progress bar if we add -s when running!
     update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
+
+
+########################################################################################
+# section 1.4 - setup recursive function, so it calls itself if there's more pages to go
+########################################################################################
 
 # NOTE:
 # the first time we query the API, we include our parameters in the query
@@ -167,41 +191,9 @@ def paginate_url(url, current_page, include_params=False, params=params):
 # whew, all that is done! now we can actually CALL our function
 paginate_url(url, current_page=0, include_params=True)
 
-"""
-# NOTE:
-# keeping this for historical/sentimental reasons, code I used before I properly figured out how to paginate
-
-# setup progress bar first tho
-total_iterations = len(years) * len(months)
-prefix = "Fetching historical weather data"
-count = 0
-update_progress_bar(iteration=count, total=total_iterations, prefix=prefix)
-
-for year in years:
-    for month in months:
-        
-        params["LOCAL_YEAR"] = year
-        params["LOCAL_MONTH"] = month
-
-        response = httpx.get(url, params=params, timeout=60.0) # api call
-        response.raise_for_status() # make sure status is good
-        response_output = response.json() # turn results into json
-        
-        data = response_output.get("features",[])
-        # get items from "features" key, returns empty list (square-brackets) is key missing
-        all_data.extend(data)
-        # add `data` to `all_data`, extend works better than append for REASONS
-
-        # update progress bar
-        count += 1
-        update_progress_bar(iteration=count, total=total_iterations, prefix=prefix)
-print("") # newline print after progress bar is done
-#### DONE THE LOOP ####
-"""
-
 
 ##########################################################
-# section 1.4 - check results, convert to GDF, process GDF
+# section 1.5 - check results, convert to GDF, process GDF
 ##########################################################
 # lets confirm our results match...
 if not args.silent:
@@ -218,12 +210,13 @@ del all_data # we don't need this anymore
 
 # first, set the crs - NOTE: newer geojsons don't have a CRS, and assume EPSG 4326 is CRS
 gdf_daily_weather_data = set_geojson_crs(gdf_daily_weather_data)
-# next, create unique column and double-check uniqueness
-gdf_daily_weather_data[DailyWeatherCols.datetime_station] =\
-    gdf_daily_weather_data[DailyWeatherCols.climate_identifier] + "-" + \
-    gdf_daily_weather_data[DailyWeatherCols.local_date] # merge stuff
-if not gdf_daily_weather_data[DailyWeatherCols.datetime_station].is_unique: # check uniqueness:'
-    raise CustomErrorMessage(f"ERROR - duplicate station-datetime combinations found in historical weather data. Aborting.")
+
+print(f"Number of records: {len(gdf_daily_weather_data)}")
+print("head:")
+print(gdf_daily_weather_data.head(1))
+print(f"'STATION_NAME' values & counts:\n{gdf_daily_weather_data['STATION_NAME'].value_counts()}\n")
+print(f"'CLIMATE_IDENTIFIER' values & counts:\n{gdf_daily_weather_data['CLIMATE_IDENTIFIER'].value_counts()}\n")
+print(f"'STN_ID' values & counts:\n{gdf_daily_weather_data['STN_ID'].value_counts()}\n")
 
 
 
@@ -232,24 +225,28 @@ if not gdf_daily_weather_data[DailyWeatherCols.datetime_station].is_unique: # ch
 # set engine
 engine = default_SQL_engine()
 
-# Add daily-weather-data to PostGIS
-# NOTE: not setting dtype on the weather station; I only really care about dtype if I need to prevent a type-mismatch
-# when adding new hourly/daily data to an existing database table
-gdf_daily_weather_data.to_postgis(DatabaseTables.weather_data_daily, engine, if_exists="replace", index=False,
-                            dtype=dict(DAILY_WEATHER_DATA_TYPES) # unwrap to a regular dict for the function call
-                            )
+if False:
+    # Add daily-weather-data to PostGIS
+    # NOTE: not setting dtype on the weather station; I only really care about dtype if I need to prevent a type-mismatch
+    # when adding new hourly/daily data to an existing database table
+    gdf_daily_weather_data.to_postgis(DatabaseTables.weather_data_daily_2, engine, if_exists="replace", index=False,
+                                dtype=dict(DAILY_WEATHER_DATA_TYPES) # unwrap to a regular dict for the function call
+                                )
 
-# add uniqueness constraint to `TABLE_COLS.datetime_station` after table creation
-sql_command = f"""
-ALTER TABLE {DatabaseTables.weather_data_daily}
-DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_daily}_{DailyWeatherCols.datetime_station};
-ALTER TABLE {DatabaseTables.weather_data_daily}
-ADD CONSTRAINT uq_{DatabaseTables.weather_data_daily}_{DailyWeatherCols.datetime_station} UNIQUE ("{DailyWeatherCols.datetime_station}");
-"""
-with engine.begin() as conn: conn.execute(text(sql_command))
+    # add uniqueness constraint to `TABLE_COLS.datetime_station` after table creation
+    # NOTE: remove that DATETIME_STATION unique constraint just in case it's still there...
+    sql_command = f"""
+    ALTER TABLE {DatabaseTables.weather_data_daily}
+    DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_daily}_DATETIME_STATION;
+    ALTER TABLE {DatabaseTables.weather_data_daily}
+    DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_daily}_{DailyWeatherCols.datetime_station};
+    ALTER TABLE {DatabaseTables.weather_data_daily_2}
+    ADD CONSTRAINT uq_{DatabaseTables.weather_data_daily_2}_{DailyWeatherCols.datetime_station} UNIQUE ("{DailyWeatherCols.datetime_station}");
+    """
+    with engine.begin() as conn: conn.execute(text(sql_command))
 
 
 
-########################################################################################################################
-### END - print script finish statement
-print(f"Script: {__file__} completed at {datetime.now()}")
+    ########################################################################################################################
+    ### END - print script finish statement
+    print(f"Script: {__file__} completed at {datetime.now()}")

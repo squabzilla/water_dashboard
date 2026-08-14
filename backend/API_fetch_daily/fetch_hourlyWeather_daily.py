@@ -1,14 +1,22 @@
 ########################################################################################################################
-# file name: fetch_weather_hourly_historical.py
+# file name: fetch_hourly_weather.py
 # author: William Hovdestad
 #
 # The goal of this script is to retrieve hourly weather data from the following weather station:
 # STATION_NAME: CALGARY INT'L CS; CLIMATE_IDENTIFIER: 3031094;
-# We only want data for the past week, meaning the most recent 7 * 24 = 168 readings.
 #
-# This script is the one that initializes the table in our PostGIS Database.
-# Because this script initializes our table, it's important that table-constraints are added here as well.
-# Later, we will cast `fetch_weather_hourly_current.py` to update the values.
+# This script will be using "climate-hourly" from https://api.weather.gc.ca/openapi
+#
+# The API this script calls only updates daily, giving us data for the previous day.
+# So we will only run this script daily.
+# We only want data for the past week, meaning the most recent 7 * 24 = 168 readings.
+# Hourly-readings over a longer period of time take up a ton of storage, and are confusing to go through,
+# so the decision was made to limit it to just the past week.
+#
+# This script is designed to insert data into an existing PostGIS table in our database.
+# Said table should have been created by `fetch_weather_hourly_historical.py`
+# Specifically, it will insert the data into a temporary staging table, merge the staging-table with the "real" table,
+# then delete the temporary staging table.
 #
 # Note that both of these use the same logic to retrieve raw data - the only difference 
 # is whether the GeoDataFrame of the data is exported as a new table in PostGIS,
@@ -61,7 +69,7 @@ import sys
 from pathlib import Path
 
 # gets file-path, (hopefully) resolves relative path issues, gets grand-parent folder
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # sets working directory to project root - there may be redundancy here but oh well lol
 os.chdir(PROJECT_ROOT)
 # Ensure repository code is importable when this wrapper is run directly.
@@ -114,8 +122,8 @@ datetime_param = str(day_minus_seven) + "T00:00:00Z/.."
 # NOTE: This gives me 12:00am from 7 days ago
 
 ### NOTE: Testing shit
-day_minus_nine = today_date - timedelta(days=9) # subtract 7 days from current date
-datetime_param = str(day_minus_nine) + "T00:00:00Z/.."
+# day_minus_nine = today_date - timedelta(days=9) # subtract 7 days from current date
+# datetime_param = str(day_minus_nine) + "T00:00:00Z/.."
 
 
 # now, setup my parameters variable
@@ -146,25 +154,104 @@ if not gdf[HourlyWeatherCols.datetime_station].is_unique: # check uniqueness:'
 #print(gdf.shape[0]) # print number of records
 
 
-
 ########################################################################################################################
-### section 3 - actually save our data
+### section 2 - save our data, ensuring we only place in NEW values
 
+################
+# set SQL engine
+################
 engine = default_SQL_engine()
+print("datetime_station example")
+print(gdf[HourlyWeatherCols.datetime_station].head())
+"""
+datetime_station example
+0    3031094-2026-07-29 00:00:00
+1    3031094-2026-07-29 01:00:00
+2    3031094-2026-07-29 02:00:00
+3    3031094-2026-07-29 03:00:00
+4    3031094-2026-07-29 04:00:00
+"""
 
-gdf.to_postgis(DatabaseTables.weather_data_hourly, engine, if_exists="replace", index=False,
+############################################
+# Write gdf_new to a temporary staging table
+############################################
+gdf.to_postgis(DatabaseTables.weather_data_hourly_staging, engine, if_exists="replace", index=False,
                             dtype=dict(HOURLY_WEATHER_DATA_TYPES) # unwrap to a regular dict for the function call
                             )
 
-### NOTE: gotta add constraint now 
 
-# make sure column is unique
+###############################################
+# make sure unique column is declared as unique
+###############################################
 sql_command = f"""
-ALTER TABLE {DatabaseTables.weather_data_hourly}
-DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_hourly}_{HourlyWeatherCols.datetime_station};
-ALTER TABLE {DatabaseTables.weather_data_hourly}
-ADD CONSTRAINT uq_{DatabaseTables.weather_data_hourly}_{HourlyWeatherCols.datetime_station} UNIQUE ("{HourlyWeatherCols.datetime_station}");
+ALTER TABLE {DatabaseTables.weather_data_hourly_staging}
+DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_hourly_staging}_{HourlyWeatherCols.datetime_station};
+ALTER TABLE {DatabaseTables.weather_data_hourly_staging}
+ADD CONSTRAINT uq_{DatabaseTables.weather_data_hourly_staging}_{HourlyWeatherCols.datetime_station} UNIQUE ("{HourlyWeatherCols.datetime_station}");
 """
+with engine.begin() as conn: conn.execute(text(sql_command))
+
+
+###############################################################################
+# SQL command to insert only rows from staging that doesn't exist in main table
+###############################################################################
+
+sql_command = f"""
+INSERT INTO {DatabaseTables.weather_data_hourly}
+SELECT * FROM {DatabaseTables.weather_data_hourly_staging}
+ON CONFLICT ("{HourlyWeatherCols.datetime_station}")
+DO UPDATE SET
+"{HourlyWeatherCols.climate_identifier}" = EXCLUDED."{HourlyWeatherCols.climate_identifier}",
+"{HourlyWeatherCols.utc_date}" = EXCLUDED."{HourlyWeatherCols.utc_date}",
+"{HourlyWeatherCols.local_date}" = EXCLUDED."{HourlyWeatherCols.local_date}",
+"{HourlyWeatherCols.temp}" = EXCLUDED."{HourlyWeatherCols.temp}",
+"{HourlyWeatherCols.precip_amount}" = EXCLUDED."{HourlyWeatherCols.precip_amount}",
+"{HourlyWeatherCols.relative_humidity}" = EXCLUDED."{HourlyWeatherCols.relative_humidity}",
+"{HourlyWeatherCols.windchill}" = EXCLUDED."{HourlyWeatherCols.windchill}",
+"{HourlyWeatherCols.wind_direction}" = EXCLUDED."{HourlyWeatherCols.wind_direction}",
+"{HourlyWeatherCols.wind_speed}" = EXCLUDED."{HourlyWeatherCols.wind_speed}",
+"{HourlyWeatherCols.weather_eng_desc}" = EXCLUDED."{HourlyWeatherCols.weather_eng_desc}",
+"{HourlyWeatherCols.datetime_station}" = EXCLUDED."{HourlyWeatherCols.datetime_station}";
+"""
+# NOTE: gah why do I have to put every column name in double quotes
+
+with engine.begin() as conn: conn.execute(text(sql_command))
+# NOTE: I can't just say "on conflict, use the newer records",
+# instead, for rows where it can't insert due to a conflict, I need to specify
+# EACH SPECIFIC COLUMN that I want to update INDIVIDUALLY
+# the EXCLUDED keyword references records that were EXCLUDED from the insert due to conflict
+# so on conflict, for each column, use the excluded one instead
+# but there's no "do this for them all" command, gotta specify each one individually :'(
+
+
+####################################################################
+# remove staging table - first the constraint, then the table itself
+####################################################################
+# SQL command to delete the staging table constraint, and then the entire staging table itself
+# Is that needed? I don't know. Probably not. But I don't wanna worry about ghost constraints lol
+sql_command = f"""
+ALTER TABLE {DatabaseTables.weather_data_hourly_staging}
+DROP CONSTRAINT IF EXISTS uq_{DatabaseTables.weather_data_hourly_staging}_{HourlyWeatherCols.datetime_station};
+DROP TABLE IF EXISTS {DatabaseTables.weather_data_hourly_staging};
+"""
+with engine.begin() as conn: conn.execute(text(sql_command))
+
+
+######################################################################
+# Delete old rows, since I only want hourly records to show last week,
+# Otherwise there's just an overwhelming amount of records to look at.
+######################################################################
+
+# SQL command to delete rows from main table prior to days_minus_seven
+# note - it's easier to just have up to a day of extra info, rather than delete records from over PRECISELY 7 * 24hrs ago
+cutoff_date = datetime.combine(day_minus_seven, time.min) # gets min time on days_minus_seven, so 12:00am
+
+sql_command = f"""
+DELETE FROM {DatabaseTables.weather_data_hourly}
+WHERE "{HourlyWeatherCols.local_date}" < '{cutoff_date}';
+"""
+# NOTE: are you fucking me sideways with a jellyfish why in gods name does the type of fucking quotation mark matter in sql you drunk dumbfuck squirrel
+# NOTE 2: "In PostgreSQL, single quotes (') are used for string literals (text values), while double quotes (") are used for identifiers (table and column names)"
 with engine.begin() as conn: conn.execute(text(sql_command))
 
 

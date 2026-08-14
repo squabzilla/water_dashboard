@@ -4,10 +4,11 @@
 
 
 ########################################################################################################################
-# file name: bash_fetch.sh
+# file name: cron_tasks_hourly.sh
 # author: William Hovdestad
 #
-# Simple script to call my fetch-scripts in order, when starting everything out.
+# This script is intended to be ran every HOURLY by a CRON job.
+# This script will sequentially run every CRON job that I want run on an hourly basis.
 
 
 
@@ -15,9 +16,11 @@
 ### setup - create some variables, set configuration options
 
 # some error handling stuff
-set -euo pipefail
+# set -euo pipefail
+set -uo pipefail
 # Explanation:
 # `set -e` - exit immediately if any command returns an error code, instead of plowing ahead
+# actually, I DON'T want that here, I want it to keep running my other py-scripts
 # `set -u` - treat unset variables as errors
 # `set -o pipefail` - in pipelines specifically, such as `cmd1 | cmd2 | cmd3`, 
 # only the exit (error) code of the LAST command is reported. This makes pipeline fail
@@ -27,7 +30,7 @@ set -euo pipefail
 
 
 ########################################################################################################################
-### config
+### basic config
 
 # Source - https://stackoverflow.com/a/246128
 # Posted by dogbane, modified by community. See post 'Timeline' for change history
@@ -39,42 +42,42 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # gets path of UV bin
 UV_BIN="$(which uv)"
 
+
 ####################
 ### verify uv exists
+####################
 if [ -z "$UV_BIN" ]; then
 # this statement checks if "$UV_BIN" matches the `-z` flag, which is the empty-string
 echo "Error: 'uv' not found in PATH. Install it first."
 exit 1
 fi
 
-#echo "starting fetch historical..."
-#"$UV_BIN" run "$SCRIPT_DIR/fetch_historical_weather.py"
-#echo "starting fetch daily..."
-#"$UV_BIN" run "$SCRIPT_DIR/fetch_daily_weather.py"
-#echo "starting fetch hourly..."
-#"$UV_BIN" run "$SCRIPT_DIR/fetch_hourly_weather.py"
-#echo "done"
 
-echo "BASH: starting \`fetch_weatherstation.py\`..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_station.py"
 
-echo "BASH: starting \`fetch_weather_daily_historical.py\`..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_daily_historical.py"
+########################################################################################################################
+### setup variables for fetch-hourly scripts
+FETCH_HOURLY_DIR="$SCRIPT_DIR/API_fetch_hourly"
 
-echo "BASH: starting \`fetch_weather_daily_current.py\`..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_daily_current.py"
+# fetch_hourlyWeather_hourly
+# fetch_watermainBreaks_hourly
 
-echo "BASH: starting \`fetch_weather_hourly_historical.py\`..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_hourly_historical.py"
+PYSCRIPT__fetch_hourlyWeather_hourly="$FETCH_HOURLY_DIR/fetch_hourlyWeather_hourly.py"
+LOG__fetch_hourlyWeather_hourly="$FETCH_HOURLY_DIR/LOG__fetch_hourlyWeather_hourly.log"
+JOB__fetch_hourlyWeather_hourly="cd $FETCH_HOURLY_DIR && $UV_BIN run $PYSCRIPT__fetch_hourlyWeather_hourly -s >> $LOG__fetch_hourlyWeather_hourly 2>&1"
 
-## echo "BASH: starting \`fetch_weather_hourly_current.py\`..."
-## "$UV_BIN" run "$SCRIPT_DIR/fetch_weather_hourly_current.py"
-# doesn't currently exist, this will fetch my real-time data tho
+PYSCRIPT__fetch_watermainBreaks_hourly="$FETCH_HOURLY_DIR/fetch_watermainBreaks_hourly.py"
+LOG__fetch_watermainBreaks_hourly="$FETCH_HOURLY_DIR/LOG__fetch_watermainBreaks_hourly.log"
+JOB__fetch_watermainBreaks_hourly="cd $FETCH_HOURLY_DIR && $UV_BIN run $PYSCRIPT__fetch_watermainBreaks_hourly -s >> $LOG__fetch_watermainBreaks_hourly 2>&1"
 
-echo "BASH: starting \`fetch_weather_hourly_recent.py\`..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_weather_hourly_recent.py"
 
-echo "BASH: starting \`fetch_watermainBreaks.py\`..."
-"$UV_BIN" run "$SCRIPT_DIR/fetch_watermainBreaks.py"
 
-echo "BASH: Done."
+########################################################################################################################
+### run the fetch-once scripts
+
+echo "BASH: starting \`$FETCH_HOURLY_DIR/fetch_hourlyWeather_hourly.py\`..."
+eval "$JOB__fetch_hourlyWeather_hourly"
+
+echo "BASH: starting \`$FETCH_HOURLY_DIR/fetch_watermainBreaks_hourly.py\`..."
+eval "$JOB__fetch_watermainBreaks_hourly"
+
+echo "done"

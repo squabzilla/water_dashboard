@@ -43,10 +43,12 @@ UV_BIN="$(which uv)"
 ### python scripts we wanna schedule jobs for go here!
 PY_SCRIPT__FETCH_DAILY_WEATHER="$SCRIPT_DIR/fetch_weather_daily_current.py" # gets path of python script
 PY_SCRIPT__FETCH_HOURLY_WEATHER="$SCRIPT_DIR/fetch_weather_hourly_current.py"
+PY_SCRIPT__FETCH_WATERMAINBREAKS="$SCRIPT_DIR/fetch_watermainBreaks.py"
 
 ### Log files - since making a log file is probably useful lol
 LOG__FETCH_DAILY_WEATHER="$SCRIPT_DIR/fetch_daily_weather.log"
 LOG__FETCH_HOURLY_WEATHER="$SCRIPT_DIR/fetch_hourly_weather.log" 
+LOG__FETCH_WATERMAINBREAKS="$SCRIPT_DIR/fetch_watermainbreaks.log"
 
 ###############################################
 ### cron explanation part 1 - time-code command
