@@ -8,3 +8,7 @@ error: Failed to spawn: `/home/willh/water_dashboard/backend/fetch_weather_daily
   Caused by: No such file or directory (os error 2)
 error: Failed to spawn: `/home/willh/water_dashboard/backend/fetch_weather_daily_current.py`
   Caused by: No such file or directory (os error 2)
+error: Failed to spawn: `/home/willh/water_dashboard/backend/fetch_weather_daily_current.py`
+  Caused by: No such file or directory (os error 2)
+error: Failed to spawn: `/home/willh/water_dashboard/backend/fetch_weather_daily_current.py`
+  Caused by: No such file or directory (os error 2)

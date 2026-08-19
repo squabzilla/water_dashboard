@@ -27,14 +27,12 @@ There are two main kinds of data:
 Here is a list of files in the API folder:  
 - `API_Readme.md`  
 This file
-- `base_layers.py`  
+- `base_city_layers.py`  
 Python file that fetches my *City of Calgary* base layers.
-- `waterMainBreaks_APIlogic.py`  
-Python file that contains a function for the API-logic used when querying the *Water Main Breaks* API
 - `waterMainBreaks_backfill.py`  
 Python file that backfills my PostGIS database, with *Water Main Breaks* data from `1956-01-01` onwards.
-- `waterMainBreaks_runHourly.py`  
-Python file for my hourly-query of the *Water Main Breaks* data.
+- `waterMainBreaks_checkAPI.py`  
+Python file for that queries the *Water Main Breaks* data for any updates, by checking the `:created_at` meta-data from Socrata.
 - `weather_APIlogic.py`  
 Python file that contains the core logic for querying *MSC GeoMet* data from `https://api.weather.gc.ca/`
 - `weather_daily_backfill.py`  
@@ -49,6 +47,8 @@ Python file to be run every day to update my **weather_data_hourly** table, usin
 Yes it's almost identical to `weather_hourly_backfill.py`, no I don't care.
 - `weather_hourly_runHourly.py`
 Python file to be run every *hour* to update my **weather_data_hourly** table, using data from `collections/swob-realtime`
+- `weather_stations.py`  
+Python file to fetch our selected weather stations, and put them in our SQL database
 
 
 
@@ -203,8 +203,8 @@ Thus we will supplement this with data from the **swob-realtime** API.
 ***NOTE: WE WILL ONLY BE USING STATION `3031094` FOR THE HOURLY-WEATHER-DATA***  
 The reason for the other two stations is when retrieving data from before our **Primary** source-of-truth, STATION `3031094`, was active.  
 However, for the most recent data, STATION `3031094` is active and has data formatted in the way most suitable for our needs.  
-Plus, the hourly queries to the **swob-realtime** API potentially grab 72 hours of per-minute data, up to 4320 records.  
-We don't want to multiply this by three stations, plus the two other stations don't have **swob-realtime** in our preferred format.  
+To grab data from STATIONS `3031092` and `3031093` in *addition* to `3031094`, we would need to first restructure   
+the hourly-weather-data from `3031092` and `3031093` to match the hourly-weather-data structure from STATION `3031094`.
 
 The **weather_data_hourly** Table is based on the columns from the **climate-hourly** API.  
 Below is a table comparing items from the **weather_data_hourly** table, the **climate-hourly** API, and the **swob-realtime** API.  
