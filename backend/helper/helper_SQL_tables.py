@@ -98,12 +98,18 @@ class DailyWeatherCols(StrEnum):
     station_name = "STATION_NAME"
     climate_identifier = "CLIMATE_IDENTIFIER"
     local_date = "LOCAL_DATE"
+    local_year = "LOCAL_YEAR"
     mean_temperature = "MEAN_TEMPERATURE"
     max_temperature = "MAX_TEMPERATURE"
     min_temperature = "MIN_TEMPERATURE"
     total_precipitation = "TOTAL_PRECIPITATION"
-    total_rain = "TOTAL_RAIN"
-    total_snow = "TOTAL_SNOW"
+    min_rel_humidity = "MIN_REL_HUMIDITY"
+    max_rel_humidity = "MAX_REL_HUMIDITY"
+    snow_on_ground = "SNOW_ON_GROUND"
+    heating_degree_days = "HEATING_DEGREE_DAYS"
+    cooling_degree_days = "COOLING_DEGREE_DAYS"
+    # total_rain = "TOTAL_RAIN" # NOTE: cut from project - see `API_Readme.md` for more details
+    # total_snow = "TOTAL_SNOW" # NOTE: cut from project - see `API_Readme.md` for more details
 
 # now we want the list of values in that DAILY_WEATHER_COLS class/object I have, as a comma-seperated text-string
 DAILY_WEATHER_PROPERTIES = ','.join(DailyWeatherCols)
@@ -118,12 +124,18 @@ DAILY_WEATHER_DATA_TYPES = MappingProxyType({
     DailyWeatherCols.station_name: String(30), # name should be string less than 30 chars
     DailyWeatherCols.climate_identifier: Integer,
     DailyWeatherCols.local_date: Date,
+    DailyWeatherCols.local_year: Integer,
     DailyWeatherCols.mean_temperature: Float,
     DailyWeatherCols.max_temperature: Float,
     DailyWeatherCols.min_temperature: Float,
     DailyWeatherCols.total_precipitation: Float,
-    DailyWeatherCols.total_rain: Float,
-    DailyWeatherCols.total_snow: Float,
+    DailyWeatherCols.min_rel_humidity: Float,
+    DailyWeatherCols.max_rel_humidity: Float,
+    DailyWeatherCols.snow_on_ground: Float,
+    DailyWeatherCols.heating_degree_days: Integer,
+    DailyWeatherCols.cooling_degree_days: Integer,
+    # DailyWeatherCols.total_rain: Float, # NOTE: cut from project - see `API_Readme.md` for more details
+    # DailyWeatherCols.total_snow: Float, # NOTE: cut from project - see `API_Readme.md` for more details
 })
 # NOTE: I could generate this from API call, but it's probably easier to do it manually
 # I'm not querying enough different APIs that have a separate schema API to be worth automating it
@@ -141,13 +153,15 @@ class HourlyWeatherCols(StrEnum):
     station_name = "STATION_NAME"
     climate_identifier = "CLIMATE_IDENTIFIER"
     local_date = "LOCAL_DATE"
-    utc_date = "UTC_DATE"
+    UTC_date = 'UTC_DATE'
+    local_year = "LOCAL_YEAR"
     temp = "TEMP"
     precip_amount = "PRECIP_AMOUNT"
-    #relative_humidity = "RELATIVE_HUMIDITY"
-    # NOTE: because daily-weather only has min and max humidity,
-    # we're not including it in MVP - as otherwise we'd want to calculate avg daily humidity from hrly records,
-    # and that's just outside the scope of MVP product
+    relative_humidity = "RELATIVE_HUMIDITY"
+    station_pressure = "STATION_PRESSURE"
+    wind_speed = "WIND_SPEED"
+    wind_direction = "WIND_DIRECTION"
+    dew_point = "DEW_POINT_TEMP"
 
 # create comma-seperated text of HourlyWeatherCols
 HOURLY_WEATHER_PROPERTIES=','.join(HourlyWeatherCols)
@@ -156,12 +170,19 @@ HOURLY_WEATHER_PROPERTIES=','.join(HourlyWeatherCols)
 HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
     HourlyWeatherCols.station_name: String(30), # name should be string less than 30 chars
     HourlyWeatherCols.climate_identifier: Integer,
-    HourlyWeatherCols.utc_date: DateTime(timezone=False), # turns out this is a datetime variable???
     HourlyWeatherCols.local_date: DateTime(timezone=False), # turns out this is a datetime variable???
+    HourlyWeatherCols.UTC_date: DateTime(timezone=False), # turns out this is a datetime variable???
+    HourlyWeatherCols.local_year: Integer,
     HourlyWeatherCols.temp: Float,
     HourlyWeatherCols.precip_amount: Float,
-    #HourlyWeatherCols.relative_humidity: Float,
+    HourlyWeatherCols.relative_humidity: Float,
+    HourlyWeatherCols.station_pressure: Float,
+    HourlyWeatherCols.wind_speed: Float,
+    HourlyWeatherCols.wind_direction: Float,
+    HourlyWeatherCols.dew_point: Float,
 })
+
+#weatherHourly_SWOBrealtime_conversion = 
 
 
 

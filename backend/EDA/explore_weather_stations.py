@@ -332,9 +332,8 @@ print("")
 
 ####################################################################################################
 ### step 5.2 - save our data as json, to make output data easier to use in the future
-output_json = Path(PROJECT_ROOT) / "backend" / "test_data" / "weather_stations.json"
-with open(output_json, "w") as f:
-    json.dump(filtered, f, indent=2)
+output_json = Path(PROJECT_ROOT) / "backend" / "EDA" / "test_data" / "weather_stations.json"
+#with open(output_json, "w") as f: json.dump(filtered, f, indent=2)
 
 
 
@@ -342,8 +341,22 @@ with open(output_json, "w") as f:
 ### step 6 - we're actually gonna make a dataframe of all our weather_stations, save to csv,
 ###          and manually examine them ourself
 
-
 import pandas as pd
+import geopandas as gpd
+
+gdf = gpd.GeoDataFrame.from_features(stations)
+
+select_cols =\
+['STN_ID','STATION_NAME','LATITUDE','LONGITUDE','CLIMATE_IDENTIFIER','FIRST_DATE','LAST_DATE','HLY_FIRST_DATE',\
+ 'HLY_LAST_DATE','DLY_FIRST_DATE','DLY_LAST_DATE','MLY_FIRST_DATE','MLY_LAST_DATE',\
+ 'HAS_MONTHLY_SUMMARY','HAS_NORMALS_DATA','HAS_HOURLY_DATA','distance_km','geometry']
+gdf = gdf[select_cols]
+gdf = gdf.set_crs("EPSG:4326")
+output_file = Path(PROJECT_ROOT) / "backend" / "EDA" / "test_data" / "weather_stationgs_geojson.geojson"
+gdf.to_file(output_file, driver='GeoJSON')
+
+#print(gdf.head())
+
 temp_stations = []
 for s in stations:
     temp_stations.append(s["properties"])
@@ -352,12 +365,14 @@ df_stations = pd.DataFrame(temp_stations)
 print("df_station head:")
 print(df_stations.head(1))
 for col in df_stations.columns:
+    break
     print(col)
 
 select_cols =\
-['STN_ID','STATION_NAME','CLIMATE_IDENTIFIER','FIRST_DATE','LAST_DATE','HLY_FIRST_DATE',\
+['STN_ID','STATION_NAME','LATITUDE','LONGITUDE','CLIMATE_IDENTIFIER','FIRST_DATE','LAST_DATE','HLY_FIRST_DATE',\
  'HLY_LAST_DATE','DLY_FIRST_DATE','DLY_LAST_DATE','MLY_FIRST_DATE','MLY_LAST_DATE',\
  'HAS_MONTHLY_SUMMARY','HAS_NORMALS_DATA','HAS_HOURLY_DATA','distance_km']
 df_stations = df_stations[select_cols]
-output_csv = Path(PROJECT_ROOT) / "backend" / "test_data" / "CSV_weather_stations.csv"
+gdf_stations = gpd.GeoDataFrame(df_stations, geometry=gpd.points_from_xy(df_stations.LONGITUDE, df_stations.LATITUDE),crs="EPSG:4326")
+output_csv = Path(PROJECT_ROOT) / "backend" / "EDA" / "test_data" / "CSV_weather_stations.csv"
 df_stations.to_csv(output_csv, index=False)

@@ -127,12 +127,16 @@ I want to retrieve the following *properties* when querying the API:
 - STATION_NAME
 - CLIMATE_IDENTIFIER
 - LOCAL_DATE
+- LOCAL_YEAR
 - MEAN_TEMPERATURE
 - MAX_TEMPERATURE
 - MIN_TEMPERATURE
 - TOTAL_PRECIPITATION
-- TOTAL_RAIN
-- TOTAL_SNOW
+- MIN_REL_HUMIDITY
+- MAX_REL_HUMIDITY
+- SNOW_ON_GROUND
+- HEATING_DEGREE_DAYS
+- COOLING_DEGREE_DAYS
 
 Remember that I want to query data from stations `3031094`, `3031092`, and `3031093`.  
 I have these stations listed here in their *source-of-truth* priority order (see [Weather-Stations](#weather-stations) for more detail on this.)  
@@ -145,40 +149,47 @@ This means during the ***Backfill*** section, I want to grab daily records from 
 I also want to retrieve data from this API ***Daily*** to keep it up-to-date, grabbing the last 30 calendar days of data, and *overwriting* existing data in my DB.  
 Note that this involves querying my data, storing it in a **weather_data_daily_staging** table, and *then* merging it with the main table.
 
-Some code Claude made to merge stations by priority - while I don't want to just *blindly* use Claude code, it's a useful starting point:
+***Note about included and omitted columns:***
 
-```
-import pandas as pd
+##### Daily-Weather: Included and Omitted Columns
 
-# Lower number = higher priority
-STATION_PRIORITY = {
-    "3031094": 1,  # primary
-    "3031092": 2,  # secondary
-    "3031093": 3,  # tertiary
-}
+The goal of the data-pipeline is to have all relevant data for a deep analysis of **Temperature and Watermain-breaks**,  
+even if some (or all) of that analysis ultimately ends up outside of the project scope.  
+It is easier to include extra data in the data-pipeline *from the beginning*,  
+then it is to modify the pipeline to include new data in the future.
 
-def merge_stations_by_priority(
-    dfs: list[pd.DataFrame],
-    date_col: str = "local_date",
-    station_col: str = "CLIMATE_IDENTIFIER",
-) -> pd.DataFrame:
-    combined = pd.concat(dfs, ignore_index=True)
-    combined["_priority"] = combined[station_col].map(STATION_PRIORITY)
+***Included columns:***  
+`STATION_NAME` - useful meta-data.  
+`CLIMATE_IDENTIFIER` - useful meta-data.  
+`LOCAL_DATE` - we want the date of a weather-reading.  
+`LOCAL_YEAR` - makes it easy to filter data by year when retrieving api data.  
+`MEAN_TEMPERATURE` - basic temperature information.  
+`MAX_TEMPERATURE` - basic temperature information.  
+`MIN_TEMPERATURE` - basic temperature information.  
+`TOTAL_PRECIPITATION` - basic temperature information.  
+`MIN_REL_HUMIDITY` - humidity might be relevant for a detailed analysis of watermain-breaks and weather.  
+`MAX_REL_HUMIDITY` - humidity might be relevant for a detailed analysis of watermain-breaks and weather.  
+`SNOW_ON_GROUND` - standing snow can insulate soil and slow frost penetration,  
+while bare/thin snow cover in extreme cold lets frost penetrate deeper and faster.  
+Frost penetration could be very related to watermain-breaks.  
+`HEATING_DEGREE_DAYS` - a standard derived metric for heating demand, and heating demand is potentially related to watermain-breaks.  
+`COOLING_DEGREE_DAYS` - a standard derived metric for cooling demand;  
+while maybe not related to watermain-breaks, it'd feel inconsistent to have `HEATING_DEGREE_DAYS` without `COOLING_DEGREE_DAYS`.
 
-    if combined["_priority"].isna().any():
-        unknown = combined.loc[combined["_priority"].isna(), station_col].unique()
-        raise ValueError(f"No priority mapping for station id(s): {unknown}")
+**Omitted Columns:***  
+`TOTAL_RAIN`, `TOTAL_SNOW`.
 
-    merged = (
-        combined
-        .sort_values([date_col, "_priority"])
-        .drop_duplicates(subset=date_col, keep="first")
-        .drop(columns="_priority")
-        .sort_values(date_col)
-        .reset_index(drop=True)
-    )
-    return merged
-```
+The daily `TOTAL_RAIN` and `TOTAL_SNOW` because they're very complicated to deal with.
+Stations that support daily `TOTAL_RAIN` and `TOTAL_SNOW` do not have hourly `PRECIP_AMOUNT` values;
+conversely, stations that have hourly `PRECIP_AMOUNT` values do not have daily `TOTAL_RAIN` and `TOTAL_SNOW` values.
+
+Because of this, and because the values recorded by different stations are slightly inconsistent with each other,
+the sum of a day's hourly `PRECIP_AMOUNT` will often be inconsistent with the sum of that day's `TOTAL_RAIN` and `TOTAL_SNOW` values,
+even tho both of those should - in theory - be equal to the total daily `TOTAL_PRECIPITATION` value.
+(This also means that a given day's `TOTAL_PRECIPITATION` value will not be consistent with both
+said day's `TOTAL_RAIN` + `TOTAL_SNOW` sum, AND the sum of said day's hourly `PRECIP_AMOUNT` values.)
+
+Thus, it's easier to remove it.
 
 #### Hourly-Weather
 
@@ -193,8 +204,14 @@ First, let's explain the columns that will be in our **weather_data_hourly** tab
 - CLIMATE_IDENTIFIER
 - LOCAL_DATE
 - UTC_DATE
+- LOCAL_YEAR
 - TEMP
 - PRECIP_AMOUNT
+- RELATIVE_HUMIDITY
+- STATION_PRESSURE
+- WIND_SPEED
+- WIND_DIRECTION
+- DEW_POINT_TEMP
 
 The **climate-hourly** API is the best data-source for this, but doesn't include the most recent, real-time data.  
 It is only updated once-per-day, and typically lacks data for the past couple days.
@@ -209,14 +226,35 @@ the hourly-weather-data from `3031092` and `3031093` to match the hourly-weather
 The **weather_data_hourly** Table is based on the columns from the **climate-hourly** API.  
 Below is a table comparing items from the **weather_data_hourly** table, the **climate-hourly** API, and the **swob-realtime** API.  
 *(Note that columns for the* **weather_data_hourly** *table were based on the* **climate-hourly** *API, so there's a 1-1 match there.)*  
-| **weather_data_hourly** table | **climate-hourly** API | **swob-realtime** API |
-|------------------------------ | ---------------------- | --------------------- |
-| STATION_NAME | STATION_NAME | stn_nam-value |
-| CLIMATE_IDENTIFIER | CLIMATE_IDENTIFIER | clim_id-value |
-| UTC_DATE | UTC_DATE | date_tm-value |
-| LOCAL_DATE | LOCAL_DATE | *will need be be calculated from* date_tm-value |
-| TEMP | TEMP | avg_air_temp_pst1hr |
-| PRECIP_AMOUNT | PRECIP_AMOUNT | pcpn_amt_pst1hr |
+| **weather_data_hourly** table | **climate-hourly** API | **swob-realtime** API     | **swob-realtime** unit-of-measurement |
+|-------------------------------|------------------------|---------------------------|---------------------------------------|
+| STATION_NAME                  | STATION_NAME           | stn_nam-value             | stn_nam-uom                           |
+| CLIMATE_IDENTIFIER            | CLIMATE_IDENTIFIER     | clim_id-value             | clim_id-uom                           |
+| LOCAL_DATE                    | LOCAL_DATE             | *calc from* date_tm-value | date_tm-uom                           |
+| UTC_DATE                      | UTC_DATE               | date_tm-value             | date_tm-uom                           |
+| LOCAL_YEAR                    | LOCAL_YEAR             | *calc from* date_tm-value | date_tm-uom                           |
+| TEMP                          | TEMP                   | avg_air_temp_pst1hr       | avg_air_temp_pst1hr-uom               |
+| PRECIP_AMOUNT                 | PRECIP_AMOUNT          | pcpn_amt_pst1hr           | pcpn_amt_pst1hr-uom                   |
+| RELATIVE_HUMIDITY             | RELATIVE_HUMIDITY      | avg_rel_hum_pst1hr        | avg_rel_hum_pst1hr-uom                |
+| STATION_PRESSURE              | STATION_PRESSURE       | stn_pres                  | stn_pres-uom                          |
+| WIND_SPEED                    | WIND_SPEED             | avg_wnd_spd_10m_pst1hr    | avg_wnd_spd_10m_pst1hr-uom            |
+| WIND_DIRECTION                | WIND_DIRECTION         | avg_wnd_dir_10m_pst1hr    | avg_wnd_dir_10m_pst1hr_1-uom          |
+| DEW_POINT_TEMP                | DEW_POINT_TEMP         | avg_dwpt_temp_pst1hr      | avg_dwpt_temp_pst1hr-uom              |
+
+- STATION_NAME
+- CLIMATE_IDENTIFIER
+- LOCAL_DATE
+- UTC_DATE
+- LOCAL_YEAR
+- TEMP
+- PRECIP_AMOUNT
+- RELATIVE_HUMIDITY
+- STATION_PRESSURE
+- WIND_SPEED
+- WIND_DIRECTION
+- DEW_POINT_TEMP
+
+
 
 For the ***Backfill*** step, we will retrieve records for the past two weeks, and export them to our database as a new table.
 
@@ -259,3 +297,55 @@ def nearest_to_hour(
     )
     return result.reset_index().rename(columns={"index": datetime_col})
 ```
+
+##### Hourly-Weather: Included and Omitted Columns
+
+
+#### Unused Weather Data
+
+There are a few weather items that have been striked out, like so: ~~striked-out example~~.  
+These are items that were up for consideration, but have been removed from our project (at least for the time being).  
+We will explain the decision to remove them from the current scope of the project below:
+
+***Daily-Weather: MIN_REL_HUMIDITY, MAX_REL_HUMIDITY, TOTAL_RAIN, TOTAL_SNOW***
+
+***Hourly-Weather: RELATIVE_HUMIDITY***
+
+Items removed:
+
+***Daily-Weather: MIN_REL_HUMIDITY, MAX_REL_HUMIDITY***  
+***Hourly-Weather: RELATIVE_HUMIDITY***  
+
+Explanation:
+
+In order to look at humidity, we would want to see *average* daily humidity in the daily weather;  
+however, this data only has *minimum* and *maximum* humidity, not average.  
+While using the central point between *minimum* and *maximum* is an option,  
+there is a possibility that a strong change in humidity either early or late in the day  
+results in the centre between *minimum* and *maximum* not being an accurate measure of center.  
+
+While average-daily-precipitation could be computed from the hourly data,  
+the process of computing daily-weather values from hourly-weather values  
+is outside the initial scope of this project.  
+
+However, it is worth noting that this represents an area for future potential work  
+once the M.V.P. project has been completed.  
+
+Items removed:
+***Daily-Weather: TOTAL_RAIN, TOTAL_SNOW***
+
+Explanation:
+
+The weather stations that support **TOTAL_RAIN** and **TOTAL_SNOW**  
+(in addition to **TOTAL_PRECIPITATION**)  
+do not have hourly precipitation data.  
+Conversely, stations that *have* hourly precipitation data  
+do not have daily **TOTAL_RAIN** and **TOTAL_SNOW** data.
+
+In order for *daily-rainfall* and *daily-snowfall* data to match *daily-precipitation* data,  
+we need to collect all of them from the same weather station.  
+However, this means that *hourly-precipitation* and *daily-precipitation*  
+come from mis-matched stations, meaning there will often be a discrepancy between  
+the sum of the *hourly-precipitation* data, and the *daily-precipitation* data.  
+Thus, the simplest choice was to remove the **TOTAL_RAIN** and **TOTAL_SNOW** measures  
+from our API-calls.

@@ -36,9 +36,21 @@ import json # used for handling export of json data
 # custom modules!
 from backend.helper_progress_bar import update_progress_bar
 from backend.helper_error import CustomErrorMessage
-from backend.helper_PSQL import default_SQL_engine, set_geojson_crs, STATION_NAME, \
-    STATION_CLIMATE_IDENTIFIER, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
-        DailyWeatherCols, DatabaseTables, HOURLY_WEATHER_PROPERTIES
+from backend.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
+    DailyWeatherCols, HourlyWeatherCols, DatabaseTables, HOURLY_WEATHER_PROPERTIES, \
+    PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
+
+from backend.helper.helper_PSQL_config import default_SQL_engine
+from backend.helper.helper_set_geojson_crs import set_geojson_crs
+
+
+
+########################################################################################################################
+### script-setup 3: pandas print options
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', 1000)
+pd.set_option('display.max_colwidth', None)
 
 
 
@@ -150,48 +162,100 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
 
 
 ########################################################################################################################
-### section 2: preparing to test shit
+### section 2: map station
+def filter_stations_by_priority(df, station_id_col, datetime_col):
+    df = df.copy()
+    STATION_PRIORITY_COL = "station_priority"
+    STATION_PRIORITY_ORDER = {
+        PRIMARY_STATION_ID: 1,
+        SECONDARY_STATION_ID: 2,
+        TERTIARY_STATION_ID: 3,
+    }
+    df[STATION_PRIORITY_COL] = df[station_id_col].map(STATION_PRIORITY_ORDER)
+    df = ( # operation we're doing to df
+        df # start with df
+        .sort_values([datetime_col, STATION_PRIORITY_COL]) # order df by DATETIME, then STATION-PRIORITY
+        .drop_duplicates(subset=datetime_col, keep="first") # drop duplicate datetimes - keep only first record
+        .sort_values(datetime_col) # let's resort stuff by date
+        .reset_index(drop=True) # nasty shit happens if you do operations like this and don't reset index lol
+    )
+    return df
 
-################################################
-# section 2.1 - parameters for all weather-calls
-################################################
+
+
+########################################################################################################################
+### section 2: daily weather
 
 # NOTE: grab all 3 stations IDs - 3031092, 3031093, 3031094, order priority is: 3031094 > 3031092 > 3031093
+# def fetch_MSC_GeoMet_weather(url, params, silent=False):
+def daily_MSC_GeoMet_weather_by_year(year: int = 2025, silent=False):
+    #return 0
 
-STATION_CLIMATE_IDENTIFIERS = ("3031092", "3031093", "3031094")
-# CQL2 string values must be single-quoted
-ids_clause = ", ".join(f"'{sid}'" for sid in STATION_CLIMATE_IDENTIFIERS)
+    ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
+    #ids_clause = f"{PRIMARY_STATION_ID}"
+    ids_clause = f"{SECONDARY_STATION_ID}"
 
+    daily_weather_url = "https://api.weather.gc.ca/collections/climate-daily/items"
+    daily_weather_params = {
+        "limit": 1000,
+        #"CLIMATE_IDENTIFIER": STATION_CLIMATE_IDENTIFIER,
+        "filter": f"properties.{DailyWeatherCols.climate_identifier} IN ({ids_clause})",
+        # "datetime": "1956-01-01T00:00:00Z/..", # per documentation, this should filter it to dates 1956-01-01 and higher
+        #"datetime": f"{start_year}-01-01T00:00:00Z/..", # per documentation, this should filter it to dates {start_year} and higher
+        f"{DailyWeatherCols.local_year}": year,
+        #"properties": DAILY_WEATHER_PROPERTIES,
+    }
 
-############################################
-# section 2.2 - parameters for daily-weather
-############################################
+    print("fetching daily weather...")
+    gdf_daily = fetch_MSC_GeoMet_weather(url=daily_weather_url, params=daily_weather_params)
 
-daily_weather_url = "https://api.weather.gc.ca/collections/climate-daily/items"
-daily_weather_params = {
-    "limit": 1000,
-    #"CLIMATE_IDENTIFIER": STATION_CLIMATE_IDENTIFIER,
-    "filter": f"properties.CLIMATE_IDENTIFIER IN ({ids_clause})",
-    "datetime": "2000-01-01T00:00:00Z/..", # per documentation, this should filter it to dates 1956-01-01 and higher
-    "properties": DAILY_WEATHER_PROPERTIES,
-}
+    gdf_daily[DailyWeatherCols.local_date] = pd.to_datetime(gdf_daily[DailyWeatherCols.local_date]).dt.date # convert to datetime, then force it to just DATE
 
+    # let's filter it by our column priority now
+    gdf_daily = filter_stations_by_priority(gdf_daily,\
+                                            station_id_col=DailyWeatherCols.climate_identifier,\
+                                            datetime_col=DailyWeatherCols.local_date)
+
+    #print(gdf_daily.dtypes)
+
+    #print("head:")
+    #print(gdf_daily.head())
+    #print("tail:")
+    #print(gdf_daily.tail())
+    # NOTE: confirmed to work
+    return gdf_daily
+
+if False:
+    year = 2026
+    gdf = daily_MSC_GeoMet_weather_by_year(year)
+    output_path = Path(PROJECT_ROOT) / "backend" / "API_Current" / f"daily_{year}_stn_{SECONDARY_STATION_ID}_test.csv"
+    gdf.to_csv(output_path, index=False)
 
 #############################################
 # section 2.3 - parameters for hourly-weather
 #############################################
+# NOTE: grab all 3 stations IDs - 3031092, 3031093, 3031094, order priority is: 3031094 > 3031092 > 3031093
 
 hourly_weather_url = "https://api.weather.gc.ca/collections/climate-hourly/items"
 
-def get_hourly_weather_datetime_param():
+"""
+def get_hourly_weather_datetime_param(day_back=7):
     # get proper datetime string to use! first, subtract 1 week from current date
     my_time_zone = ZoneInfo("America/Edmonton")
     today_date = datetime.now(my_time_zone).date() # gets today's date as datetime so I can include timezone, then make it date
-    day_minus_seven = today_date - timedelta(days=7) # subtract 7 days from current date
+    day_minus_seven = today_date - timedelta(days=day_back) # subtract 7 days from current date
     # now, convert it to proper parameter to API call
     datetime_param = str(day_minus_seven) + "T00:00:00Z/.."
     # NOTE: This gives me 12:00am from 7 days ago
     return datetime_param
+
+
+ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
+ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
+ids_clause = f"{PRIMARY_STATION_ID}"
+#ids_clause = f"{SECONDARY_STATION_ID}"
+#ids_clause = f"{TERTIARY_STATION_ID}"
+#ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}"
 
 hourly_weather_params = {
     "limit": 250, # 8 * 25 = 200, I'm getting at most last 8 days * 24 hrs, so this should be good
@@ -200,7 +264,41 @@ hourly_weather_params = {
     "datetime": get_hourly_weather_datetime_param(),
     "properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
 }
+if True:
+    print("\nfetching hourly weather...")
+    gdf_hourly = fetch_MSC_GeoMet_weather(url=hourly_weather_url, params=hourly_weather_params)
+    print(gdf_hourly.head(20))
+    #print(gdf_hourly.tail())
+    #print(gdf_hourly)
+    # NOTE: confirmed to work
+"""
+def hourly_MSC_GeoMet_weather_by_year(year: int = 1956, silent=False):
+    ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
+    hourly_weather_url = "https://api.weather.gc.ca/collections/climate-hourly/items"
+    hourly_weather_params = {
+        "limit": 1000,
+        "filter": f"properties.{HourlyWeatherCols.climate_identifier} IN ({ids_clause})",
+        f"{HourlyWeatherCols.local_year}": year,
+        #"properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
+    }
 
+    print("fetching hourly weather...")
+    gdf_hourly = fetch_MSC_GeoMet_weather(url=hourly_weather_url, params=hourly_weather_params)
+
+    # let's filter it by our column priority now
+    gdf_hourly = filter_stations_by_priority(gdf_hourly,
+                                             station_id_col=DailyWeatherCols.climate_identifier,
+                                             datetime_col=DailyWeatherCols.local_date)
+
+    return gdf_hourly
+
+
+if False:
+    gdf = hourly_MSC_GeoMet_weather_by_year()
+    output_path = Path(PROJECT_ROOT) / "backend" / "API_Current" / "hrly_1955_test.csv"
+    #print(gdf['geometry'].head())
+    #print(gdf.tail())
+    gdf.to_csv(output_path, index=False)
 
 ######################################################
 # section 2.4 - parameters for real-time weather query
@@ -245,26 +343,22 @@ real_time_weather_params = {
     "sortby": "date_tm-value",
     "properties": swob_properties_str_arr, # filter to specific properties I want from station
 }
-
+"""
+print("\nfetching real-time weather data...")
+# gdf_real_time = fetch_MSC_GeoMet_weather(url=real_time_weather_url, params=real_time_weather_params)
+gdf_real_time = fetch_MSC_GeoMet_weather(url=real_time_weather_url, params=real_time_weather_params)
+print(gdf_real_time.head(1))
+print(gdf_real_time.tail(1))
+print(gdf_real_time.columns)
+"""
 
 ########################################################################################################################
 ### section 3: actually testing shit
 
-print("fetching daily weather...")
-gdf_daily = fetch_MSC_GeoMet_weather(url=daily_weather_url, params=daily_weather_params)
-# NOTE: confirmed to work
 
-print("fetching hourly weather...")
-gdf_daily = fetch_MSC_GeoMet_weather(url=hourly_weather_url, params=hourly_weather_params)
-# NOTE: confirmed to work
 
-print("fetching real-time weather data...")
-# gdf_real_time = fetch_MSC_GeoMet_weather(url=real_time_weather_url, params=real_time_weather_params)
-gdf_real_time = fetch_MSC_GeoMet_weather(url=real_time_weather_url, params=real_time_weather_params)
-print("head")
-print(gdf_real_time.head())
-print("tail")
-print(gdf_real_time.tail())
-print(gdf_real_time.columns)
+
+
+
 
 print("done")
