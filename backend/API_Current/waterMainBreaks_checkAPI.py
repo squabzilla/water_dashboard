@@ -24,8 +24,6 @@ os.chdir(PROJECT_ROOT)
 # Ensure repository code is importable when this wrapper is run directly.
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-# get path for environment so I can load it later
-env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 
 

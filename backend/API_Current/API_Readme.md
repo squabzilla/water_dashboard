@@ -45,7 +45,7 @@ Yes it's almost identical to `weather_hourly_runDaily.py`, no I don't care.
 - `weather_hourly_runDaily.py`  
 Python file to be run every day to update my **weather_data_hourly** table, using data from `collections/climate-hourly`  
 Yes it's almost identical to `weather_hourly_backfill.py`, no I don't care.
-- `weather_hourly_runHourly.py`
+- `weather_hourly_runHourly.py`  
 Python file to be run every *hour* to update my **weather_data_hourly** table, using data from `collections/swob-realtime`
 - `weather_stations.py`  
 Python file to fetch our selected weather stations, and put them in our SQL database

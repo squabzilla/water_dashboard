@@ -1,4 +1,27 @@
 ########################################################################################################################
+# file name: weather_APIlogic.py
+# author: William Hovdestad
+#
+# This script contains the main logic for retrieving data from the `MSC GeoMet - GeoMet-OGC-API`
+# Link: https://api.weather.gc.ca/openapi?f=html
+# The point of this script is to create a function called `fetch_MSC_GeoMet_weather` that handles most of the API-logic
+# for paginating through the `MSC GeoMet - GeoMet-OGC-API`, and return the data in GeoDataFrame format.
+# This function is to be used as the structural backfone for the scripts:
+#   `weather_daily_backfill.py`  
+#   `weather_hourly_backfill.py`  
+#   `weather_hourly_runDaily.py`  
+#   `weather_hourly_runHourly.py`  
+#
+# This file starts off with a function called `filter_stations_by_priority` 
+# which will be called by the function `fetch_MSC_GeoMet_weather`
+# So that when it returns the GeoDataFrame, the column filtering/prioritizing is already done.
+#
+# It is worth noting that this function is designed assuming that it is used as intended/expected.
+# It is unfortunately not very robust when it comes to error-handling, or improper use.
+
+
+
+########################################################################################################################
 ### script-setup 1: project-root-setup
 import os
 import sys
@@ -11,8 +34,6 @@ os.chdir(PROJECT_ROOT)
 # Ensure repository code is importable when this wrapper is run directly.
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-# get path for environment so I can load it later
-env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 
 
@@ -20,7 +41,6 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 ### script-setup 2: library imports
 import argparse # used for adding command line arguments to script
 from datetime import date, datetime, time, timedelta, timezone # for getting current date
-from zoneinfo import ZoneInfo # for time zones
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
@@ -38,9 +58,8 @@ from backend.helper_progress_bar import update_progress_bar
 from backend.helper_error import CustomErrorMessage
 from backend.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
     DailyWeatherCols, HourlyWeatherCols, DatabaseTables, HOURLY_WEATHER_PROPERTIES, \
-    PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
-
-from backend.helper.helper_PSQL_config import default_SQL_engine
+    PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID, \
+    SWOB_PROPERTIES, HOURLY_SWOB_CONVERSION
 from backend.helper.helper_set_geojson_crs import set_geojson_crs
 
 
@@ -55,12 +74,41 @@ pd.set_option('display.max_colwidth', None)
 
 
 ########################################################################################################################
-### section 1: function to actually fetch weather lol
+### section 1: some error-functions
+#class Error_APItimeout
+
+
+
+########################################################################################################################
+### section 1: filter stations by priority
+def filter_stations_by_priority(df, station_id_col="CLIMATE_IDENTIFIER", datetime_col="LOCAL_DATE"):
+    df = df.copy()
+    STATION_PRIORITY_COL = "station_priority"
+    STATION_PRIORITY_ORDER = {
+        PRIMARY_STATION_ID: 1,
+        SECONDARY_STATION_ID: 2,
+        TERTIARY_STATION_ID: 3,
+    }
+    df[STATION_PRIORITY_COL] = df[station_id_col].map(STATION_PRIORITY_ORDER)
+    df = ( # operation we're doing to df
+        df # start with df
+        .sort_values([datetime_col, STATION_PRIORITY_COL]) # order df by DATETIME, then STATION-PRIORITY
+        .drop_duplicates(subset=datetime_col, keep="first") # drop duplicate datetimes - keep only first record
+        .sort_values(datetime_col) # let's resort stuff by date
+        .reset_index(drop=True) # nasty shit happens if you do operations like this and don't reset index lol
+    )
+    df = df.drop(columns=[STATION_PRIORITY_COL]) # we don't need this column anymore, lets remove it
+    return df
+
+
+
+########################################################################################################################
+### section 2: function to actually fetch weather lol
 
 def fetch_MSC_GeoMet_weather(url, params, silent=False):
 
     ##############################################################
-    # section 1.1 - quick query to determine total number of items
+    # section 2.1 - quick query to determine total number of items
     ##############################################################
     
     og_limit = params["limit"]
@@ -77,7 +125,7 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
 
 
     ##################################
-    # section 1.2 - start progress bar
+    # section 2.2 - start progress bar
     ##################################
     
     total_iterations = page_count
@@ -85,16 +133,68 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
     current_page = 0
     if not silent:
         update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
+    
 
 
     ###########################################################
-    # section 1.3 - setup and actually start recursive API call
+    # section 2.3 - setup and actually start recursive API call
     ###########################################################
+    # NOTE: let's try to make it a while-loop lol
     
     # first, create empty variable to hold data
     all_data = []
 
+    # first page
+    current_page += 1
+    response = httpx.get(url, params=params, timeout=60.0)
+    response.raise_for_status() # make sure status is good
+    response_output = response.json() # turn results into json# get data from API call
+
+    data = response_output.get("features",[])
+    # get items from "features" key, returns empty list (square-brackets) is key missing
+    all_data.extend(data)
+    # add `data` to `all_data`, extend works better than append for REASONS
+    
+    # now let's increase our progress bar, since we just added some data
+    if not silent:
+        update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
+
+    # now we look for the URL of the "next" page, and call this function again if we find it
+    next_url = None
+    links = response_output["links"]
+    for item in links:
+        if item["rel"] == "next":
+        # "rel" is like the key for the, uh, 'rank' of the link? as opposed to its title/name?
+            next_url = item["href"]
+
+    while next_url:
+        current_page += 1
+        if current_page > page_count: break # emergency exit just-in-case
+
+        response = httpx.get(next_url, timeout=60.0) # api call
+        response.raise_for_status() # make sure status is good
+        response_output = response.json() # turn results into json# get data from API call
+
+        data = response_output.get("features",[])
+        # get items from "features" key, returns empty list (square-brackets) is key missing
+        all_data.extend(data)
+        # add `data` to `all_data`, extend works better than append for REASONS
+        
+        # now let's increase our progress bar, since we just added some data
+        if not silent:
+            update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
+
+        # now we look for the URL of the "next" page, and call this function again if we find it
+        next_url = None
+        links = response_output["links"]
+        for item in links:
+            if item["rel"] == "next":
+            # "rel" is like the key for the, uh, 'rank' of the link? as opposed to its title/name?
+                next_url = item["href"]
+    """
     # HERE is the recursive function to paginate URL!
+    all_data = []
+    current_page = 0
     def paginate_url(url, current_page, include_params=False, params=params):
     # recursive function, to be called by this function
 
@@ -128,14 +228,16 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
             if item["rel"] == "next":
             # "rel" is like the key for the, uh, 'rank' of the link? as opposed to its title/name?
                 new_url = item["href"]
+                print(f"next url: {new_url}")
                 paginate_url(new_url, current_page)
 
     # whew, all that is done! now we can actually CALL our function
     paginate_url(url, current_page=0, include_params=True)
+    """
 
 
     ######################################################
-    # section 1.4 - check results, convert to GDF, set CRS
+    # section 2.4 - check results, convert to GDF, set CRS
     ######################################################
     
     # lets confirm our results match...
@@ -153,33 +255,19 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
     # first, set the crs - NOTE: newer geojsons don't have a CRS, and assume EPSG 4326 is CRS
     gdf = set_geojson_crs(gdf)
 
+
+    ##########################################################################
+    # section 2.5 - call our function to filter the stations by their priority
+    ##########################################################################
+
+    # filter_stations_by_priority(df, station_id_col, datetime_col)
+    gdf = filter_stations_by_priority(gdf)
+
     #################
     # return the data
     #################
 
     return gdf
-
-
-
-########################################################################################################################
-### section 2: map station
-def filter_stations_by_priority(df, station_id_col, datetime_col):
-    df = df.copy()
-    STATION_PRIORITY_COL = "station_priority"
-    STATION_PRIORITY_ORDER = {
-        PRIMARY_STATION_ID: 1,
-        SECONDARY_STATION_ID: 2,
-        TERTIARY_STATION_ID: 3,
-    }
-    df[STATION_PRIORITY_COL] = df[station_id_col].map(STATION_PRIORITY_ORDER)
-    df = ( # operation we're doing to df
-        df # start with df
-        .sort_values([datetime_col, STATION_PRIORITY_COL]) # order df by DATETIME, then STATION-PRIORITY
-        .drop_duplicates(subset=datetime_col, keep="first") # drop duplicate datetimes - keep only first record
-        .sort_values(datetime_col) # let's resort stuff by date
-        .reset_index(drop=True) # nasty shit happens if you do operations like this and don't reset index lol
-    )
-    return df
 
 
 
@@ -193,7 +281,7 @@ def daily_MSC_GeoMet_weather_by_year(year: int = 2025, silent=False):
 
     ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
     #ids_clause = f"{PRIMARY_STATION_ID}"
-    ids_clause = f"{SECONDARY_STATION_ID}"
+    #ids_clause = f"{SECONDARY_STATION_ID}"
 
     daily_weather_url = "https://api.weather.gc.ca/collections/climate-daily/items"
     daily_weather_params = {
@@ -203,11 +291,11 @@ def daily_MSC_GeoMet_weather_by_year(year: int = 2025, silent=False):
         # "datetime": "1956-01-01T00:00:00Z/..", # per documentation, this should filter it to dates 1956-01-01 and higher
         #"datetime": f"{start_year}-01-01T00:00:00Z/..", # per documentation, this should filter it to dates {start_year} and higher
         f"{DailyWeatherCols.local_year}": year,
-        #"properties": DAILY_WEATHER_PROPERTIES,
+        "properties": DAILY_WEATHER_PROPERTIES,
     }
 
     print("fetching daily weather...")
-    gdf_daily = fetch_MSC_GeoMet_weather(url=daily_weather_url, params=daily_weather_params)
+    gdf_daily = fetch_MSC_GeoMet_weather(url=daily_weather_url, params=daily_weather_params, silent=True)
 
     gdf_daily[DailyWeatherCols.local_date] = pd.to_datetime(gdf_daily[DailyWeatherCols.local_date]).dt.date # convert to datetime, then force it to just DATE
 
@@ -225,12 +313,13 @@ def daily_MSC_GeoMet_weather_by_year(year: int = 2025, silent=False):
     # NOTE: confirmed to work
     return gdf_daily
 
-if False:
-    year = 2026
+if True:
+    year = 2023
     gdf = daily_MSC_GeoMet_weather_by_year(year)
-    output_path = Path(PROJECT_ROOT) / "backend" / "API_Current" / f"daily_{year}_stn_{SECONDARY_STATION_ID}_test.csv"
-    gdf.to_csv(output_path, index=False)
-
+    print(gdf.head())
+    #output_path = Path(PROJECT_ROOT) / "backend" / "API_Current" / f"daily_{year}_stn_{SECONDARY_STATION_ID}_test.csv"
+    #gdf.to_csv(output_path, index=False)
+"""
 #############################################
 # section 2.3 - parameters for hourly-weather
 #############################################
@@ -238,40 +327,7 @@ if False:
 
 hourly_weather_url = "https://api.weather.gc.ca/collections/climate-hourly/items"
 
-"""
-def get_hourly_weather_datetime_param(day_back=7):
-    # get proper datetime string to use! first, subtract 1 week from current date
-    my_time_zone = ZoneInfo("America/Edmonton")
-    today_date = datetime.now(my_time_zone).date() # gets today's date as datetime so I can include timezone, then make it date
-    day_minus_seven = today_date - timedelta(days=day_back) # subtract 7 days from current date
-    # now, convert it to proper parameter to API call
-    datetime_param = str(day_minus_seven) + "T00:00:00Z/.."
-    # NOTE: This gives me 12:00am from 7 days ago
-    return datetime_param
 
-
-ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
-ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
-ids_clause = f"{PRIMARY_STATION_ID}"
-#ids_clause = f"{SECONDARY_STATION_ID}"
-#ids_clause = f"{TERTIARY_STATION_ID}"
-#ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}"
-
-hourly_weather_params = {
-    "limit": 250, # 8 * 25 = 200, I'm getting at most last 8 days * 24 hrs, so this should be good
-    #"CLIMATE_IDENTIFIER": STATION_CLIMATE_IDENTIFIER,
-    "filter": f"properties.CLIMATE_IDENTIFIER IN ({ids_clause})",
-    "datetime": get_hourly_weather_datetime_param(),
-    "properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
-}
-if True:
-    print("\nfetching hourly weather...")
-    gdf_hourly = fetch_MSC_GeoMet_weather(url=hourly_weather_url, params=hourly_weather_params)
-    print(gdf_hourly.head(20))
-    #print(gdf_hourly.tail())
-    #print(gdf_hourly)
-    # NOTE: confirmed to work
-"""
 def hourly_MSC_GeoMet_weather_by_year(year: int = 1956, silent=False):
     ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
     hourly_weather_url = "https://api.weather.gc.ca/collections/climate-hourly/items"
@@ -330,6 +386,23 @@ swob_properties_list = [
 	"pcpn_amt_pst1hr", # NOTE: unit is mm
 ]
 swob_properties_str_arr = ",".join(swob_properties_list)
+print(f"swob_properties_str_arr v1:\n{swob_properties_str_arr}\n")
+swob_properties_str_arr = SWOB_PROPERTIES
+print(f"swob_properties_str_arr v2:\n{swob_properties_str_arr}")
+
+swob_properties_list = [
+    "stn_nam-value",
+    "clim_id-value",
+    "avg_air_temp_pst1hr", "avg_air_temp_pst1hr-uom",
+    "pcpn_amt_pst1hr", "pcpn_amt_pst1hr-uom",
+    "avg_rel_hum_pst1hr", "avg_rel_hum_pst1hr-uom",
+    "stn_pres", "stn_pres-uom",
+    "avg_wnd_spd_10m_pst1hr", "avg_wnd_spd_10m_pst1hr-uom",
+    "avg_wnd_dir_10m_pst1hr", "avg_wnd_dir_10m_pst1hr_1-uom",
+    "avg_dwpt_temp_pst1hr", "avg_dwpt_temp_pst1hr-uom"
+]
+#swob_properties_str_arr = ",".join(swob_properties_list)
+
 
 # set parameters for API query
 # NOTE: this is the "main" one I'm using
@@ -343,22 +416,24 @@ real_time_weather_params = {
     "sortby": "date_tm-value",
     "properties": swob_properties_str_arr, # filter to specific properties I want from station
 }
-"""
-print("\nfetching real-time weather data...")
+print("fetching real-time weather data...")
 # gdf_real_time = fetch_MSC_GeoMet_weather(url=real_time_weather_url, params=real_time_weather_params)
-gdf_real_time = fetch_MSC_GeoMet_weather(url=real_time_weather_url, params=real_time_weather_params)
-print(gdf_real_time.head(1))
-print(gdf_real_time.tail(1))
-print(gdf_real_time.columns)
+if True:
+    gdf = fetch_MSC_GeoMet_weather(url=real_time_weather_url, params=real_time_weather_params)
+    gdf = gdf.rename(columns=dict(HOURLY_SWOB_CONVERSION))
+    #print(gdf.tail())
+    #print(type(gdf)) # okay so it is geodataframe
+    #print(gdf[HourlyWeatherCols.UTC_date].tail(1))
+    print(gdf.columns[gdf.columns.duplicated()])
+    gdf[HourlyWeatherCols.UTC_date] = pd.to_datetime(gdf[HourlyWeatherCols.UTC_date])
+    gdf[HourlyWeatherCols.local_date] = gdf[HourlyWeatherCols.UTC_date].dt.tz_convert("America/Edmonton")
+    gdf[HourlyWeatherCols.local_year] = gdf[HourlyWeatherCols.local_date].dt.year
+    #gdf_real_time['date_tm-value']
+    #print(gdf_real_time.head(1))
+    print(gdf.tail(1))
+    print(gdf.columns)
+    output_path = Path(PROJECT_ROOT) / "backend" / "API_Current" / "SWOB_test.csv"
+    gdf.to_csv(output_path, index=False)
+
+
 """
-
-########################################################################################################################
-### section 3: actually testing shit
-
-
-
-
-
-
-
-print("done")

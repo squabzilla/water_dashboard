@@ -182,7 +182,21 @@ HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
     HourlyWeatherCols.dew_point: Float,
 })
 
-#weatherHourly_SWOBrealtime_conversion = 
+HOURLY_SWOB_CONVERSION = MappingProxyType({
+    "stn_nam-value": f"{HourlyWeatherCols.station_name}",
+    "clim_id-value": f"{HourlyWeatherCols.climate_identifier}",
+    "date_tm-value": f"{HourlyWeatherCols.UTC_date}",
+    "avg_air_temp_pst1hr": f"{HourlyWeatherCols.temp}", # celcius
+    "pcpn_amt_pst1hr": f"{HourlyWeatherCols.precip_amount}", # mm
+    "avg_rel_hum_pst1hr": f"{HourlyWeatherCols.relative_humidity}", # %
+    "stn_pres": f"{HourlyWeatherCols.station_pressure}", # hPa
+    "avg_wnd_spd_10m_pst1hr": f"{HourlyWeatherCols.wind_speed}", # km/h
+    "avg_wnd_dir_10m_pst1hr": f"{HourlyWeatherCols.wind_direction}", # degrees
+    "avg_dwpt_temp_pst1hr": f"{HourlyWeatherCols.dew_point}", # celcius
+})
+# fuck-off, not accepting my variable-values unless I tell you its a variable in a f-string
+
+SWOB_PROPERTIES = ','.join(HOURLY_SWOB_CONVERSION)
 
 
 
