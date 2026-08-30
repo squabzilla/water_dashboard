@@ -53,7 +53,9 @@ import httpx # used for calling API
 #from dateutil.parser import parse # used for properly formatting DATE data into datetime variables
 import json # used for handling export of json data
 
-# custom modules!
+### tenacity stuff for API calls, and recalling because an API call failed or something
+
+### custom modules!
 from backend.helper_progress_bar import update_progress_bar
 from backend.helper_error import CustomErrorMessage
 from backend.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
@@ -76,6 +78,21 @@ pd.set_option('display.max_colwidth', None)
 ########################################################################################################################
 ### section 1: some error-functions
 #class Error_APItimeout
+
+#class APIFetchError(Exception):
+#    """Base class for backfill-related failures."""
+
+#class APITimeoutError(APIFetchError):
+#    """Network timeout calling the GeoMet API."""
+
+#class APIResponseError(APIFetchError):
+#    """API responded, but the payload was malformed or unexpected."""
+
+#class APICountMismatch(APIFetchError):
+#    """API responded, but we have inconsistency between expected results and actual results"""
+
+#class DBError(APIFetchError):
+#    """DB write failed (constraint violation, connection issue, etc.)."""
 
 
 
@@ -114,9 +131,11 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
     og_limit = params["limit"]
     params["limit"] = 1
     response = httpx.get(url, params=params) # api call
-    params["limit"] = og_limit # reset limit back to what it should be
     response.raise_for_status() # make sure status is good
     response_output = response.json() # turn results into json
+
+    params["limit"] = og_limit # reset limit back to what it should be
+
     response_expected = response_output["numberMatched"] # get expected number of responses
     # NOTE: fail here if API meta-data says we have no results
     if response_expected == 0:
@@ -166,12 +185,12 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
         if item["rel"] == "next":
         # "rel" is like the key for the, uh, 'rank' of the link? as opposed to its title/name?
             next_url = item["href"]
-
+    params=None
     while next_url:
         current_page += 1
         if current_page > page_count: break # emergency exit just-in-case
 
-        response = httpx.get(next_url, timeout=60.0) # api call
+        response = httpx.get(next_url, timeout=60.0, params=params) # api call
         response.raise_for_status() # make sure status is good
         response_output = response.json() # turn results into json# get data from API call
 
@@ -191,49 +210,6 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
             if item["rel"] == "next":
             # "rel" is like the key for the, uh, 'rank' of the link? as opposed to its title/name?
                 next_url = item["href"]
-    """
-    # HERE is the recursive function to paginate URL!
-    all_data = []
-    current_page = 0
-    def paginate_url(url, current_page, include_params=False, params=params):
-    # recursive function, to be called by this function
-
-        # Set page number, emergency-return if over page number
-        current_page += 1 # increase the page-count to current page - note that we should START at `current_page = 0`
-        if current_page > page_count: return 0 # emergency return just-in-case
-
-        ## API call - note the if/else statement for if we want to include OUR parameters or not
-        if include_params == True: response = httpx.get(url, params=params, timeout=60.0)
-        # api-call with parameters, if include_params = True - for first API call
-        else:  response = httpx.get(url, timeout=60.0) # api call
-        # api-call WITHOUT parameters, if include_params = False - for second API call & onwards
-
-        # rest of the API call
-        response.raise_for_status() # make sure status is good
-        response_output = response.json() # turn results into json
-
-        # get data from API call
-        data = response_output.get("features",[])
-        # get items from "features" key, returns empty list (square-brackets) is key missing
-        all_data.extend(data)
-        # add `data` to `all_data`, extend works better than append for REASONS
-
-        # now let's increase our progress bar, since we just added some data
-        if not silent:
-            update_progress_bar(iteration=current_page, total=total_iterations, prefix=prefix)
-
-        # now we look for the URL of the "next" page, and call this function again if we find it
-        links = response_output["links"]
-        for item in links:
-            if item["rel"] == "next":
-            # "rel" is like the key for the, uh, 'rank' of the link? as opposed to its title/name?
-                new_url = item["href"]
-                print(f"next url: {new_url}")
-                paginate_url(new_url, current_page)
-
-    # whew, all that is done! now we can actually CALL our function
-    paginate_url(url, current_page=0, include_params=True)
-    """
 
 
     ######################################################
@@ -261,7 +237,7 @@ def fetch_MSC_GeoMet_weather(url, params, silent=False):
     ##########################################################################
 
     # filter_stations_by_priority(df, station_id_col, datetime_col)
-    gdf = filter_stations_by_priority(gdf)
+    # gdf = filter_stations_by_priority(gdf) # let's not do it here, since input parameters might
 
     #################
     # return the data
@@ -295,7 +271,7 @@ def daily_MSC_GeoMet_weather_by_year(year: int = 2025, silent=False):
     }
 
     print("fetching daily weather...")
-    gdf_daily = fetch_MSC_GeoMet_weather(url=daily_weather_url, params=daily_weather_params, silent=True)
+    gdf_daily = fetch_MSC_GeoMet_weather(url=daily_weather_url, params=daily_weather_params, silent=False)
 
     gdf_daily[DailyWeatherCols.local_date] = pd.to_datetime(gdf_daily[DailyWeatherCols.local_date]).dt.date # convert to datetime, then force it to just DATE
 
@@ -319,6 +295,47 @@ if True:
     print(gdf.head())
     #output_path = Path(PROJECT_ROOT) / "backend" / "API_Current" / f"daily_{year}_stn_{SECONDARY_STATION_ID}_test.csv"
     #gdf.to_csv(output_path, index=False)
+
+
+
+########################################################################################################################
+### section 3: hourly weather
+
+def hourly_MSC_GeoMet_weather_by_year(year: int = 2025, silent=False):
+
+    ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
+
+    hourly_weather_url = "https://api.weather.gc.ca/collections/climate-hourly/items"
+
+    hourly_weather_params = {
+            "limit": 1000,
+            "filter": f"properties.{HourlyWeatherCols.climate_identifier} IN ({ids_clause})",
+            f"{HourlyWeatherCols.local_year}": year,
+            "properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
+        }
+
+    print("fetching hourly weather...")
+    gdf_hourly = fetch_MSC_GeoMet_weather(url=hourly_weather_url, params=hourly_weather_params, silent=False)
+
+    gdf_hourly[HourlyWeatherCols.local_date] = pd.to_datetime(gdf_hourly[HourlyWeatherCols.local_date]).dt.date # convert to datetime, then force it to just DATE
+
+    gdf_hourly = filter_stations_by_priority(gdf_hourly,\
+                                             station_id_col=HourlyWeatherCols.climate_identifier,
+                                             datetime_col=HourlyWeatherCols.local_date)
+
+    return gdf_hourly
+
+
+
+if False:
+    year = 2023
+    gdf = hourly_MSC_GeoMet_weather_by_year(year)
+    print(gdf.head())
+
+
+
+
+
 """
 #############################################
 # section 2.3 - parameters for hourly-weather

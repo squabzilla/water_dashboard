@@ -35,22 +35,34 @@ What percentage of total watermain-breaks did this community account for (during
 Because larger communities will generally have more breaks, have a way of normalizing watermain-breaks.  
 Examples: "Breaks per 1000 people, breaks per 1000 households, breaks per X km of watermains"
 
-# Page 3 - Precipitation (Rainfall) and Watermain-breaks
+# Page 3 - Precipitation (Rainfall), Weather, and Watermain-breaks
 
 The user will be able to filter the date-range they are inspecting.  
 The default year for this page will be 2013, the year of the "Hell-or-High-Water" stampede year.
 
 Simple concept: over this (time-period) there was X amount of rain per day, there were Y watermain breaks,  
-and here are the water-main breaks on the map.
+and here are the water-main breaks on the map.  
+
+I also want basic temperature-data here.
+
+Could I do a histogram of rainfall, with the bars coloured based on temperature?
 
 # Page 4 - Temperature and Watermain-breaks
 
 Identifying if temperature-shifts (Chinooks, freezing/thawing events) are correlated with watermain-breaks.
 
+Real talk - not gonna be part of MVP.
+
 # Page 5 - Watermain-breaks Over Time
 
 Shows a chart of watermain-breaks over time.  
-Users can change the time period, and have it show watermain-breaks per community instead of city overall.
+
+Basically, this page is a chart-builder lol.  
+
+Users can change the time period, and have it show watermain-breaks per community instead of city overall.  
+Make sure we have a way to normalize community data.  
+
+
 
 Since there's overlap between this page and page 2, ensure we clearly state distinction.
 

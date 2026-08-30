@@ -1,0 +1,65 @@
+2026-08-29 22:23:18,670 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py started at 2026-08-29 22:23:18.670249
+2026-08-29 22:23:18,670 [INFO] backend.API_Current.weather_helper_backfill: 
+##################################################
+WARNING: START YEAR IS 2025 FOR TEST
+##################################################
+
+2026-08-29 22:23:18,670 [INFO] backend.API_Current.weather_helper_backfill: Backfilling daily weather records for year: 2025
+2026-08-29 22:23:17,904 [ERROR] backend.API_Current.weather_helper_backfill: Inconsistent number of records found for 2025
+Traceback (most recent call last):
+  File "/home/willh/water_dashboard/backend/API_Current/weather_helper_backfill.py", line 116, in backfill_weather_years
+    gdf = MSC_GeoMet_weather_by_year(year)
+  File "/home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py", line 105, in daily_MSC_GeoMet_weather_by_year
+    gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params, job_title=f"historical-daily-weather-records-year-{year}")
+  File "/home/willh/water_dashboard/backend/API_Current/weather_helper_API.py", line 135, in fetch_weather_pages
+    if current_page > page_count + 1: raise APICountMismatchError("Error: max page count exceeded")
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend.helper.helper_API_errors.APICountMismatchError: Error: max page count exceeded
+2026-08-29 22:23:17,906 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py completed at 2026-08-29 22:23:17.906552
+2026-08-29 22:25:09,690 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py started at 2026-08-29 22:25:09.690202
+2026-08-29 22:25:09,690 [INFO] backend.API_Current.weather_helper_backfill: 
+##################################################
+WARNING: START YEAR IS 2025 FOR TEST
+##################################################
+
+2026-08-29 22:25:09,690 [INFO] backend.API_Current.weather_helper_backfill: Backfilling daily weather records for year: 2025
+2026-08-29 22:25:11,006 [ERROR] backend.API_Current.weather_helper_backfill: Inconsistent number of records found for 2025
+Traceback (most recent call last):
+  File "/home/willh/water_dashboard/backend/API_Current/weather_helper_backfill.py", line 116, in backfill_weather_years
+    gdf = MSC_GeoMet_weather_by_year(year)
+  File "/home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py", line 105, in daily_MSC_GeoMet_weather_by_year
+    gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params, job_title=f"historical-daily-weather-records-year-{year}")
+  File "/home/willh/water_dashboard/backend/API_Current/weather_helper_API.py", line 135, in fetch_weather_pages
+    if current_page > page_count + 1: raise APICountMismatchError("Error: max page count exceeded")
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend.helper.helper_API_errors.APICountMismatchError: Error: max page count exceeded
+2026-08-29 22:25:11,008 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py completed at 2026-08-29 22:25:11.008453
+2026-08-29 22:26:17,615 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py started at 2026-08-29 22:26:17.615542
+2026-08-29 22:26:17,615 [INFO] backend.API_Current.weather_helper_backfill: 
+##################################################
+WARNING: START YEAR IS 2025 FOR TEST
+##################################################
+
+2026-08-29 22:26:17,615 [INFO] backend.API_Current.weather_helper_backfill: Backfilling daily weather records for year: 2025
+2026-08-29 22:26:18,829 [INFO] backend.API_Current.weather_helper_backfill: Backfilling daily weather records for year: 2026
+2026-08-29 22:26:17,326 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py completed at 2026-08-29 22:26:17.326793
+2026-08-29 22:30:18,945 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py started at 2026-08-29 22:30:18.945328
+2026-08-29 22:30:18,945 [INFO] backend.API_Current.weather_helper_backfill: 
+##################################################
+WARNING: START YEAR IS 2025 FOR TEST
+##################################################
+
+2026-08-29 22:30:18,945 [INFO] backend.API_Current.weather_helper_backfill: Backfilling daily weather records for year: 2025
+2026-08-29 22:30:17,856 [INFO] backend.API_Current.weather_helper_backfill: Backfilling daily weather records for year: 2026
+2026-08-29 22:30:18,591 [INFO] backend.API_Current.weather_helper_backfill: Number of failed years: 0.
+2026-08-29 22:30:18,591 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py completed at 2026-08-29 22:30:18.591767
+2026-08-29 22:33:32,577 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py started at 2026-08-29 22:33:32.576992
+2026-08-29 22:33:32,577 [INFO] backend.API_Current.weather_helper_backfill: 
+##################################################
+WARNING: START YEAR IS 2025 FOR TEST
+##################################################
+
+2026-08-29 22:33:32,577 [INFO] backend.API_Current.weather_helper_backfill: Backfilling daily weather records for year: 2025
+2026-08-29 22:33:33,628 [INFO] backend.API_Current.weather_helper_backfill: Backfilling daily weather records for year: 2026
+2026-08-29 22:33:34,319 [INFO] backend.API_Current.weather_helper_backfill: Number of failed years: 0.
+2026-08-29 22:33:34,320 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_backfillDaily.py completed at 2026-08-29 22:33:34.320014

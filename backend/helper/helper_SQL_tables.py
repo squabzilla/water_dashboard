@@ -97,7 +97,7 @@ class DatabaseTables(StrEnum):
 class DailyWeatherCols(StrEnum):
     station_name = "STATION_NAME"
     climate_identifier = "CLIMATE_IDENTIFIER"
-    local_date = "LOCAL_DATE"
+    local_date = "LOCAL_DATE" # NOTE: unique column
     local_year = "LOCAL_YEAR"
     mean_temperature = "MEAN_TEMPERATURE"
     max_temperature = "MAX_TEMPERATURE"
@@ -132,8 +132,8 @@ DAILY_WEATHER_DATA_TYPES = MappingProxyType({
     DailyWeatherCols.min_rel_humidity: Float,
     DailyWeatherCols.max_rel_humidity: Float,
     DailyWeatherCols.snow_on_ground: Float,
-    DailyWeatherCols.heating_degree_days: Integer,
-    DailyWeatherCols.cooling_degree_days: Integer,
+    DailyWeatherCols.heating_degree_days: Float, # documentation says `Int`, but I think it lied to me and it's float
+    DailyWeatherCols.cooling_degree_days: Float, # documentation says `Int`, but I think it lied to me and it's float
     # DailyWeatherCols.total_rain: Float, # NOTE: cut from project - see `API_Readme.md` for more details
     # DailyWeatherCols.total_snow: Float, # NOTE: cut from project - see `API_Readme.md` for more details
 })
@@ -141,6 +141,12 @@ DAILY_WEATHER_DATA_TYPES = MappingProxyType({
 # I'm not querying enough different APIs that have a separate schema API to be worth automating it
 # I just need to set dtypes when I need to make sure that newly-queried hourly/daily data matches existing historical data
 # especially if there's no data for that period, so GeoPandas arbitrarily decides what to assign a column with NULL
+
+# ADD CONSTRAINT uq_{DatabaseTables.weather_data_daily_staging}_{DailyWeatherCols.datetime_station} UNIQUE ("{DailyWeatherCols.datetime_station}");
+# uniqueness constraint for SQL
+DAILY_WEATHER_UNIQUE_DATE_CONSTRAINT = f"uq_{DatabaseTables.weather_daily}_{DailyWeatherCols.local_date}"
+DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT = f"uq_{DatabaseTables.weather_daily_staging}_{DailyWeatherCols.local_date}"
+
 
 
 
@@ -185,7 +191,9 @@ HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
 HOURLY_SWOB_CONVERSION = MappingProxyType({
     "stn_nam-value": f"{HourlyWeatherCols.station_name}",
     "clim_id-value": f"{HourlyWeatherCols.climate_identifier}",
+    # NOTE: `HourlyWeatherCols.local_date` will need to be calculated from `HourlyWeatherCols.UTC_date`
     "date_tm-value": f"{HourlyWeatherCols.UTC_date}",
+    # NOTE: `HourlyWeatherCols.local_year` will need to be calculated from `HourlyWeatherCols.local_date`
     "avg_air_temp_pst1hr": f"{HourlyWeatherCols.temp}", # celcius
     "pcpn_amt_pst1hr": f"{HourlyWeatherCols.precip_amount}", # mm
     "avg_rel_hum_pst1hr": f"{HourlyWeatherCols.relative_humidity}", # %
@@ -197,6 +205,10 @@ HOURLY_SWOB_CONVERSION = MappingProxyType({
 # fuck-off, not accepting my variable-values unless I tell you its a variable in a f-string
 
 SWOB_PROPERTIES = ','.join(HOURLY_SWOB_CONVERSION)
+
+# uniqueness constraint for SQL
+HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT = f"uq_{DatabaseTables.weather_hourly}_{HourlyWeatherCols.local_date}"
+HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT = f"uq_{DatabaseTables.weather_hourly_staging}_{HourlyWeatherCols.local_date}"
 
 
 

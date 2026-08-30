@@ -27,39 +27,38 @@ There are two main kinds of data:
 Here is a list of files in the API folder:  
 - `API_Readme.md`  
 This file
-- `base_city_layers.py`  
+- `backfill_base_city_layers.py`  
 Python file that fetches my *City of Calgary* base layers.
 - `waterMainBreaks_backfill.py`  
 Python file that backfills my PostGIS database, with *Water Main Breaks* data from `1956-01-01` onwards.
 - `waterMainBreaks_checkAPI.py`  
 Python file for that queries the *Water Main Breaks* data for any updates, by checking the `:created_at` meta-data from Socrata.
-- `weather_APIlogic.py`  
+
+- `weather_helper_API.py`  
 Python file that contains the core logic for querying *MSC GeoMet* data from `https://api.weather.gc.ca/`
-- `weather_daily_backfill.py`  
-Python file that will backfill my **weather_data_daily** table, using data from `collections/climate-daily`
-- `weather_daily_runDaily.py`  
+- `weather_helper_backfill.py`  
+Python file containing logic for backfilling weather from 1956 (first watermain break record) to current year,  
+using functions from `weatherHelper_API.py`.
+- `weather_helper_filterStationPriority`  
+Python file containing a function to filter weather stations by priority (see [Weather-Stations](#weather-stations))  
+- `weatherData_backfillDaily.py`  
+Python file that will backfill my **weather_data_daily** table,  
+using data from `collections/climate-daily`, with functions from `weatherHelper_backfill.py`.
+- `weatherData_backfillHourly.py`  
+Python file that will backfill my **weather_data_hourly** table in my database,  
+using data from `collections/climate-hourly`, with functions from `weatherHelper_backfill.py`.
+
+
+- `weatherData_updateDailyRecords_runDaily.py`  
 Python file to be run every day to update my **weather_data_daily** table, using data from `collections/climate-daily`
-- `weather_hourly_backfill.py`  
-Python file that will backfill my **weather_data_hourly** table in my database, using data from `collections/climate-hourly`
-Yes it's almost identical to `weather_hourly_runDaily.py`, no I don't care.
-- `weather_hourly_runDaily.py`  
+- `weatherData_updateHourlyRecords_runDaily.py`  
 Python file to be run every day to update my **weather_data_hourly** table, using data from `collections/climate-hourly`  
-Yes it's almost identical to `weather_hourly_backfill.py`, no I don't care.
-- `weather_hourly_runHourly.py`  
+
+- `weatherData_updateHourlyRecords_runHourly.py`  
 Python file to be run every *hour* to update my **weather_data_hourly** table, using data from `collections/swob-realtime`
-- `weather_stations.py`  
+
+- `weatherData_weatherStations.py`  
 Python file to fetch our selected weather stations, and put them in our SQL database
-
-
-
-- `weather_climate-daily.py`  
-Python file that queries *MSC GeoMet* `collections/climate-daily` data.  
-Will have a command-line toggle of `-b` that determines if it 
-and backfills our database from `1956-01-01` onwards.
-- `weather_climate-daily_runDaily.py`  
-Python file that queries *MSC GeoMet* `collections/climate-daily`, and is run once-per-day to update our **weather_data_daily** table.
-- `weather_climate-hourly_runDaily.py`  
-Python file that queries *MSC GeoMet* `collections/climate-hourly`, and is run once-per-day to update our **weather_data_hourly** table.
 
 
 I want TWO weather-data tables:  
