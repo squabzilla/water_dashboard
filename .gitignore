@@ -19,4 +19,4 @@ poddata/
 .ipynb_checkpoints
 
 # probably need need my log files uploaded...
-.log
+*.log
