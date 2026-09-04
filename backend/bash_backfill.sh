@@ -103,6 +103,12 @@ NAME__weatherData_weatherStations="weatherData_weatherStations"
 PYSCRIPT__weatherData_weatherStations="$SCRIPT_DIR/weatherData_weatherStations.py"
 JOB__weatherData_weatherStations="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_weatherStations 2>> $BASH_BACKFILL_LOG"
 
+# backfill of hourly-swob-records to be ran with backfill as well!
+NAME__weatherData_updateHourlyWeather_runHourly="weatherData_updateHourlyWeather_runHourly"
+PYSCRIPT__weatherData_updateHourlyWeather_runHourly="$SCRIPT_DIR/weatherData_updateHourlyWeather_runHourly.py"
+JOB__weatherData_updateHourlyWeather_runHourly="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateHourlyWeather_runHourly -hrs 48 2>> $BASH_BACKFILL_LOG"
+# gotta remember that 48 hour backfill for new jobs!
+
 
 
 ########################################################################################################################
@@ -112,3 +118,4 @@ run_job "$NAME__waterMainBreaks_backfill" "$JOB__waterMainBreaks_backfill"
 run_job "$NAME__weatherData_backfillDaily" "$JOB__weatherData_backfillDaily"
 run_job "$NAME__weatherData_backfillHourly" "$JOB__weatherData_backfillHourly"
 run_job "$NAME__weatherData_weatherStations" "$JOB__weatherData_weatherStations"
+run_job "$NAME__weatherData_updateHourlyWeather_runHourly" "$JOB__weatherData_updateHourlyWeather_runHourly"
