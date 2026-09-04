@@ -1,1 +1,0 @@
-This folder stores scripts we are no longer using, but whose code still might make useful reference material.

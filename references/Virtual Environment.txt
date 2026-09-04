@@ -1,0 +1,151 @@
+~~~ QUICKSTART ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Type `./run.sh` into the console (not including the ` marks).
+Everything should run!
+./run.sh
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+~~~ DEV ENVIRONMENT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    NOTE:
+    This guide assumes the existence of a Python development environment with Git and UV installed.
+
+    Relevant Python links:
+    Link 1: https://www.python.org/ 
+    Link 2: https://www.python.org/downloads/ 
+
+    Relevant Git links:
+    Link 1: https://git-scm.com/
+    Link 2: https://git-scm.com/install/ 
+
+    Relevant UV links:
+    Link 1: https://docs.astral.sh/uv/
+    Link 2: https://github.com/astral-sh/uv
+
+    Instructions on downloading and installing those can be found on their respective sites.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+~~~ VIRTUAL ENVIRONMENT SETUP ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Since this only needs to be done once, instructions for this are at the bottom of the document.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+~~~ RUNNING THE APP ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Type the following in the console to run the `run.sh` script to start the model!
+        `./run.sh`
+    (Do not include ` marks, just copy everything inside the ` marks.)
+
+    This script runs the full command-line argument to properly setup the script.
+
+    The full command-line argument is as follows:
+        `uv run streamlit run streamlit_app.py`
+    (Yeah hit's super awkward, that's why we have the script.)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+~~~ RUNNING ON DIGITAL OCEAN ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Note that all of this needs to be in the "Run Command" section.
+    There is a bash script that does all of it, but the explanation here is hopefully useful.
+
+    First, we need to install UV in the DigitalOcean runtime environment.
+        `curl -LsSf https://astral.sh/uv/install.sh | sh`
+    Now we need to add the install location to path because it's not there for some gods-forsaken reason!?!?!?
+        `source $HOME/.local/bin/env`
+    The actual command to start the app on DigitalOcean:
+        `uv run streamlit run streamlit_app.py --server.port 8501`
+
+
+
+~~~ SETTING UP ENVIRONMENT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    NOTE:
+    This only needs to be done once. Once `pyproject.toml`, `uv.lock`, and `.python-version` exist, 
+    it's all configured and we don't need to do this again.
+
+    Initialize the project with UV. The console command for this is:
+        `uv init`
+    (Do not include ` marks, just copy everything inside the ` marks.)
+    
+    Delete `main.py` since we won't be using it as the main file.
+
+    Make sure to update `.gitignore`, since it likely needs configuration beyond default setup.
+
+    Update `.gitignore` by opening it with a text editor, and adding the following lines below:
+# ignore ms-office temporary backups
+~$*
+
+# ignore temporary files
+*.tmp
+    (Note: the lines to copy are deliberately unindented, as we don't want indents in .gitignore)
+
+    ~~~ SUBSECTION - LOAD REQUIREMENTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Add our the required packages. The console command for this is:
+        `uv add -r requirements.in`
+    (Do not include ` marks, just copy everything inside the ` marks.)
+    NOTE:   The requirements are stored in a `requirements.in` file, because apparently DigitalOcean
+            won't want to use UV if a `requirements.txt` file exists, I guess.
+    
+
+    Doing this should update all the relevant files with the information that makes them happy.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+~~~ DEPRECATED ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This section is deprecated, as we are currently using a different method,
+as we are currently using a different method to setup and run our script with UV as our package manager.
+It is only kept for historical purposes, and as a potentially useful reference.
+
+    Next: make sure we have requirements file.
+    We will call it `requirements.in` to match uv's convention.
+    Note that matching the convention is optional, it just makes it easier to follow their guide without changing much.
+
+    To lock dependencies declared in a requirements.in:
+    `uv pip compile requirements.in -o requirements.txt`
+    Reference: https://docs.astral.sh/uv/pip/compile/#locking-requirements
+
+    Assuming UV can figure everything out and come up with a valid configuration - 
+    it will create a file listing the locked requirements!
+
+    Once setup: create virtual environment with uv
+    `uv venv <name>`
+
+    TransAccel is what I named the virtual environment in UV. So I used:
+    `uv venv TransAccel_env`
+
+    Console command:
+    `uv venv TransAccel_env`
+        output:
+            Using CPython 3.12.5 interpreter at: C:\Program Files\Python312\python.exe
+            Creating virtual environment at: TransAccel_env
+            Activate with: TransAccel_env\Scripts\activate
+
+    Note that the virtual-environment folder was created locally!
+
+    Now we activate the environment, following the instructions providing in the console-command output.
+    `TransAccel_env\Scripts\activate`
+    `source TransAccel_env/bin/activate`
+
+    Note: Powershell initially didn't want to let me run scripts. Modified Powershell so I *could* run stuff.
+    `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+    Reference for this:
+    https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/set-executionpolicy?view=powershell-7.5
+    If we had to do this, we aren't in the virtual environment and still need to activate it:
+        `uv venv TransAccel_env`
+
+    Lock-in the requires for the code (create our proper "requirements.txt" file)
+    `uv pip compile requirements.in -o requirements.txt`
+
+    Install the locked requirements:
+    `uv pip sync requirements.txt`
+
+    Assuming the `requirements.txt` file was properly created, we now have a working virtual environment!
+
+    Now we can run the code.
+
+    Run command from README:
+    streamlit run streamlit_app.py --server.port 8501'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

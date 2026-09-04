@@ -17,3 +17,6 @@ poddata/
 
 # jupyter notebook stuff
 .ipynb_checkpoints
+
+# probably need need my log files uploaded...
+.log
