@@ -38,19 +38,6 @@ BASH_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # that's because the path to the script directory varies by where the git repo was cloned into
 SCRIPT_DIR="$BASH_DIR/API"
 
-# gets path of UV bin
-UV_BIN="$(which uv)" 
-
-### python scripts we wanna schedule jobs for go here!
-PY_SCRIPT__FETCH_DAILY_WEATHER="$SCRIPT_DIR/fetch_weather_daily_current.py" # gets path of python script
-PY_SCRIPT__FETCH_HOURLY_WEATHER="$SCRIPT_DIR/fetch_weather_hourly_current.py"
-PY_SCRIPT__FETCH_WATERMAINBREAKS="$SCRIPT_DIR/fetch_watermainBreaks.py"
-
-### Log files - since making a log file is probably useful lol
-LOG__FETCH_DAILY_WEATHER="$SCRIPT_DIR/fetch_daily_weather.log"
-LOG__FETCH_HOURLY_WEATHER="$SCRIPT_DIR/fetch_hourly_weather.log" 
-LOG__FETCH_WATERMAINBREAKS="$SCRIPT_DIR/fetch_watermainbreaks.log"
-
 ###############################################
 ### cron explanation part 1 - time-code command
 # * * * * * command
@@ -72,41 +59,19 @@ CRON_SCHEDULE_HOURLY="0 * * * *"
 # my fetch-hourly-weather CRON-job will only run daily - not hourly.
 
 
-####################
-### verify uv exists
-if [ -z "$UV_BIN" ]; then
-# this statement checks if "$UV_BIN" matches the `-z` flag, which is the empty-string
-echo "Error: 'uv' not found in PATH. Install it first."
-exit 1
-fi
-
-
 
 ########################################################################################################################
 ### creation and explanation of full cron-job-entry-command that we'll be running if everything is good
 
-CRON_JOB__FETCH_DAILY_WEATHER="$CRON_SCHEDULE_DAILY cd $SCRIPT_DIR && $UV_BIN run $PY_SCRIPT__FETCH_DAILY_WEATHER >> $LOG__FETCH_DAILY_WEATHER 2>&1"
-CRON_JOB__FETCH_HOURLY_WEATHER="$CRON_SCHEDULE_DAILY cd $SCRIPT_DIR && $UV_BIN run $PY_SCRIPT__FETCH_HOURLY_WEATHER >> $LOG__FETCH_HOURLY_WEATHER 2>&1"
-# explanation:
-# `CRON_JOB_1="..."` just assigns everything to the variable `CRON_JOB_1`
-# `$CRON_SCHEDULE_DAILY` calls the variable containing code for WHEN cron runs the job
-# `cd $SCRIPT_DIR &&` tells it to move to repo directory, and ONLY PROCEED IF `cd` SUCCEEDED, so script isn't run from wrong location
-# ` $UV_BIN run $PYTHON_SCRIPT` - the actual command to run the script
-# `>> $LOG_FILE` appends `stdout` to the logfile. Note that `>` is overwrite, `>>` is append.
-# 
-# aside: file descriptors
-# in linux, there are three standard file descriptors (FD):
-# FD    Name        Default Destination
-#  0    stdin       Keyboard input
-#  1    stdout      Terminal
-#  2    stderr      Terminal
-# HOWEVER: if the output is sent to a log file: then `stdout` will go to the file,
-# but stderr will still show up in the terminal
-# so if we want stderr to show up in a log file, we need to redirect it to stdout
-# NOW: let's look at the last piece: `2>&1`
-# `2>` means we're redirecting stderr somewhere - the 'somewhere' is `&1`
-# the `&` part of `&1` says "the following thing is a file descriptor", so `&1` ends up meaning FD1, which is stdout
-# so it gets redirected to the log file!
+# name of run-daily bash script
+BASH_DAILY="cron_tasks_daily.sh"
+# full-text of the CRON job we want scheduled to run DAILY in CRON
+CRON_DAILY="$CRON_SCHEDULE_DAILY cd $BASH_DIR && ./$BASH_DAILY"
+
+# name of the run-hourly bash script
+BASH_HOURLY="cron_tasks_hourly.sh"
+# full-text of the CRON job we want scheduled to run HOURLY in CRON
+CRON_HOURLY="$CRON_SCHEDULE_HOURLY cd $BASH_DIR && ./$BASH_HOURLY"
 
 
 
@@ -117,16 +82,12 @@ CRON_JOB__FETCH_HOURLY_WEATHER="$CRON_SCHEDULE_DAILY cd $SCRIPT_DIR && $UV_BIN r
 ### Bash doesn't support multidimensional arrays like this.
 ### So parallel arrays is the cleanest way to do this.
 
-# script/cron-job 1: FETCH_DAILY_WEATHER
-PYSCRIPT_1="$PY_SCRIPT__FETCH_DAILY_WEATHER"
-CRON_JOB_1="$CRON_JOB__FETCH_DAILY_WEATHER"
+BASH_SCRIPTS=("$BASH_DAILY" "$BASH_HOURLY")
+CRON_JOBS=("$CRON_DAILY" "$CRON_HOURLY")
 
-# script/cron-job 2: FETCH_HOURLY_WEATHER
-PYSCRIPT_2="$PY_SCRIPT__FETCH_HOURLY_WEATHER"
-CRON_JOB_2="$CRON_JOB__FETCH_HOURLY_WEATHER"
-
-PYSCRIPTS=("$PYSCRIPT_1" "$PYSCRIPT_2")
-CRON_JOBS=("$CRON_JOB_1" "$CRON_JOB_2")
+# NOTE: this is way over-engineered because originally I had planned to potentially have LOTS of Python scipts scheduled,
+# but later decided I'd do one BASH script calling all the Python scripts that have the same schedule
+# (and I only ever planned to have 2 schedules: DAILY and HOURLY)
 
 
 
@@ -134,28 +95,28 @@ CRON_JOBS=("$CRON_JOB_1" "$CRON_JOB_2")
 ### for-loop, to loop through all of our scripts
 
 ### START OF FOR-LOOP HERE ##################################
-for i in "${!PYSCRIPTS[@]}"; do
+for i in "${!BASH_SCRIPTS[@]}"; do
 # NOTE:
-# `PYSCRIPTS[@]` refers to all elements of the array `PYSCRIPTS`
+# `BASH_SCRIPTS[@]` refers to all elements of the array `BASH_SCRIPTS`
 # the `${...}` syntax is the parameter/array expansion syntax
 # (remember that `$` tells bash to treat the following thing as a variable, not a string
 # add the exclamation mark `!`, and changing `${VARNAME[@]}` to `${!VARNAME[@]}` gets is the indices/keys instead of the values
 # by getting the index value, it means we can loop through both scripts in parallel
     
-    TEMP_PYSCRIPT="${PYSCRIPTS[$i]}" # <- this syntax gets us the i'th value from the array PYSCRIPTS
+    TEMP_BASH_SCRIPT="${BASH_SCRIPTS[$i]}" # <- this syntax gets us the i'th value from the array BASH_SCRIPTS
     TEMP_CRON_JOB="${CRON_JOBS[$i]}" # <- this syntax gets us the i'th value from the array CRON_JOBS
 
     ### if-statements, to ensure idempotency, or in other words: 
     ### making sure running `setup_cron.sh` won't create duplicate cron entries
     ### START OF IF STATEMENT HERE ##############################
-    if crontab -l 2>/dev/null | grep -qF "$TEMP_PYSCRIPT"; then
+    if crontab -l 2>/dev/null | grep -qF "$TEMP_BASH_SCRIPT"; then
 
         echo "Cron job already exists — skipping."
         # explanation of "if" statement:
         # `crontab -l` prints users crontab things, but gives an error if nothing is found, which is dumb?
         # so `2>/dev/null` redirects the error to a special null file that ignores it, and lets us ignore it
         # `|` pipes stdout from `crontab -l` into next thing, which is:
-        # `grep -qF "$TEMP_PYSCRIPT"` - grep searches TEMP_PYSCRIPT for stuff (searches previous thing that was piped into it)
+        # `grep -qF "$TEMP_BASH_SCRIPT"` - grep searches TEMP_BASH_SCRIPT for stuff (searches previous thing that was piped into it)
         # -q makes grep output quiet since we don't need it to print success/failure;
         # -F means "regular string not regex" because oh god regex a filepath? GG
 
