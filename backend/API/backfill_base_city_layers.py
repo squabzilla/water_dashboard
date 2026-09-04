@@ -29,8 +29,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
-#import argparse # used for adding command line arguments to script
-from datetime import datetime # used to get current time
+from datetime import datetime # for getting date-time stuff
 import psycopg # stuff needed to connect with postgis database
 import pandas as pd # dataframe library, for when I'm not ready to make the DataFrame all Geo quite yet
 import geopandas as gpd # geospatial library, used for GeoDataFrames
@@ -40,12 +39,10 @@ import logging
 
 # custom modules!
 from backend.helper.helper_progress_bar import update_progress_bar
-from backend.helper.helper_error import CustomErrorMessage
 from backend.helper.helper_API_try_except_job import try_except_city_API
 from backend.helper.helper_PSQL_config import default_SQL_engine, DATABASE_CONFIG
-from backend.helper.helper_timezones import AB_TIME, UTC_TIME
-from backend.helper.helper_API_errors import DataPipelineError, \
-    APITimeoutError, APIConnectError, APIResponseError, DBError
+from backend.helper.helper_timezones import AB_TIME
+from backend.helper.helper_API_errors import DBError
 
 
 
@@ -118,18 +115,6 @@ city_layers = [
 ########################################################################################################################
 ### section 2: function that fetches and saves a geojson layer, given a dict with name and url-link
 
-"""# let's add tenacity stuff here
-@retry(
-    retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError)),
-    # decorator itself, and the condition for retrying anything at all
-    stop=stop_after_attempt(4), # tells tenacity when to give up - after 4 attemps (1 initial call, 3 retries)
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-    # wait an increasing time between each attempt;
-    # the `max` setting is redundant since we stop after attempt 4, but redundancy is good in this case
-    before_sleep=before_sleep_log(logger, logging.WARNING),
-    reraise=True,
-)
-"""
 def fetch_city_layer(layer_dict: dict) -> None:
     layer_name = layer_dict[NAME]
     #print(f"Fetching {layer_name}")
@@ -137,21 +122,8 @@ def fetch_city_layer(layer_dict: dict) -> None:
     payload = {"includeSynthetic": False,}
     job_name = f"fetching city layer {layer_name}"
     # `"includeSynthetic": False` prevents auto-generated, made-up columns from showing up, which are annoying
-    """
-    with httpx.Client(timeout=30.0) as client:
-            response = client.post(
-                geojson_url,
-                json=payload,
-                headers={"X-App-Token": DATABASE_CONFIG.app_token.get_secret_value()},
-                auth=(
-                    DATABASE_CONFIG.api_key.get_secret_value(),
-                    DATABASE_CONFIG.api_secret_key.get_secret_value(),
-                ),
-            )
-    response.raise_for_status()
-    """
+    
     response = try_except_city_API(job_name=job_name, url=geojson_url, payload=payload)
-    #json_result = gpd.GeoDataFrame(response.json())["features"]
     json_result = gpd.GeoDataFrame(response)["features"]
     gdf = gpd.GeoDataFrame.from_features(json_result, crs="EPSG:4326")
     engine = default_SQL_engine()
@@ -182,20 +154,7 @@ def main() -> None:
         # progress bar part!
         progress_bar_count += 1
         update_progress_bar(iteration=progress_bar_count, total=total_iterations, prefix=progress_bar_prefix)
-        """
-        try:
-            fetch_city_layer(layer)
-        except httpx.TimeoutException as e:
-            raise APITimeoutError(f"Timed out fetching layer {layer_name} after retries") from e
-        except httpx.ConnectError as e:
-            raise APIConnectError(f"Connection error fetching layer {layer_name} after retries") from e
-        except httpx.HTTPStatusError as e:
-            raise APIResponseError(f"Bad status fetching layer {layer_name}: {e.response.status_code}") from e
-        except (KeyError, json.JSONDecodeError) as e:
-            raise APIResponseError(f"Malformed page while paginating layer {layer_name}: {e}") from e
-        except Exception as e:
-            raise DataPipelineError(f"Unexpected error while fetching layer {layer_name}: {e}") from e
-        """
+
     # log end
     print("") # print statement to fixup progress bar
     logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
@@ -205,7 +164,3 @@ def main() -> None:
 # this function will run by itself if this script is called, including the start & end time pieces
 if __name__ == "__main__":
     main()
-    
-
-
-

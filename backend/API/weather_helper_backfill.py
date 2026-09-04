@@ -32,16 +32,7 @@ if str(PROJECT_ROOT) not in sys.path:
 ########################################################################################################################
 ### script-setup 2: library imports
 from collections.abc import Callable
-# from datetime import date, datetime, time, timedelta, timezone # for getting current date
 from datetime import datetime # for getting current date
-from zoneinfo import ZoneInfo
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
-)
 import httpx
 import json
 import pandas as pd
@@ -50,10 +41,9 @@ import logging
 
 
 # custom libraries!
-from backend.helper.helper_timezones import AB_TIME, UTC_TIME
-from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIConnectError, APIResponseError, \
+from backend.helper.helper_timezones import AB_TIME
+from backend.helper.helper_API_errors import APITimeoutError, APIConnectError, APIResponseError, \
     APIZeroCountError, APICountMismatchError, DataUniquenessConstraintViolation, DBError
-from backend.helper.helper_set_geojson_crs import set_geojson_crs
 from backend.helper.helper_PSQL_config import default_SQL_engine
 from backend.helper.helper_DB_update import export_as_new_table, add_new_records_to_table
 from backend.helper.helper_progress_bar import update_progress_bar

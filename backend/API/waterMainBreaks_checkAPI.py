@@ -31,14 +31,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
-from datetime import datetime # used to get current time
+from datetime import datetime # for getting date-time stuff
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
-from sqlalchemy.orm import Session
-#from shapely.geometry import Point # used to properly format lat/long values for use by GeoPandas
 import httpx # used for calling API
-#from dateutil.parser import parse # used for properly formatting DATE data into datetime variables
 import json # used for handling export of json data
 import logging # for logging stuff
 from tenacity import ( # for retrying APIs so a single timeout doesn't cause a crash
@@ -50,13 +47,10 @@ from tenacity import ( # for retrying APIs so a single timeout doesn't cause a c
 )
 
 # custom modules!
-from backend.helper.helper_timezones import AB_TIME, UTC_TIME
-#from backend.helper_PSQL import default_SQL_engine, DATABASE_CONFIG, DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES
+from backend.helper.helper_timezones import AB_TIME
 from backend.API.waterMainBreaks_backfill import waterMainBreaks_backfill
 from backend.helper.helper_PSQL_config import DATABASE_CONFIG, default_SQL_engine
-from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIResponseError, \
-    APICountMismatchError, APIZeroCountError, DataUniquenessConstraintViolation, DBError
-# def fetch_waterMainBreaks(starting_year, silent_function=False):
+from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIResponseError
 
 
 ########################################################################################################################

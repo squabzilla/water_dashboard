@@ -34,8 +34,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
-import argparse # used for adding command line arguments to script
-from datetime import datetime # used to get current time
+from datetime import datetime # for getting date-time stuff
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
@@ -43,29 +42,19 @@ from sqlalchemy import create_engine # stuff needed to connect with postgis data
 import pandas as pd # dataframe library, for when I'm not ready to make the DataFrame all Geo quite yet
 import geopandas as gpd # geospatial library, used for GeoDataFrames
 from shapely.geometry import shape # used to properly assign/set Geometry values for GeoDataFrame
-#from shapely.geometry import Point # used to properly format lat/long values for use by GeoPandas
 import httpx # used for calling API
-#from dateutil.parser import parse # used for properly formatting DATE data into datetime variables
 import json # used for handling export of json data
 import logging # used to log stuff
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
-)
+
 
 # custom modules!
 from backend.helper.helper_progress_bar import update_progress_bar
-from backend.helper.helper_timezones import AB_TIME, UTC_TIME
-#from backend.helper_PSQL import default_SQL_engine, DATABASE_CONFIG, DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES, set_geojson_crs
-from backend.helper.helper_PSQL_config import DATABASE_CONFIG, default_SQL_engine
+from backend.helper.helper_timezones import AB_TIME
+from backend.helper.helper_PSQL_config import default_SQL_engine
 from backend.helper.helper_SQL_tables import DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES
 from backend.helper.helper_set_geojson_crs import set_geojson_crs
 from backend.helper.helper_API_try_except_job import try_except_city_API
-from backend.helper.helper_API_errors import DataPipelineError, \
-    APITimeoutError, APIResponseError, APICountMismatchError, APIZeroCountError, DBError
+from backend.helper.helper_API_errors import APICountMismatchError, APIZeroCountError, DBError
 
 
 ########################################################################################################################
@@ -95,73 +84,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 
 
 ########################################################################################################################
-### section 1:
-### local helper function to count number of records,
-### and local helper function to get single page
-
-# NOTE: first recorded watermain break is 1956/01/01
-"""
-@retry(
-    retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError)),
-    # decorator itself, and the condition for retrying anything at all
-    stop=stop_after_attempt(4), # tells tenacity when to give up - after 4 attemps (1 initial call, 3 retries)
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-    # wait an increasing time between each attempt;
-    # the `max` setting is redundant since we stop after attempt 4, but redundancy is good in this case
-    before_sleep=before_sleep_log(logger, logging.WARNING),
-    reraise=True,
-)
-def _get_record_count(JSON_QUERY_URL: str, payload: dict, page_size: int) -> int:
-    with httpx.Client(timeout=30.0) as client:
-            response = client.post(
-                JSON_QUERY_URL,
-                json=payload,
-                headers={"X-App-Token": DATABASE_CONFIG.app_token.get_secret_value()},
-                auth=(
-                    DATABASE_CONFIG.api_key.get_secret_value(),
-                    DATABASE_CONFIG.api_secret_key.get_secret_value(),
-                ),
-            )
-            response.raise_for_status()
-            record_count = response.json()[0]["COUNT"]
-            record_count = int(record_count)
-            if record_count == 0:
-                raise APIZeroCountError("ERROR - no matches found. Aborting.")
-    return record_count
-
-
-
-@retry(
-    retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError)),
-    # decorator itself, and the condition for retrying anything at all
-    stop=stop_after_attempt(4), # tells tenacity when to give up - after 4 attemps (1 initial call, 3 retries)
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-    # wait an increasing time between each attempt;
-    # the `max` setting is redundant since we stop after attempt 4, but redundancy is good in this case
-    before_sleep=before_sleep_log(logger, logging.WARNING),
-    reraise=True,
-)
-def _fetchWaterMainBreakPage(GEOJSON_QUERY_URL: str, payload: dict) -> dict:
-    with httpx.Client(timeout=30.0) as client:
-        response = client.post(
-            GEOJSON_QUERY_URL,
-            json=payload,
-            headers={"X-App-Token": DATABASE_CONFIG.app_token.get_secret_value()},
-            auth=(DATABASE_CONFIG.api_key.get_secret_value(),DATABASE_CONFIG.api_secret_key.get_secret_value(),),
-            )
-    response.raise_for_status()
-    return response.json()
-"""
-
-
-
-
-
-
-
-
-########################################################################################################################
-### section 2: loop-through and fetch historical watermain-break data
+### section 1: loop-through and fetch historical watermain-break data
 
 # NOTE: first recorded watermain break is 1956/01/01
 
@@ -193,20 +116,6 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
     # payload - basically the API parameters
     payload = {"query": soql_query, "includeSynthetic": False,}
     # `"includeSynthetic": False` prevents auto-generated, made-up columns from showing up, which are annoying
-    """
-    try:
-        record_count = _get_record_count(JSON_QUERY_URL, payload, page_size)
-    except httpx.TimeoutException as e:
-            raise APITimeoutError(f"Timed out fetching json {JSON_QUERY_URL} after retries") from e
-    except httpx.ConnectError as e:
-        raise APITimeoutError(f"Connection error fetching json {JSON_QUERY_URL} after retries") from e
-    except httpx.HTTPStatusError as e:
-        raise APIResponseError(f"Bad status fetching json {JSON_QUERY_URL}: {e.response.status_code}") from e
-    except (KeyError, json.JSONDecodeError) as e:
-        raise APIResponseError(f"Malformed page while paginating json {JSON_QUERY_URL}: {e}") from e
-    except Exception as e:
-        raise DataPipelineError(f"Unexpected error while fetching json {JSON_QUERY_URL}: {e}") from e
-    """
 
     job_name = "count water-main-break-records"
     record_count_response = try_except_city_API(job_name=job_name, url=JSON_QUERY_URL, payload=payload)
@@ -216,8 +125,6 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
         raise APIZeroCountError(f"ERROR - no matches found during {job_name}. Aborting.")
     page_count = (record_count / page_size).__ceil__()
         
-    #print(f"Page count: {page_count}")
-
 
     #############################################
     # section 1.3 - Loop through all of our pages
@@ -246,26 +153,11 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
         }
         job_name = f"fetch-water-main-break-records-page-{page_number}"
         response_data = try_except_city_API(job_name=job_name, url=GEOJSON_QUERY_URL, payload=payload)
-        """
-        try:
-            response_data = _fetchWaterMainBreakPage(GEOJSON_QUERY_URL, payload)
-        except httpx.TimeoutException as e:
-                raise APITimeoutError(f"Timed out fetching geojson {GEOJSON_QUERY_URL} after retries") from e
-        except httpx.ConnectError as e:
-            raise APITimeoutError(f"Connection error fetching geojson {GEOJSON_QUERY_URL} after retries") from e
-        except httpx.HTTPStatusError as e:
-            raise APIResponseError(f"Bad status fetching geojson {GEOJSON_QUERY_URL}: {e.response.status_code}") from e
-        except (KeyError, json.JSONDecodeError) as e:
-            raise APIResponseError(f"Malformed page while paginating geojson {GEOJSON_QUERY_URL}: {e}") from e
-        except Exception as e:
-            raise DataPipelineError(f"Unexpected error while fetching geojson {GEOJSON_QUERY_URL}: {e}") from e
-        """
         response_data = response_data['features']
         all_data.extend(response_data)
         # add `response.json()` to `all_data`, extend works better than append for REASONS
 
         # update progress bar
-        #if not args.silent:
         if not silent_function:
             update_progress_bar(iteration=page_number, total=total_iterations, prefix=prefix)
 
@@ -282,9 +174,7 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
     gdf = set_geojson_crs(gdf)
 
     # lets confirm our results match...
-    #if not args.silent:
     if not silent_function:
-        #print(f" Expected responses: {row_count}; actual: {len(all_data)}")
         print(f". Expected responses: {record_count}; actual: {len(gdf)}")
     # spit out an error if they don't
     expected_vs_actual_error =\
@@ -325,7 +215,6 @@ def main() -> None:
     logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
 
 
-# call main
-# this function will run by itself if this script is called, including the start & end time pieces
+# call main - this function will run by itself if this script is called, including the start & end time pieces
 if __name__ == "__main__":
     main()

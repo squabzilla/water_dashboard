@@ -38,37 +38,26 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
-import argparse # used for adding command line arguments to script
-from datetime import date, datetime, time, timedelta, timezone # for getting current date
+from datetime import datetime, timedelta # for getting date-time stuff
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
-from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
-from sqlalchemy import create_engine # stuff needed to connect with postgis database
 import numpy as np # because I guess `np.nan` is better than `pd.NA` for no-data-values in Pandas?
 import pandas as pd # just for merging dataframes, otherwise we use geopandas lol
 import geopandas as gpd # geospatial library, used for GeoDataFrames
-#from shapely.geometry import Point # used to properly format lat/long values for use by GeoPandas
 import httpx # used for calling API
-#from dateutil.parser import parse # used for properly formatting DATE data into datetime variables
 import json # used for handling export of json data
 import logging
 
 # custom modules!
-from backend.helper.helper_timezones import AB_TIME, UTC_TIME
-from backend.helper.helper_progress_bar import update_progress_bar
-#from backend.helper_error import CustomErrorMessage
+from backend.helper.helper_timezones import AB_TIME
 from backend.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, \
-    HourlyWeatherCols, DatabaseTables, PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID, \
-        HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
-from backend.helper.helper_set_geojson_crs import set_geojson_crs
+    HourlyWeatherCols, DatabaseTables, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
 from backend.API.weather_helper_API import fetch_weather_pages
 from backend.API.weather_helper_filterStationPriority import filter_stations_by_priority
-from backend.API.weather_helper_backfill import backfill_weather_years
-from backend.helper.helper_API_errors import APITimeoutError, APIResponseError, APICountMismatchError, APIZeroCountError, \
-    DataUniquenessConstraintViolation, DBError
+from backend.helper.helper_API_errors import DataUniquenessConstraintViolation
 from backend.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 from backend.helper.helper_PSQL_config import default_SQL_engine
-from backend.helper.helper_DB_update import export_as_new_table, add_new_records_to_table
+from backend.helper.helper_DB_update import add_new_records_to_table
 
 
 
@@ -104,27 +93,16 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 # def filter_stations_by_priority(df, station_id_col="CLIMATE_IDENTIFIER", datetime_col="LOCAL_DATE"):
 
 def _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days() -> gpd.GeoDataFrame:
-    """
-    # get proper datetime string to use! first, get datetime in current timezone
-    my_time_zone = ZoneInfo("America/Edmonton")
-    today_date = datetime.now(my_time_zone).date() # gets today's date as datetime so I can include timezone, then make it date
-    # now, subtract 2 weeks
-    day_minus_14 = today_date - timedelta(days=14) # subtract 14 days from current date
-    # now, convert it to proper parameter to API call
-    datetime_param = str(day_minus_14) + "T00:00:00Z/.."
-    # NOTE: This gives me 12:00am from 14 days ago
-    """
+    
     # get proper datetime string to use! first, get current time, make it a date, subtract 2 weeks from current date
     day_minus_14 = datetime.now(AB_TIME).date() - timedelta(days=14) # being very explicit with timezones here
     # now, convert it to proper parameter to API call
     datetime_param = str(day_minus_14) + "T00:00:00Z/.."
     # NOTE: This gives me 12:00am from 14 days ago
 
-    # get the stations we want to work with
-    #ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
-    #ids_clause = ", ".join(STATION_CLIMATE_IDENTIFIERS)
     # url of API
     hourly_weather_url = "https://api.weather.gc.ca/collections/climate-hourly/items"
+
     # setup parameters
     hourly_weather_params = {
         "limit": 1000,
@@ -132,14 +110,17 @@ def _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days() -> gpd.GeoDataFrame
         "datetime": datetime_param,
         "properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
     }
+
     gdf = fetch_weather_pages(start_url=hourly_weather_url, params=hourly_weather_params,
                               job_title=f"last-14-hourly-weather-records")
 
     gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier,
                                       datetime_col=HourlyWeatherCols.hwc_local_date)
     # NOTE: dates should be unique now, so let's check that
+    
     if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
         raise DataUniquenessConstraintViolation(f"ERROR: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}")
+
     return gdf
 
 

@@ -33,8 +33,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
-import argparse # used for adding command line arguments to script
-from datetime import date, datetime, time, timedelta, timezone # for getting current date
+from datetime import datetime # for getting date-time stuff
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
@@ -42,27 +41,19 @@ from sqlalchemy import create_engine # stuff needed to connect with postgis data
 import numpy as np # because I guess `np.nan` is better than `pd.NA` for no-data-values in Pandas?
 import pandas as pd # just for merging dataframes, otherwise we use geopandas lol
 import geopandas as gpd # geospatial library, used for GeoDataFrames
-#from shapely.geometry import Point # used to properly format lat/long values for use by GeoPandas
 import httpx # used for calling API
-#from dateutil.parser import parse # used for properly formatting DATE data into datetime variables
 import json # used for handling export of json data
 import logging
 
 # custom modules!
-from backend.helper.helper_timezones import AB_TIME, UTC_TIME
-from backend.helper.helper_progress_bar import update_progress_bar
-#from backend.helper_error import CustomErrorMessage
+from backend.helper.helper_timezones import AB_TIME
 from backend.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
     DailyWeatherCols, DatabaseTables, DAILY_WEATHER_UNIQUE_DATE_CONSTRAINT, DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT
-from backend.helper.helper_set_geojson_crs import set_geojson_crs
 from backend.API.weather_helper_API import fetch_weather_pages
 from backend.API.weather_helper_filterStationPriority import filter_stations_by_priority
 from backend.API.weather_helper_backfill import backfill_weather_years
-from backend.helper.helper_API_errors import APITimeoutError, APIResponseError, APICountMismatchError, APIZeroCountError, \
-    DataUniquenessConstraintViolation, DBError
+from backend.helper.helper_API_errors import DataUniquenessConstraintViolation
 from backend.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
-from backend.helper.helper_PSQL_config import default_SQL_engine
-from backend.helper.helper_DB_update import export_as_new_table, add_new_records_to_table
 
 
 
@@ -96,24 +87,26 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 ########################################################################################################################
 ### section 1: function to fetch weather for given year
 
-# def filter_stations_by_priority(df, station_id_col="CLIMATE_IDENTIFIER", datetime_col="LOCAL_DATE"):
-
 def daily_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
     daily_weather_url = "https://api.weather.gc.ca/collections/climate-daily/items"
+
     daily_weather_params = {
         "limit": 1000,
         "filter": f"properties.{DailyWeatherCols.dwc_climate_identifier} IN ({STN_IDS_STR_CSV_LIST})",
         f"{DailyWeatherCols.dwc_local_year}": year,
         "properties": DAILY_WEATHER_PROPERTIES, # filter to specific properties I want from station
     }
+
     gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params,
                               job_title=f"historical-daily-weather-records-year-{year}")
 
     gdf = filter_stations_by_priority(gdf, station_id_col=DailyWeatherCols.dwc_climate_identifier,
                                       datetime_col=DailyWeatherCols.dwc_local_date)
+
     # NOTE: dates should be unique now, so let's check that
     if not gdf[DailyWeatherCols.dwc_local_date].is_unique:
         raise DataUniquenessConstraintViolation(f"ERROR: dates not unique for daily-weather backfill year {year}")
+
     return gdf
 
 
@@ -135,81 +128,6 @@ def main() -> None:
                            datetimecol=unique_column, main_table_unique_constraint_name=main_table_unique_constraint_name,
                            staging_table_unique_constraint_name=staging_table_unique_constraint_name,
                            dtype_dictionary=dtype_dictionary, progress_bar_prefix=progress_bar_prefix)
-
-    """
-    start_year = 1956 # first date in watermain break data
-    start_year = 2025
-    current_year = date.today().year
-
-    failed_years = []
-
-
-    for year in range(start_year, current_year + 1):
-        logger.info(f"year: {year}")
-        try:
-            gdf = daily_MSC_GeoMet_weather_by_year(year)
-        except APITimeoutError:
-            logger.error(f"Network timeout for {year}")
-            # NOTE: `logger.error` records the error message, without traceback to previous error messages;
-            # because in this particular case, we know the whole story from the first message alone
-            # traceback will give us more messages saying the same "OMG THE API TIMED OUT" and we don't need that in our lives
-            failed_years.append(year)
-        except APIResponseError:
-            logger.exception(f"Malformed response for {year}")
-            # NOTE: `logger.exception` does traceback, so it records all the error messages that triggered/preceded this one as well
-            # that's because we'll want to get more detail about WHAT, exactly, went wrong with the API call & response
-            # was it a bad HTTP status? asking the API for non-existant properties? we want fo figure out what caused it
-            # NOTE: this one is the same level as `logger.error`
-            failed_years.append(year)
-        except APIZeroCountError:
-            logger.warning(f"No records found for {year}")
-            # still no traceback, but we're not going "OMG SOMETHING WENT HORRIBLY WRONG" here
-            # this is "user made a mistake and queried something with 0 results" instead of an incorrectly formatted query
-            failed_years.append(year)
-        except APICountMismatchError:
-            logger.exception(f"Inconsistent number of records found for {year}")
-            failed_years.append(year)
-        except DataUniquenessConstraintViolation:
-            logger.error(f"Dates not unique for daily-weather backfill, year: {year}")
-            failed_years.append(year)
-
-
-        # define variables for database updating
-        gdf = gdf
-        engine = default_SQL_engine()
-        main_table_name = DatabaseTables.weather_daily
-        staging_table_name = DatabaseTables.weather_daily_staging
-        unique_column = DailyWeatherCols.dwc_local_date
-        main_table_unique_constraint_name = DAILY_WEATHER_UNIQUE_DATE_CONSTRAINT
-        staging_table_unique_constraint_name = DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT
-        dtype_dictionary = dict(DAILY_WEATHER_DATA_TYPES)
-
-
-        if not year == start_year:
-            # we want to update our table with new records if it's NOT the start year
-            # def add_new_records_to_table(gdf, engine, main_table_name, staging_table_name,
-                                         # unique_column, staging_table_unique_constraint_name,
-                                         # dtype_dictionary)
-            try:
-                add_new_records_to_table(gdf=gdf, engine=engine, main_table_name=main_table_name,
-                                         staging_table_name=staging_table_name, unique_column=unique_column,
-                                         staging_table_unique_constraint_name=staging_table_unique_constraint_name,
-                                         dtype_dictionary=dtype_dictionary)
-            except:
-                logger.exception(f"DB write failed for {year}")
-                failed_years.append(year)
-
-        else:
-            # Write gdf to main table, overwriting old results if any
-            # def export_as_new_table(gdf, engine, main_table_name, dtype_dictionary, main_table_unique_constraint_name, unique_column):
-            try:
-                export_as_new_table(gdf=gdf, engine=engine, main_table_name=main_table_name, dtype_dictionary=dtype_dictionary,
-                                    main_table_unique_constraint_name=main_table_unique_constraint_name, unique_column=unique_column)
-            except:
-                error_message = f"Cannot create table for start year {year}; aborting backfill."
-                logger.critical(error_message, exc_info=True)
-                raise DBError(error_message)
-    """
 
 
 
