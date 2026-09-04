@@ -86,7 +86,7 @@ run_job() {
 
 NAME__weatherData_updateHourlyWeather_runHourly="weatherData_updateHourlyWeather_runHourly"
 PYSCRIPT__weatherData_updateHourlyWeather_runHourly="$SCRIPT_DIR/weatherData_updateHourlyWeather_runHourly.py"
-JOB__weatherData_updateHourlyWeather_runHourly="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateHourlyWeather_runHourly 2>> $BASH_BACKFILL_LOG"
+JOB__weatherData_updateHourlyWeather_runHourly="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateHourlyWeather_runHourly 2>> $BASH_RUN_HOURLY_LOG"
 
 
 
