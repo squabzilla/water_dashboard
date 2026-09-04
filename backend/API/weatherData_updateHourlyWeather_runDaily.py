@@ -139,7 +139,7 @@ def _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days() -> gpd.GeoDataFrame
                                       datetime_col=HourlyWeatherCols.hwc_local_date)
     # NOTE: dates should be unique now, so let's check that
     if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
-        raise DataUniquenessConstraintViolation(f"ERROR: dates not unique on daily-update of daily-weather-values on day: {date.today()}")
+        raise DataUniquenessConstraintViolation(f"ERROR: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}")
     return gdf
 
 
