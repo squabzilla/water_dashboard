@@ -164,7 +164,7 @@ def main() -> None:
     ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
     params = {
         "limit": 1000,
-        "filter": f"properties.{DailyWeatherCols.climate_identifier} IN ({ids_clause})",
+        "filter": f"properties.CLIMATE_IDENTIFIER IN ({ids_clause})",
     }
     job_title = "fetching_weather_stations"
     gdf_weather_station = fetch_weather_pages(start_url=WEATHER_STATION_URL, params=params, job_title=job_title)
