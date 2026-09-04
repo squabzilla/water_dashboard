@@ -169,6 +169,11 @@ def _fetch_swob_data(hours_back:int = args.hours_back) -> gpd.GeoDataFrame:
 
     gdf = filter_stations_by_priority(gdf, station_id_col=SWOBWeatherCols.swob_climate_identifier,
                                       datetime_col=SWOBWeatherCols.swob_utc_date)
+
+    # for some gods-forsaken reason, the SWOB-realtime data API includes the Z dimension...
+    #gdf["geometry"] = gdf["geometry"].apply(force_2d)
+    gdf.geometry = gdf.geometry.force_2d()
+
     # NOTE: dates should be unique now, so let's check that
     if not gdf[SWOBWeatherCols.swob_utc_date].is_unique:
         err_mss = f"ERROR: dates not unique on hourly-update of SWOB-realtime from UTC:{utc_start_time} to UTC:{utc_current_time}"
@@ -179,6 +184,21 @@ def _fetch_swob_data(hours_back:int = args.hours_back) -> gpd.GeoDataFrame:
 
 ########################################################################################################################
 ### section 2: function to format SWOB GDF like hourly-weather GDF
+
+def _reorder_cols(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    # get list for column order
+    col_order_list = [col.value for col in HourlyWeatherCols]
+    
+    # don't forget to include geometry column at start!
+    col_order_list.insert(0, 'geometry')
+    # I hate how lists have in-place methods, but 99% of what I do is pandas where you gotta do:
+    # 'df = df.method()', but in lists that syntax actually doesn't work???
+
+    # re-organize the columns
+    gdf = gdf.reindex(columns=col_order_list)
+    return gdf
+
+
 def _convert_SWOBFormat_to_HourlyFormat(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     # get my key for renaming columns
     conversion_dict = dict(HOURLY_SWOB_CONVERSION)
@@ -193,16 +213,7 @@ def _convert_SWOBFormat_to_HourlyFormat(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFram
     # add local year column
     gdf_hourly[HourlyWeatherCols.hwc_local_year] = gdf_hourly[HourlyWeatherCols.hwc_local_date].dt.year
 
-    # get list for column order
-    col_order_list = [col.value for col in HourlyWeatherCols]
-    
-    # don't forget to include geometry column at start!
-    col_order_list.insert(0, 'geometry')
-    # I hate how lists have in-place methods, but 99% of what I do is pandas where you gotta do:
-    # 'df = df.method()', but in lists that syntax actually doesn't work???
-
-    # re-organize the columns
-    gdf_hourly = gdf_hourly.reindex(columns=col_order_list)
+    gdf_hourly = _reorder_cols(gdf_hourly)
 
     # return it
     return gdf_hourly
@@ -212,11 +223,11 @@ def _convert_SWOBFormat_to_HourlyFormat(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFram
 ########################################################################################################################
 ### section 3: filter results to just on-the-hours results....
 def _filter_hourly_records(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    #print(gdf.head(1))
     # TODO: FINISHI THIS LOL
     #pass
-    og_gdf = gdf.copy()
-    working_gdf = gdf.copy()
-    print(f"Length of working gdf: {len(working_gdf)}")
+    # og_gdf = gdf.copy()
+    # working_gdf = gdf.copy(); print(f"Length of working gdf: {len(working_gdf)}")
     # NOTE: remember it's been converted to proper hourly-format by now
     
     # sort values by datetime, then make datetime the column
@@ -228,11 +239,18 @@ def _filter_hourly_records(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     # for col in working_gdf.columns: print(f"{col} head:\n{working_gdf[col].head(1)}\n")
 
     # build a new dataframe by re-indexing the original one on the hourly index
-    new_gdf = gdf.reindex(hourly_index, method="nearest", tolerance=pd.Timedelta(minutes=5))
+    new_gdf = gdf.reindex(hourly_index, method="nearest", tolerance=pd.Timedelta(minutes=5)).reset_index()
 
     # rename the index to the datetime lol
     new_gdf = new_gdf.rename(columns={"index": HourlyWeatherCols.hwc_local_date})
     #print(f"new gdf:\n{new_gdf}")
+    
+    # reorder the columns AGAIN
+    new_gdf = _reorder_cols(new_gdf)
+
+    # NOTE: dates should be unique now, so let's check that
+    if not new_gdf[HourlyWeatherCols.hwc_local_date].is_unique:
+        raise DataUniquenessConstraintViolation(f"ERROR: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}")
 
     # return it
     return new_gdf
