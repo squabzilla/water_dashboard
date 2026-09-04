@@ -1,13 +1,13 @@
-########################################################################################################################
-# file name: fetch_city_shapes.py
-# author: William Hovdestad
-#
-# The goal of this script is to retrieve "static" city shapes for my water main break dashboard:
-# 1.    public water main
-# 2.    city boundary
-# 3.    community boundaries
-# 4.    hydrology
+"""
+file name: fetch_city_shapes.py
+author: William Hovdestad
 
+The goal of this script is to retrieve "static" city shapes for my water main break dashboard:
+1.    public water main
+2.    city boundary
+3.    community boundaries
+4.    hydrology
+"""
 
 
 ########################################################################################################################
@@ -37,20 +37,13 @@ import geopandas as gpd # geospatial library, used for GeoDataFrames
 import httpx # used for calling API
 import json # used for handling export of json data
 import logging
-# lets add tenacity
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
-)
 
 # custom modules!
 from backend.helper.helper_progress_bar import update_progress_bar
 from backend.helper.helper_error import CustomErrorMessage
 from backend.helper.helper_API_try_except_job import try_except_city_API
 from backend.helper.helper_PSQL_config import default_SQL_engine, DATABASE_CONFIG
+from backend.helper.helper_timezones import AB_TIME, UTC_TIME
 from backend.helper.helper_API_errors import DataPipelineError, \
     APITimeoutError, APIConnectError, APIResponseError, DBError
 
@@ -175,11 +168,20 @@ def fetch_city_layer(layer_dict: dict) -> None:
          
 def main() -> None:
     # log start
-    logger.info(f"Script: {__file__} started at {datetime.now()}")# print statement for start of script, and current time
+    logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
+
+    # start progress bar for fun
+    progress_bar_count = 0
+    total_iterations = len(city_layers)
+    progress_bar_prefix = "Fetching city layers..."
+    update_progress_bar(iteration=progress_bar_count, total=total_iterations, prefix=progress_bar_prefix) # first iteration is 0
+
     # loop through layers, with exceptions ready
     for layer in city_layers:
-        layer_name = layer[NAME]
         fetch_city_layer(layer)
+        # progress bar part!
+        progress_bar_count += 1
+        update_progress_bar(iteration=progress_bar_count, total=total_iterations, prefix=progress_bar_prefix)
         """
         try:
             fetch_city_layer(layer)
@@ -195,7 +197,8 @@ def main() -> None:
             raise DataPipelineError(f"Unexpected error while fetching layer {layer_name}: {e}") from e
         """
     # log end
-    logger.info(f"Script: {__file__} completed at {datetime.now()}")# print statement for end of script, and current time
+    print("") # print statement to fixup progress bar
+    logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
 
 
 # call main

@@ -1,9 +1,10 @@
-########################################################################################################################
-# file name: weather_helper_API.py
-# author: William Hovdestad
-#
-# This script contains the logic to filter my weather stations based on my defined station-priority
-# (see `API_Readme.md` for more details)
+"""
+file name: weather_helper_API.py
+author: William Hovdestad
+
+This script contains the logic to filter my weather stations based on my defined station-priority
+(see `API_Readme.md` for more details)
+"""
 
 
 
@@ -29,6 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
 ########################################################################################################################
 ### script-setup 2: library imports
 from collections.abc import Callable
+"""
 from datetime import date, datetime, time, timedelta, timezone # for getting current date
 from tenacity import (
     retry,
@@ -37,6 +39,7 @@ from tenacity import (
     retry_if_exception_type,
     before_sleep_log,
 )
+"""
 import httpx
 import json
 import pandas as pd

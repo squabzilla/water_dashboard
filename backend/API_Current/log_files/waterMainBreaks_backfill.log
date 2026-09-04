@@ -1,6 +1,2 @@
-2026-08-29 16:05:52,156 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_backfill.py started at 2026-08-29 16:05:52.156080
-2026-08-29 16:06:34,221 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_backfill.py completed at 2026-08-29 16:06:34.221684
-2026-08-29 21:52:36,560 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_backfill.py started at 2026-08-29 21:52:36.560885
-2026-08-29 21:53:05,075 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_backfill.py completed at 2026-08-29 21:53:05.075496
-2026-08-29 21:53:14,869 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_checkAPI.py started at 2026-08-29 21:53:14.869748
-2026-08-29 21:53:15,412 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_checkAPI.py completed at 2026-08-29 21:53:15.412564
+2026-09-03 17:36:37,294 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_backfill.py started at 2026-09-03 17:36:37.294029-06:00
+2026-09-03 17:37:18,307 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_backfill.py completed at 2026-09-03 17:37:18.307521-06:00

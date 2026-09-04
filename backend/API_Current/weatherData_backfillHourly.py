@@ -1,13 +1,17 @@
-########################################################################################################################
-# file name: weather_hourly_backfill.py
-# author: William Hovdestad
-#
-# This script is designed to call the `fetch_MSC_GeoMet_weather` from the `weather_APIlogic.py` file,
-# in order to backfill the database with hourly-weather-values.
-#
-# This data is designed to be used in tandem with Water-Main-Breaks data from the City-of-Calgary,
-# whose data can be found here: https://data.calgary.ca/Environment/Water-Main-Breaks/dpcu-jr23/data_preview
-# so this data fetches records starting at 1956-01-01 to match the Water-Main-Break records.
+"""
+file name: weather_hourly_backfill.py
+author: William Hovdestad
+
+This script is designed to call the `fetch_MSC_GeoMet_weather` from the `weather_APIlogic.py` file,
+in order to backfill the database with hourly-weather-values.
+
+It grabs the `climate-hourly` data from the Canada weather API
+link: https://api.weather.gc.ca/openapi?f=html#/climate-hourly
+
+This data is designed to be used in tandem with Water-Main-Breaks data from the City-of-Calgary,
+whose data can be found here: https://data.calgary.ca/Environment/Water-Main-Breaks/dpcu-jr23/data_preview
+so this data fetches records starting at 1956-01-01 to match the Water-Main-Break records.
+"""
 
 
 
@@ -45,18 +49,18 @@ import json # used for handling export of json data
 import logging
 
 # custom modules!
+from backend.helper.helper_timezones import AB_TIME, UTC_TIME
 from backend.helper.helper_progress_bar import update_progress_bar
 #from backend.helper_error import CustomErrorMessage
-from backend.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, \
-    HourlyWeatherCols, DatabaseTables, PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID, \
-        HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT, HOURLY_WEATHER__STAGING_UNIQUE_DATETIME_CONSTRAINT
+from backend.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, DatabaseTables, \
+    HourlyWeatherCols, HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
 from backend.helper.helper_set_geojson_crs import set_geojson_crs
 from backend.API_Current.weather_helper_API import fetch_weather_pages
 from backend.API_Current.weather_helper_filterStationPriority import filter_stations_by_priority
 from backend.API_Current.weather_helper_backfill import backfill_weather_years
 from backend.helper.helper_API_errors import APITimeoutError, APIResponseError, APICountMismatchError, APIZeroCountError, \
     DataUniquenessConstraintViolation, DBError
-from backend.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
+from backend.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 from backend.helper.helper_PSQL_config import default_SQL_engine
 from backend.helper.helper_DB_update import export_as_new_table, add_new_records_to_table
 
@@ -94,19 +98,18 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 # def filter_stations_by_priority(df, station_id_col="CLIMATE_IDENTIFIER", datetime_col="LOCAL_DATE"):
 
 def hourly_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
-    ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
     daily_weather_url = "https://api.weather.gc.ca/collections/climate-hourly/items"
     daily_weather_params = {
         "limit": 1000,
-        "filter": f"properties.{HourlyWeatherCols.climate_identifier} IN ({ids_clause})",
-        f"{HourlyWeatherCols.local_year}": year,
+        "filter": f"properties.{HourlyWeatherCols.hwc_climate_identifier} IN ({STN_IDS_STR_CSV_LIST})",
+        f"{HourlyWeatherCols.hwc_local_year}": year,
         "properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
     }
     gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params, job_title=f"historical-hourly-weather-records-year-{year}")
 
-    gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.climate_identifier, datetime_col=HourlyWeatherCols.local_date)
+    gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier, datetime_col=HourlyWeatherCols.hwc_local_date)
     # NOTE: dates should be unique now, so let's check that
-    if not gdf[HourlyWeatherCols.local_date].is_unique:
+    if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
         raise DataUniquenessConstraintViolation(f"ERROR: dates not unique for daily-weather backfill year {year}")
     return gdf
 
@@ -119,9 +122,9 @@ def main() -> None:
 
     main_table_name = DatabaseTables.weather_hourly
     staging_table_name = DatabaseTables.weather_hourly_staging
-    unique_column = HourlyWeatherCols.local_date
+    unique_column = HourlyWeatherCols.hwc_local_date
     main_table_unique_constraint_name = HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT
-    staging_table_unique_constraint_name = HOURLY_WEATHER__STAGING_UNIQUE_DATETIME_CONSTRAINT
+    staging_table_unique_constraint_name = HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
     dtype_dictionary = dict(HOURLY_WEATHER_DATA_TYPES)
     progress_bar_prefix = "Backfilling hourly weather records"
 
@@ -174,7 +177,7 @@ def main() -> None:
         engine = default_SQL_engine()
         main_table_name = DatabaseTables.weather_hourly
         staging_table_name = DatabaseTables.weather_hourly_staging
-        unique_column = HourlyWeatherCols.local_date
+        unique_column = HourlyWeatherCols.hwc_local_date
         main_table_unique_constraint_name = HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT
         staging_table_unique_constraint_name = HOURLY_WEATHER__STAGING_UNIQUE_DATETIME_CONSTRAINT
         dtype_dictionary = dict(HOURLY_WEATHER_DATA_TYPES)
@@ -211,6 +214,6 @@ def main() -> None:
 ### section 2:  call main
 # this function will run by itself if this script is called, including the start & end time pieces
 if __name__ == "__main__":
-    logger.info(f"Script: {__file__} started at {datetime.now()}")# print statement for start of script, and current time
+    logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
     main()
-    logger.info(f"Script: {__file__} completed at {datetime.now()}")# print statement for end of script, and current time
+    logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time

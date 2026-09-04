@@ -1,14 +1,16 @@
-########################################################################################################################
-# file name: waterMainBreaks_APIlogic.py
-# author: William Hovdestad
-#
-# This script checks the watermainbreak API to see if our latest `created_at` value in our water main breaks table
-# matches the latest `:created_at` value from Socrata's metadata on the watermain breaks page.
-# This is done because the Socrata data has a full-replace of the data whenever the City wants to update the data,
-# and Socrata's metadata column `created_at` is updated to reflect this time
-# (Because it's all done at once, the values in this column are all identical)
-# So if there's a discrepancy between my most recent `created_at` value, and Socrata's meta-data `:created_at` column,
-# it's time to replace - we'll ALSO do a batch job of replacing all of our data.
+"""
+file name: waterMainBreaks_APIlogic.py
+author: William Hovdestad
+
+This script checks the watermainbreak API to see if our latest `created_at` value in our water main breaks table
+matches the latest `:created_at` value from Socrata's metadata on the watermain breaks page.
+This is done because the Socrata data has a full-replace of the data whenever the City wants to update the data,
+and Socrata's metadata column `created_at` is updated to reflect this time
+(Because it's all done at once, the values in this column are all identical)
+So if there's a discrepancy between my most recent `created_at` value, and Socrata's meta-data `:created_at` column,
+it's time to replace - we'll ALSO do a batch job of replacing all of our data.
+"""
+
 
 
 ########################################################################################################################
@@ -48,6 +50,7 @@ from tenacity import ( # for retrying APIs so a single timeout doesn't cause a c
 )
 
 # custom modules!
+from backend.helper.helper_timezones import AB_TIME, UTC_TIME
 #from backend.helper_PSQL import default_SQL_engine, DATABASE_CONFIG, DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES
 from backend.API_Current.waterMainBreaks_backfill import waterMainBreaks_backfill
 from backend.helper.helper_PSQL_config import DATABASE_CONFIG, default_SQL_engine
@@ -115,7 +118,7 @@ def _checkWaterMainBreaksAPI(JSON_QUERY_URL: str, payload: dict) -> dict:
 
 def main() -> None:
     ### step 1 - log current time
-    logger.info(f"Script: {__file__} started at {datetime.now()}")
+    logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")
 
     engine = default_SQL_engine()
 
@@ -160,7 +163,7 @@ def main() -> None:
         waterMainBreaks_backfill()
 
     ### END - log end time
-    logger.info(f"Script: {__file__} completed at {datetime.now()}")
+    logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")
 
 
 

@@ -1,10 +1,11 @@
-########################################################################################################################
-# file name: weather_helper_API.py
-# author: William Hovdestad
-#
-# This script contains the logic for fetching the API response from a given request,
-# including paginating through results.
-# It assumes it is passed a url, and a parameters dictionary with a "limit" key
+"""
+file name: weather_helper_API.py
+author: William Hovdestad
+
+This script contains the logic for fetching the API response from a given request,
+including paginating through results.
+It assumes it is passed a url, and a parameters dictionary with a "limit" key
+"""
 
 
 
@@ -30,14 +31,6 @@ if str(PROJECT_ROOT) not in sys.path:
 ########################################################################################################################
 ### script-setup 2: library imports
 from collections.abc import Callable
-from datetime import date, datetime, time, timedelta, timezone # for getting current date
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
-)
 import httpx
 import json
 import pandas as pd
@@ -48,7 +41,6 @@ import logging
 # custom libraries!
 from backend.helper.helper_API_errors import APITimeoutError, APIResponseError, APICountMismatchError, \
     APIZeroCountError, DataUniquenessConstraintViolation, DBError
-from backend.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
 from backend.helper.helper_set_geojson_crs import set_geojson_crs
 from backend.helper.helper_PSQL_config import default_SQL_engine
 from backend.helper.helper_DB_update import export_as_new_table, add_new_records_to_table

@@ -1,11 +1,12 @@
-########################################################################################################################
-# file name: helper_fetch_API_page.py
-# author: William Hovdestad
-#
-# This script to backfill my weather data, from from 1956 (first date in watermain break data) to current.
-# Takes, as input, a `fetch_year` function: 
-# this function takes an integer year as input, and returns a geodataframe
-# Also takes a bunch of other, slightly less relevant things lol
+"""
+file name: helper_fetch_API_page.py
+author: William Hovdestad
+
+This script to backfill my weather data, from from 1956 (first date in watermain break data) to current.
+Takes, as input, a `fetch_year` function: 
+this function takes an integer year as input, and returns a geodataframe
+Also takes a bunch of other, slightly less relevant things lol
+"""
 
 
 
@@ -31,7 +32,9 @@ if str(PROJECT_ROOT) not in sys.path:
 ########################################################################################################################
 ### script-setup 2: library imports
 from collections.abc import Callable
-from datetime import date, datetime, time, timedelta, timezone # for getting current date
+# from datetime import date, datetime, time, timedelta, timezone # for getting current date
+from datetime import datetime # for getting current date
+from zoneinfo import ZoneInfo
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -47,9 +50,9 @@ import logging
 
 
 # custom libraries!
+from backend.helper.helper_timezones import AB_TIME, UTC_TIME
 from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIConnectError, APIResponseError, \
     APIZeroCountError, APICountMismatchError, DataUniquenessConstraintViolation, DBError
-from backend.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
 from backend.helper.helper_set_geojson_crs import set_geojson_crs
 from backend.helper.helper_PSQL_config import default_SQL_engine
 from backend.helper.helper_DB_update import export_as_new_table, add_new_records_to_table
@@ -83,7 +86,8 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
                            dtype_dictionary: dict, progress_bar_prefix: str) -> None:
 
     start_year = 1956 # first date in watermain break data
-    start_year = 2025
+    TESTING_CODE = False
+    if TESTING_CODE == True: start_year = 2025
     if start_year == 2025:
         warning_message = (
             "\n##################################################\nWARNING: START YEAR IS 2025 FOR TEST\n##################################################\n"
@@ -91,7 +95,8 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
         print(warning_message)
         logger.info(warning_message)
 
-    current_year = date.today().year
+    #current_year = date.today().year
+    current_year = datetime.now(AB_TIME).year # yeah I'm just being overly thorough with timezones lol
     stop_year = current_year + 1 # stop when we reach this year, BUT DO NOT PROCESS THIS YEAR
 
     failed_years = []

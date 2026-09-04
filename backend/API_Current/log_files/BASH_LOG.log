@@ -1,0 +1,27 @@
+2026-09-03 17:36:10 starting backfill_base_city_layers
+2026-09-03 17:36:11,046 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/backfill_base_city_layers.py started at 2026-09-03 17:36:11.046696-06:00
+2026-09-03 17:36:22,481 [INFO] __main__: Posted PublicWaterMain_Pipes to PostGIS Database
+2026-09-03 17:36:33,964 [INFO] __main__: Posted Hydrology to PostGIS Database
+2026-09-03 17:36:35,543 [INFO] __main__: Posted CommunityDistrictBoundaries to PostGIS Database
+2026-09-03 17:36:36,261 [INFO] __main__: Posted CityBoundary to PostGIS Database
+2026-09-03 17:36:36,261 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/backfill_base_city_layers.py completed at 2026-09-03 17:36:36.261474-06:00
+2026-09-03 17:36:36 backfill_base_city_layers exit=0
+2026-09-03 17:36:36 starting waterMainBreaks_backfill
+2026-09-03 17:36:37,294 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_backfill.py started at 2026-09-03 17:36:37.294029-06:00
+2026-09-03 17:37:18,307 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/waterMainBreaks_backfill.py completed at 2026-09-03 17:37:18.307521-06:00
+2026-09-03 17:37:18 waterMainBreaks_backfill exit=0
+2026-09-03 17:37:18 starting weatherData_backfillDaily
+2026-09-03 17:38:06 weatherData_backfillDaily exit=0
+2026-09-03 17:38:06 starting weatherData_backfillHourly
+2026-09-03 17:45:07 weatherData_backfillHourly exit=0
+2026-09-03 17:45:07 starting weatherData_weatherStations
+2026-09-03 17:45:08,708 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/weatherData_weatherStations.py started at 2026-09-03 17:45:08.708826
+Traceback (most recent call last):
+  File "/home/willh/water_dashboard/backend/API_Current/weatherData_weatherStations.py", line 190, in <module>
+    main()
+    ~~~~^^
+  File "/home/willh/water_dashboard/backend/API_Current/weatherData_weatherStations.py", line 167, in main
+    "filter": f"properties.{DailyWeatherCols.climate_identifier} IN ({ids_clause})",
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'DailyWeatherCols' has no attribute 'climate_identifier'. Did you mean: 'dwc_climate_identifier'?
+2026-09-03 17:45:08 weatherData_weatherStations exit=1

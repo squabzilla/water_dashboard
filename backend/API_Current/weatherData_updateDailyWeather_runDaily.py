@@ -1,17 +1,22 @@
-########################################################################################################################
-# file name: weatherData_updateHourlyRecords_runDaily.py
-# author: William Hovdestad
-#
-# This script is designed to call the `fetch_MSC_GeoMet_weather` from the `weather_APIlogic.py` file,
-# in order to update the hourly-weather values in the PostGIS database; this script is intended to be run daily.
-# It will grab the last 14 days of data, and overwrite existing records.
-# Why? Because there's a possibility of some Canada Weather QA/QC process leading to records being changed,
-# and two weeks is both overkill, and also honestly a small number of records to change.
-# Especially since I want to run this daily at like 2am or something.
-#
-# This data is designed to be used in tandem with Water-Main-Breaks data from the City-of-Calgary,
-# whose data can be found here: https://data.calgary.ca/Environment/Water-Main-Breaks/dpcu-jr23/data_preview
-# so this data fetches records starting at 1956-01-01 to match the Water-Main-Break records.
+"""
+file name: weatherData_updateDailyRecords_runDaily.py
+author: William Hovdestad
+
+This script is designed to call the `fetch_MSC_GeoMet_weather` from the `weather_APIlogic.py` file,
+in order to update the daily-weather values in the PostGIS database; this script is intended to be run daily.
+
+It grabs the `climate-daily` data from the Canada weather API
+link: https://api.weather.gc.ca/openapi?f=html#/climate-daily
+
+It will grab the last 14 days of data, and overwrite existing records.
+Why? Because there's a possibility of some Canada Weather QA/QC process leading to records being changed,
+and two weeks is both overkill, and also honestly a small number of records to change.
+Especially since I want to run this daily at like 2am or something.
+
+This data is designed to be used in tandem with Water-Main-Breaks data from the City-of-Calgary,
+whose data can be found here: https://data.calgary.ca/Environment/Water-Main-Breaks/dpcu-jr23/data_preview
+so this data fetches records starting at 1956-01-01 to match the Water-Main-Break records.
+"""
 
 
 
@@ -35,7 +40,6 @@ if str(PROJECT_ROOT) not in sys.path:
 ### script-setup 2: library imports
 import argparse # used for adding command line arguments to script
 from datetime import date, datetime, time, timedelta, timezone # for getting current date
-from zoneinfo import ZoneInfo # for time zones
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
@@ -50,18 +54,18 @@ import json # used for handling export of json data
 import logging
 
 # custom modules!
+from backend.helper.helper_timezones import AB_TIME, UTC_TIME
 from backend.helper.helper_progress_bar import update_progress_bar
 #from backend.helper_error import CustomErrorMessage
-from backend.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, \
-    HourlyWeatherCols, DatabaseTables, PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID, \
-        HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
+from backend.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DatabaseTables, \
+    DailyWeatherCols, DAILY_WEATHER_UNIQUE_DATE_CONSTRAINT, DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT
 from backend.helper.helper_set_geojson_crs import set_geojson_crs
 from backend.API_Current.weather_helper_API import fetch_weather_pages
 from backend.API_Current.weather_helper_filterStationPriority import filter_stations_by_priority
 from backend.API_Current.weather_helper_backfill import backfill_weather_years
 from backend.helper.helper_API_errors import APITimeoutError, APIResponseError, APICountMismatchError, APIZeroCountError, \
     DataUniquenessConstraintViolation, DBError
-from backend.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
+from backend.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 from backend.helper.helper_PSQL_config import default_SQL_engine
 from backend.helper.helper_DB_update import export_as_new_table, add_new_records_to_table
 
@@ -69,7 +73,7 @@ from backend.helper.helper_DB_update import export_as_new_table, add_new_records
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API_Current" / "log_files" / "weatherData_updateHourlyRecords_runDaily.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API_Current" / "log_files" / "weatherData_updateDailyRecords_runDaily.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -98,32 +102,29 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 
 # def filter_stations_by_priority(df, station_id_col="CLIMATE_IDENTIFIER", datetime_col="LOCAL_DATE"):
 
-def _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days() -> gpd.GeoDataFrame:
-    # get proper datetime string to use! first, get datetime in current timezone
-    my_time_zone = ZoneInfo("America/Edmonton")
-    today_date = datetime.now(my_time_zone).date() # gets today's date as datetime so I can include timezone, then make it date
-    # now, subtract 2 weeks
-    day_minus_14 = today_date - timedelta(days=14) # subtract 14 days from current date
+def _fetch_daily_MSC_GeoMet_daily_weather_last_14_days() -> gpd.GeoDataFrame:
+    # get proper datetime string to use! first, get current time, make it a date, subtract 2 weeks from current date
+    day_minus_14 = datetime.now(AB_TIME).date() - timedelta(days=14) # being very explicit with timezones here
     # now, convert it to proper parameter to API call
     datetime_param = str(day_minus_14) + "T00:00:00Z/.."
-    # NOTE: This gives me 12:00am from 14 days ago
 
     # get the stations we want to work with
-    ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
     # url of API
-    hourly_weather_url = "https://api.weather.gc.ca/collections/climate-hourly/items"
+    daily_weather_url = "https://api.weather.gc.ca/collections/climate-daily/items"
     # setup parameters
-    hourly_weather_params = {
+    daily_weather_params = {
         "limit": 1000,
-        "filter": f"properties.{HourlyWeatherCols.climate_identifier} IN ({ids_clause})",
+        "filter": f"properties.{DailyWeatherCols.dwc_climate_identifier} IN ({STN_IDS_STR_CSV_LIST})",
         "datetime": datetime_param,
-        "properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
+        "properties": DAILY_WEATHER_PROPERTIES, # filter to specific properties I want from station
     }
-    gdf = fetch_weather_pages(start_url=hourly_weather_url, params=hourly_weather_params, job_title=f"last-14-hourly-weather-records")
+    gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params,
+                              job_title=f"last-14-daily-weather-records")
 
-    gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.climate_identifier, datetime_col=HourlyWeatherCols.local_date)
+    gdf = filter_stations_by_priority(gdf, station_id_col=DailyWeatherCols.dwc_climate_identifier,
+                                      datetime_col=DailyWeatherCols.dwc_local_date)
     # NOTE: dates should be unique now, so let's check that
-    if not gdf[HourlyWeatherCols.local_date].is_unique:
+    if not gdf[DailyWeatherCols.dwc_local_date].is_unique:
         raise DataUniquenessConstraintViolation(f"ERROR: dates not unique on daily-update of daily-weather-values on day: {date.today()}")
     return gdf
 
@@ -132,13 +133,13 @@ def _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days() -> gpd.GeoDataFrame
 ### section 2 - define main function to call local helper
 
 def main() -> None:
-    gdf = _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days()
+    gdf = _fetch_daily_MSC_GeoMet_daily_weather_last_14_days()
     engine = default_SQL_engine()
-    main_table_name = DatabaseTables.weather_hourly
-    staging_table_name = DatabaseTables.weather_hourly_staging
-    unique_column = HourlyWeatherCols.local_date
-    staging_table_unique_constraint_name = HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
-    dtype_dictionary = dict(HOURLY_WEATHER_DATA_TYPES)
+    main_table_name = DatabaseTables.weather_daily
+    staging_table_name = DatabaseTables.weather_daily_staging
+    unique_column = DailyWeatherCols.dwc_local_date
+    staging_table_unique_constraint_name = DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT
+    dtype_dictionary = dict(DAILY_WEATHER_DATA_TYPES)
 
     add_new_records_to_table(gdf=gdf, engine=engine, main_table_name=main_table_name,
                                 staging_table_name=staging_table_name, unique_column=unique_column,

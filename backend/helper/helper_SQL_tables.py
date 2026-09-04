@@ -61,6 +61,7 @@ SECONDARY_STATION_ID = "3031092"
 TERTIARY_STATION_ID = "3031093"
 
 STATION_CLIMATE_IDENTIFIERS = (PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID)
+STN_IDS_STR_CSV_LIST = ", ".join(STATION_CLIMATE_IDENTIFIERS)
 
 
 class DatabaseTables(StrEnum):
@@ -95,21 +96,25 @@ class DatabaseTables(StrEnum):
 # instead of potential confusion where I try to reference the same column with two ALMOST-BUT-NOT-QUITE identical names
 
 class DailyWeatherCols(StrEnum):
-    station_name = "STATION_NAME"
-    climate_identifier = "CLIMATE_IDENTIFIER"
-    local_date = "LOCAL_DATE" # NOTE: unique column
-    local_year = "LOCAL_YEAR"
-    mean_temperature = "MEAN_TEMPERATURE"
-    max_temperature = "MAX_TEMPERATURE"
-    min_temperature = "MIN_TEMPERATURE"
-    total_precipitation = "TOTAL_PRECIPITATION"
-    min_rel_humidity = "MIN_REL_HUMIDITY"
-    max_rel_humidity = "MAX_REL_HUMIDITY"
-    snow_on_ground = "SNOW_ON_GROUND"
-    heating_degree_days = "HEATING_DEGREE_DAYS"
-    cooling_degree_days = "COOLING_DEGREE_DAYS"
-    # total_rain = "TOTAL_RAIN" # NOTE: cut from project - see `API_Readme.md` for more details
-    # total_snow = "TOTAL_SNOW" # NOTE: cut from project - see `API_Readme.md` for more details
+    dwc_station_name = "STATION_NAME"
+    dwc_climate_identifier = "CLIMATE_IDENTIFIER"
+    dwc_local_date = "LOCAL_DATE" # NOTE: unique column
+    dwc_local_year = "LOCAL_YEAR"
+    dwc_mean_temperature = "MEAN_TEMPERATURE"
+    dwc_max_temperature = "MAX_TEMPERATURE"
+    dwc_min_temperature = "MIN_TEMPERATURE"
+    dwc_total_precipitation = "TOTAL_PRECIPITATION"
+    dwc_min_rel_humidity = "MIN_REL_HUMIDITY"
+    dwc_max_rel_humidity = "MAX_REL_HUMIDITY"
+    dwc_snow_on_ground = "SNOW_ON_GROUND"
+    dwc_heating_degree_days = "HEATING_DEGREE_DAYS"
+    dwc_cooling_degree_days = "COOLING_DEGREE_DAYS"
+    # HWC_total_rain = "TOTAL_RAIN" # NOTE: cut from project - see `API_Readme.md` for more details
+    # HWC_total_snow = "TOTAL_SNOW" # NOTE: cut from project - see `API_Readme.md` for more details
+    # NOTE:
+    # having class-acronym at starts means I can't grab the right key from the wrong table
+    # this can cause an error that's hard to spot, since syntactically it's fine
+    # but this way, grabbing the wrong key from the wrong table IMMEDIATELY causes an error
 
 # now we want the list of values in that DAILY_WEATHER_COLS class/object I have, as a comma-seperated text-string
 DAILY_WEATHER_PROPERTIES = ','.join(DailyWeatherCols)
@@ -121,19 +126,19 @@ DAILY_WEATHER_PROPERTIES = ','.join(DailyWeatherCols)
 
 # class of DailyWeatherCols data-types
 DAILY_WEATHER_DATA_TYPES = MappingProxyType({
-    DailyWeatherCols.station_name: String(30), # name should be string less than 30 chars
-    DailyWeatherCols.climate_identifier: Integer,
-    DailyWeatherCols.local_date: Date,
-    DailyWeatherCols.local_year: Integer,
-    DailyWeatherCols.mean_temperature: Float,
-    DailyWeatherCols.max_temperature: Float,
-    DailyWeatherCols.min_temperature: Float,
-    DailyWeatherCols.total_precipitation: Float,
-    DailyWeatherCols.min_rel_humidity: Float,
-    DailyWeatherCols.max_rel_humidity: Float,
-    DailyWeatherCols.snow_on_ground: Float,
-    DailyWeatherCols.heating_degree_days: Float, # documentation says `Int`, but I think it lied to me and it's float
-    DailyWeatherCols.cooling_degree_days: Float, # documentation says `Int`, but I think it lied to me and it's float
+    DailyWeatherCols.dwc_station_name: String(30), # name should be string less than 30 chars
+    DailyWeatherCols.dwc_climate_identifier: Integer,
+    DailyWeatherCols.dwc_local_date: Date,
+    DailyWeatherCols.dwc_local_year: Integer,
+    DailyWeatherCols.dwc_mean_temperature: Float,
+    DailyWeatherCols.dwc_max_temperature: Float,
+    DailyWeatherCols.dwc_min_temperature: Float,
+    DailyWeatherCols.dwc_total_precipitation: Float,
+    DailyWeatherCols.dwc_min_rel_humidity: Float,
+    DailyWeatherCols.dwc_max_rel_humidity: Float,
+    DailyWeatherCols.dwc_snow_on_ground: Float,
+    DailyWeatherCols.dwc_heating_degree_days: Float, # documentation says `Int`, but I think it lied to me and it's float
+    DailyWeatherCols.dwc_cooling_degree_days: Float, # documentation says `Int`, but I think it lied to me and it's float
     # DailyWeatherCols.total_rain: Float, # NOTE: cut from project - see `API_Readme.md` for more details
     # DailyWeatherCols.total_snow: Float, # NOTE: cut from project - see `API_Readme.md` for more details
 })
@@ -141,11 +146,12 @@ DAILY_WEATHER_DATA_TYPES = MappingProxyType({
 # I'm not querying enough different APIs that have a separate schema API to be worth automating it
 # I just need to set dtypes when I need to make sure that newly-queried hourly/daily data matches existing historical data
 # especially if there's no data for that period, so GeoPandas arbitrarily decides what to assign a column with NULL
+# NOTE: names with `CAPS_` always register as "valid" by VS Code linter, so making them all lowercase now
 
 # ADD CONSTRAINT uq_{DatabaseTables.weather_data_daily_staging}_{DailyWeatherCols.datetime_station} UNIQUE ("{DailyWeatherCols.datetime_station}");
 # uniqueness constraint for SQL
-DAILY_WEATHER_UNIQUE_DATE_CONSTRAINT = f"uq_{DatabaseTables.weather_daily}_{DailyWeatherCols.local_date}"
-DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT = f"uq_{DatabaseTables.weather_daily_staging}_{DailyWeatherCols.local_date}"
+DAILY_WEATHER_UNIQUE_DATE_CONSTRAINT = f"uq_{DatabaseTables.weather_daily}_{DailyWeatherCols.dwc_local_date}"
+DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT = f"uq_{DatabaseTables.weather_daily_staging}_{DailyWeatherCols.dwc_local_date}"
 
 
 
@@ -156,59 +162,71 @@ DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT = f"uq_{DatabaseTables.weather_dail
 # class of HourlyWeatherCols column-names
 # NOTE: adding `DATETIME_STATION: String,` to end, for custom unique-identifier of table
 class HourlyWeatherCols(StrEnum):
-    station_name = "STATION_NAME"
-    climate_identifier = "CLIMATE_IDENTIFIER"
-    local_date = "LOCAL_DATE"
-    UTC_date = 'UTC_DATE'
-    local_year = "LOCAL_YEAR"
-    temp = "TEMP"
-    precip_amount = "PRECIP_AMOUNT"
-    relative_humidity = "RELATIVE_HUMIDITY"
-    station_pressure = "STATION_PRESSURE"
-    wind_speed = "WIND_SPEED"
-    wind_direction = "WIND_DIRECTION"
-    dew_point = "DEW_POINT_TEMP"
+    hwc_station_name = "STATION_NAME"
+    hwc_climate_identifier = "CLIMATE_IDENTIFIER"
+    hwc_local_date = "LOCAL_DATE"
+    hwc_utc_date = "UTC_DATE"
+    hwc_local_year = "LOCAL_YEAR"
+    hwc_temp = "TEMP"
+    hwc_precip_amount = "PRECIP_AMOUNT"
+    hwc_relative_humidity = "RELATIVE_HUMIDITY"
+    hwc_station_pressure = "STATION_PRESSURE"
+    hwc_wind_speed = "WIND_SPEED"
+    hwc_wind_direction = "WIND_DIRECTION"
+    hwc_dew_point = "DEW_POINT_TEMP"
 
 # create comma-seperated text of HourlyWeatherCols
 HOURLY_WEATHER_PROPERTIES=','.join(HourlyWeatherCols)
 
 # mapping-proxy-type of HourlyWeatherCols data-types
 HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
-    HourlyWeatherCols.station_name: String(30), # name should be string less than 30 chars
-    HourlyWeatherCols.climate_identifier: Integer,
-    HourlyWeatherCols.local_date: DateTime(timezone=False), # turns out this is a datetime variable???
-    HourlyWeatherCols.UTC_date: DateTime(timezone=False), # turns out this is a datetime variable???
-    HourlyWeatherCols.local_year: Integer,
-    HourlyWeatherCols.temp: Float,
-    HourlyWeatherCols.precip_amount: Float,
-    HourlyWeatherCols.relative_humidity: Float,
-    HourlyWeatherCols.station_pressure: Float,
-    HourlyWeatherCols.wind_speed: Float,
-    HourlyWeatherCols.wind_direction: Float,
-    HourlyWeatherCols.dew_point: Float,
+    HourlyWeatherCols.hwc_station_name: String(30), # name should be string less than 30 chars
+    HourlyWeatherCols.hwc_climate_identifier: Integer,
+    HourlyWeatherCols.hwc_local_date: DateTime(timezone=False), # turns out this is a datetime variable???
+    HourlyWeatherCols.hwc_utc_date: DateTime(timezone=False), # turns out this is a datetime variable???
+    HourlyWeatherCols.hwc_local_year: Integer,
+    HourlyWeatherCols.hwc_temp: Float,
+    HourlyWeatherCols.hwc_precip_amount: Float,
+    HourlyWeatherCols.hwc_relative_humidity: Float,
+    HourlyWeatherCols.hwc_station_pressure: Float,
+    HourlyWeatherCols.hwc_wind_speed: Float,
+    HourlyWeatherCols.hwc_wind_direction: Float,
+    HourlyWeatherCols.hwc_dew_point: Float,
 })
 
+class SWOBWeatherCols(StrEnum):
+    swob_station_name="stn_nam-value"
+    swob_climate_identifier="clim_id-value"
+    swob_utc_date="date_tm-value"
+    swob_temp="avg_air_temp_pst1hr"
+    swob_precip_amount="pcpn_amt_pst1hr"
+    swob_relative_humidity="avg_rel_hum_pst1hr"
+    swob_station_pressure="stn_pres"
+    swob_wind_speed="avg_wnd_spd_10m_pst1hr"
+    swob_wind_direction="avg_wnd_dir_10m_pst1hr"
+    swob_dew_point="avg_dwpt_temp_pst1hr"
+
 HOURLY_SWOB_CONVERSION = MappingProxyType({
-    "stn_nam-value": f"{HourlyWeatherCols.station_name}",
-    "clim_id-value": f"{HourlyWeatherCols.climate_identifier}",
-    # NOTE: `HourlyWeatherCols.local_date` will need to be calculated from `HourlyWeatherCols.UTC_date`
-    "date_tm-value": f"{HourlyWeatherCols.UTC_date}",
-    # NOTE: `HourlyWeatherCols.local_year` will need to be calculated from `HourlyWeatherCols.local_date`
-    "avg_air_temp_pst1hr": f"{HourlyWeatherCols.temp}", # celcius
-    "pcpn_amt_pst1hr": f"{HourlyWeatherCols.precip_amount}", # mm
-    "avg_rel_hum_pst1hr": f"{HourlyWeatherCols.relative_humidity}", # %
-    "stn_pres": f"{HourlyWeatherCols.station_pressure}", # hPa
-    "avg_wnd_spd_10m_pst1hr": f"{HourlyWeatherCols.wind_speed}", # km/h
-    "avg_wnd_dir_10m_pst1hr": f"{HourlyWeatherCols.wind_direction}", # degrees
-    "avg_dwpt_temp_pst1hr": f"{HourlyWeatherCols.dew_point}", # celcius
+    f"{SWOBWeatherCols.swob_station_name}": f"{HourlyWeatherCols.hwc_station_name}",
+    f"{SWOBWeatherCols.swob_climate_identifier}": f"{HourlyWeatherCols.hwc_climate_identifier}",
+    # NOTE: `HourlyWeatherCols.hwc_local_date` will need to be calculated from `HourlyWeatherCols.hwc_utc_date`
+    f"{SWOBWeatherCols.swob_utc_date}": f"{HourlyWeatherCols.hwc_utc_date}",
+    # NOTE: `HourlyWeatherCols.hwc_local_year` will need to be calculated from `HourlyWeatherCols.hwc_local_date`
+    f"{SWOBWeatherCols.swob_temp}": f"{HourlyWeatherCols.hwc_temp}", # celcius
+    f"{SWOBWeatherCols.swob_precip_amount}": f"{HourlyWeatherCols.hwc_precip_amount}", # mm
+    f"{SWOBWeatherCols.swob_relative_humidity}": f"{HourlyWeatherCols.hwc_relative_humidity}", # %
+    f"{SWOBWeatherCols.swob_station_pressure}": f"{HourlyWeatherCols.hwc_station_pressure}", # hPa
+    f"{SWOBWeatherCols.swob_wind_speed}": f"{HourlyWeatherCols.hwc_wind_speed}", # km/h
+    f"{SWOBWeatherCols.swob_wind_direction}": f"{HourlyWeatherCols.hwc_wind_direction}", # degrees
+    f"{SWOBWeatherCols.swob_dew_point}": f"{HourlyWeatherCols.hwc_dew_point}", # celcius
 })
 # fuck-off, not accepting my variable-values unless I tell you its a variable in a f-string
 
 SWOB_PROPERTIES = ','.join(HOURLY_SWOB_CONVERSION)
 
 # uniqueness constraint for SQL
-HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT = f"uq_{DatabaseTables.weather_hourly}_{HourlyWeatherCols.local_date}"
-HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT = f"uq_{DatabaseTables.weather_hourly_staging}_{HourlyWeatherCols.local_date}"
+HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT = f"uq_{DatabaseTables.weather_hourly}_{HourlyWeatherCols.hwc_local_date}"
+HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT = f"uq_{DatabaseTables.weather_hourly_staging}_{HourlyWeatherCols.hwc_local_date}"
 
 
 

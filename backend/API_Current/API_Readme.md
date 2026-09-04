@@ -49,12 +49,12 @@ Python file that will backfill my **weather_data_hourly** table in my database,
 using data from `collections/climate-hourly`, with functions from `weatherHelper_backfill.py`.
 
 
-- `weatherData_updateDailyRecords_runDaily.py`  
+- `weatherData_updateDailyWeather_runDaily.py`  
 Python file to be run every day to update my **weather_data_daily** table, using data from `collections/climate-daily`
-- `weatherData_updateHourlyRecords_runDaily.py`  
+- `weatherData_updateHourlyWeather_runDaily.py`  
 Python file to be run every day to update my **weather_data_hourly** table, using data from `collections/climate-hourly`  
 
-- `weatherData_updateHourlyRecords_runHourly.py`  
+- `weatherData_updateHourlyWeather_runHourly.py`  
 Python file to be run every *hour* to update my **weather_data_hourly** table, using data from `collections/swob-realtime`
 
 - `weatherData_weatherStations.py`  

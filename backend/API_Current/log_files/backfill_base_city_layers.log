@@ -1,0 +1,6 @@
+2026-09-03 17:36:11,046 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/backfill_base_city_layers.py started at 2026-09-03 17:36:11.046696-06:00
+2026-09-03 17:36:22,481 [INFO] __main__: Posted PublicWaterMain_Pipes to PostGIS Database
+2026-09-03 17:36:33,964 [INFO] __main__: Posted Hydrology to PostGIS Database
+2026-09-03 17:36:35,543 [INFO] __main__: Posted CommunityDistrictBoundaries to PostGIS Database
+2026-09-03 17:36:36,261 [INFO] __main__: Posted CityBoundary to PostGIS Database
+2026-09-03 17:36:36,261 [INFO] __main__: Script: /home/willh/water_dashboard/backend/API_Current/backfill_base_city_layers.py completed at 2026-09-03 17:36:36.261474-06:00

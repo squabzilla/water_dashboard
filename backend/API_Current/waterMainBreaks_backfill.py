@@ -1,17 +1,18 @@
-########################################################################################################################
-# file name: waterMainBreaks_APIlogic.py
-# author: William Hovdestad
-#
-# The goal of this function is to create a function that backfills my watermain break data
-# from the first recorded break to now
-# and that if this script is called by itself, it execudes the script and backfills the database
-# we explicitly keep the `:created_at` Socrata meta-data, so that we can later query the API
-# and see if data has been updated since we last backfilled the database.
-# This is done because the Socrata data has a full-replace of the data whenever the City wants to update the data,
-# and Socrata's metadata column `created_at` is updated to reflect this time
-# (Because it's all done at once, the values in this column are all identical)
-# So if there's a discrepancy between my most recent `created_at` value, and Socrata's meta-data `:created_at` column,
-# it's time to replace - we'll ALSO do a batch job of replacing all of our data.
+"""
+file name: waterMainBreaks_APIlogic.py
+author: William Hovdestad
+
+The goal of this function is to create a function that backfills my watermain break data
+from the first recorded break to now
+and that if this script is called by itself, it execudes the script and backfills the database
+we explicitly keep the `:created_at` Socrata meta-data, so that we can later query the API
+and see if data has been updated since we last backfilled the database.
+This is done because the Socrata data has a full-replace of the data whenever the City wants to update the data,
+and Socrata's metadata column `created_at` is updated to reflect this time
+(Because it's all done at once, the values in this column are all identical)
+So if there's a discrepancy between my most recent `created_at` value, and Socrata's meta-data `:created_at` column,
+it's time to replace - we'll ALSO do a batch job of replacing all of our data.
+"""
 
 
 
@@ -57,7 +58,7 @@ from tenacity import (
 
 # custom modules!
 from backend.helper.helper_progress_bar import update_progress_bar
-
+from backend.helper.helper_timezones import AB_TIME, UTC_TIME
 #from backend.helper_PSQL import default_SQL_engine, DATABASE_CONFIG, DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES, set_geojson_crs
 from backend.helper.helper_PSQL_config import DATABASE_CONFIG, default_SQL_engine
 from backend.helper.helper_SQL_tables import DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES
@@ -319,9 +320,9 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
 ### section 3 - logic for script to run by itself if called
 
 def main() -> None:
-    logger.info(f"Script: {__file__} started at {datetime.now()}")# print statement for start of script, and current time
+    logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
     waterMainBreaks_backfill(silent_function=False)
-    logger.info(f"Script: {__file__} completed at {datetime.now()}")# print statement for end of script, and current time
+    logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
 
 
 # call main
