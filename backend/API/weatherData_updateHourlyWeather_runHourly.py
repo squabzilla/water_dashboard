@@ -62,15 +62,14 @@ import logging # want to log data
 
 # custom modules!
 from backend.helper.helper_timezones import AB_TIME, UTC_TIME
-from backend.helper_progress_bar import update_progress_bar
 #from backend.helper_error import CustomErrorMessage
 #from backend.helper_PSQL import default_SQL_engine, set_geojson_crs, STATION_NAME, \
     #STATION_CLIMATE_IDENTIFIER, HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, HourlyWeatherCols, DatabaseTables
 from backend.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, \
     HourlyWeatherCols, DatabaseTables, STN_IDS_STR_CSV_LIST, SWOBWeatherCols, SWOB_PROPERTIES,\
     HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT, HOURLY_SWOB_CONVERSION
-from backend.API_Current.weather_helper_API import fetch_weather_pages
-from backend.API_Current.weather_helper_filterStationPriority import filter_stations_by_priority
+from backend.API.weather_helper_API import fetch_weather_pages
+from backend.API.weather_helper_filterStationPriority import filter_stations_by_priority
 from backend.helper.helper_PSQL_config import default_SQL_engine
 from backend.helper.helper_DB_update import add_new_records_to_table
 from backend.helper.helper_set_geojson_crs import set_geojson_crs
@@ -81,7 +80,7 @@ from backend.helper.helper_API_errors import DataUniquenessConstraintViolation
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API_Current" / "log_files" / "weatherData_updateHourlyRecords_runDaily.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "weatherData_updateHourlyRecords_runDaily.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

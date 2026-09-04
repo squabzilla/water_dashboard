@@ -61,9 +61,9 @@ from backend.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_W
     HourlyWeatherCols, DatabaseTables, PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID, \
         HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
 from backend.helper.helper_set_geojson_crs import set_geojson_crs
-from backend.API_Current.weather_helper_API import fetch_weather_pages
-from backend.API_Current.weather_helper_filterStationPriority import filter_stations_by_priority
-from backend.API_Current.weather_helper_backfill import backfill_weather_years
+from backend.API.weather_helper_API import fetch_weather_pages
+from backend.API.weather_helper_filterStationPriority import filter_stations_by_priority
+from backend.API.weather_helper_backfill import backfill_weather_years
 from backend.helper.helper_API_errors import APITimeoutError, APIResponseError, APICountMismatchError, APIZeroCountError, \
     DataUniquenessConstraintViolation, DBError
 from backend.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
@@ -74,7 +74,7 @@ from backend.helper.helper_DB_update import export_as_new_table, add_new_records
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API_Current" / "log_files" / "weatherData_updateHourlyRecords_runDaily.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "weatherData_updateHourlyRecords_runDaily.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

@@ -57,14 +57,14 @@ from backend.helper.helper_set_geojson_crs import set_geojson_crs
 #from backend.helper.helper_SQL_tables import STATION_CLIMATE_IDENTIFIER, DatabaseTables, STATION_CLIMATE_IDENTIFIERS, DailyWeatherCols
 from backend.helper.helper_SQL_tables import DailyWeatherCols, DatabaseTables, PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
 from backend.helper.helper_API_errors import APITimeoutError, APIResponseError, DBError
-from backend.API_Current.weather_helper_API import fetch_weather_pages
+from backend.API.weather_helper_API import fetch_weather_pages
 from backend.helper.helper_DB_update import export_as_new_table
 
 
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API_Current" / "log_files" / "weather_stations_backfill.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "weather_stations_backfill.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

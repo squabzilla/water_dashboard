@@ -52,7 +52,7 @@ from tenacity import ( # for retrying APIs so a single timeout doesn't cause a c
 # custom modules!
 from backend.helper.helper_timezones import AB_TIME, UTC_TIME
 #from backend.helper_PSQL import default_SQL_engine, DATABASE_CONFIG, DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES
-from backend.API_Current.waterMainBreaks_backfill import waterMainBreaks_backfill
+from backend.API.waterMainBreaks_backfill import waterMainBreaks_backfill
 from backend.helper.helper_PSQL_config import DATABASE_CONFIG, default_SQL_engine
 from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIResponseError, \
     APICountMismatchError, APIZeroCountError, DataUniquenessConstraintViolation, DBError
@@ -61,7 +61,7 @@ from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError,
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API_Current" / "log_files" / "waterMainBreaks_checkAPI.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "waterMainBreaks_checkAPI.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

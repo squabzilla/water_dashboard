@@ -70,7 +70,7 @@ from backend.helper.helper_API_errors import DataPipelineError, \
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API_Current" / "log_files" / "waterMainBreaks_backfill.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "waterMainBreaks_backfill.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
