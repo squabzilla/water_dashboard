@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "select_watermain_breaks",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{"type":"Feature","properties":{"break_date":"2024-06-05","break_type":"S","status":"RETIRED","created_at":"2026-09-08T15:56:37.622Z"},"geometry":{"type":"Point","coordinates":[-114.1662843,51.0740877]}},
+{"type":"Feature","properties":{"break_date":"2025-12-30","break_type":"B","status":"ACTIVE","created_at":"2026-09-08T15:56:37.622Z"},"geometry":{"type":"Point","coordinates":[-114.1842216,51.0791522]}}
+]
+}
