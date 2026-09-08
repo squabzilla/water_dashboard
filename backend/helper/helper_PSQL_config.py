@@ -17,8 +17,7 @@ Hardcoding those means editing the Python file itself between dev and prod, whic
 Worth moving POSTGRES_HOST, POSTGRES_PORT, and DATABASE_NAME into .env too (keeping the current values only as fallback defaults) once you're closer to deploying.
 """
 
-# TODO:
-# Clean up this file lol
+
 
 ########################################################################################################################
 ### script-setup 1: project-root-setup
@@ -82,46 +81,3 @@ def default_SQL_engine(config: DBConfig = DATABASE_CONFIG) -> Engine:
     )
     engine = create_engine(url)
     return engine
-
-"""
-load_dotenv(env_dir) # get my environment variables
-
-# setup config class
-@dataclass(frozen=True) # set up unchanging, constants dataclass for these variables
-class Config: # this is a custom class, I could name it whatever I want lol
-    postgres_user: str
-    postgres_password: str
-    api_key: str
-    api_secret_key: str
-    app_token: str
-    postgres_host: str
-    postgres_port: int
-    database_name: str
-
-# initialize CONFIG variable of type `Config` class
-CONFIG = Config(
-    postgres_user = os.environ["POSTGRES_USER"], # NOTE: using `os.environ[]` means it'll crash if not found
-    postgres_password = os.environ["POSTGRES_PASSWORD"], # `os.getenv()` would just return `None` if not found
-    api_key = os.environ["API_KEY"],
-    api_secret_key = os.environ["API_SECRET_KEY"],
-    app_token = os.environ["APP_TOKEN"],
-    postgres_host = "localhost",
-    postgres_port = 5433, # using 5433 instead of 5432 so I don't get port conflict on local machine from native vs containerized PSQL install
-    database_name = "calgary_watermains",
-)
-
-# set default text value for sqlalchemy engine initialization
-ENGINE_TEXT = f"postgresql+psycopg://{CONFIG.postgres_user}:{CONFIG.postgres_password}@{CONFIG.postgres_host}:{CONFIG.postgres_port}/{CONFIG.database_name}"
-
-
-# function to create engine
-# doing as function instead of creating actual engine here as constant variable, 
-# so errors with connection are found around query time, and so I don't initialize connection
-# in scripts importing this module, that don't actually need the connection
-# while none of this is relevant for my use-case, it's good to be aware of
-def default_SQL_engine(text = ENGINE_TEXT):
-    engine = create_engine(text)
-    return engine
-"""
-
-var_n = 1 # 'useless' code so python doesn't do weird stuff with triple-quoted-text-block lol

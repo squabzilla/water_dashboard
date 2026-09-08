@@ -19,8 +19,8 @@ from pathlib import Path
 
 # set PROJECT_ROOT so libraries from cousin folders import properly
 # note that I want the main directory and file is `scripts`, a sub-directory of main,
-#  so I need grand-parent folder instead of simply parent-folder
-PROJECT_ROOT = Path(__file__).resolve().parents[2] # gets file-path, (hopefully) resolves relative path issues, gets great-grand-parent folder
+#  so I need great grand-parent folder instead of simply parent-folder
+PROJECT_ROOT = Path(__file__).resolve().parents[2] 
 # sets working directory to project root - there may be redundancy here but oh well lol
 os.chdir(PROJECT_ROOT)
 # Ensure repository code is importable when this wrapper is run directly.

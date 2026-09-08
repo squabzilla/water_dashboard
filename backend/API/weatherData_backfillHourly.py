@@ -21,7 +21,7 @@ import os
 import sys
 from pathlib import Path
 
-# gets file-path, (hopefully) resolves relative path issues, gets grand-parent folder
+# gets file-path, (hopefully) resolves relative path issues, gets great grand-parent folder
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # sets working directory to project root - there may be redundancy here but oh well lol
 os.chdir(PROJECT_ROOT)
