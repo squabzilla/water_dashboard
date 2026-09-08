@@ -1,3 +1,6 @@
+# this is a deprecated file I'm not using, idk if useful lol
+
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
@@ -28,7 +31,7 @@ def get_features(
     maxx: float,
     maxy: float,
 ):
-    query = text("""
+    query = text("
         SELECT json_build_object(
             'type', 'FeatureCollection',
             'features', json_agg(features.feature)
@@ -46,7 +49,7 @@ def get_features(
                 :minx, :miny, :maxx, :maxy, 4326
             )
         ) AS features;
-    """)
+    ")
 
     with engine.connect() as conn:
         result = conn.execute(query, {
@@ -59,3 +62,5 @@ def get_features(
         geojson = result.scalar()
 
     return geojson
+"""
+a=1
