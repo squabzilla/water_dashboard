@@ -119,3 +119,16 @@ run_job "$NAME__weatherData_backfillDaily" "$JOB__weatherData_backfillDaily"
 run_job "$NAME__weatherData_backfillHourly" "$JOB__weatherData_backfillHourly"
 run_job "$NAME__weatherData_weatherStations" "$JOB__weatherData_weatherStations"
 run_job "$NAME__weatherData_updateHourlyWeather_runHourly" "$JOB__weatherData_updateHourlyWeather_runHourly"
+
+# remember cron jobs I wanna test too!
+#run_job "$CRONJOB_NAME__weatherData_updateDailyWeather_runDaily" "$CRONJOB_JOB__weatherData_updateDailyWeather_runDaily"
+#run_job "$CRONJOB_NAME__weatherData_updateHourlyWeather_runDaily" "$CRONJOB_JOB__weatherData_updateHourlyWeather_runDaily"
+#run_job "$CRONJOB_NAME__weatherData_updateHourlyWeather_runHourly" "$CRONJOB_JOB__weatherData_updateHourlyWeather_runHourly"
+
+echo "testing \`cron_tasks_daily.sh\`"
+cron_daily_cmd=".\\cron_tasks_daily.sh 2>> $BASH_BACKFILL_LOG"
+eval "$cron_daily_cmd"
+
+echo "testing \`cron_tasks_hourly.sh\`"
+cron_hourly_cmd=".\\cron_tasks_hourly.sh 2>> $BASH_BACKFILL_LOG"
+eval "$cron_hourly_cmd"
