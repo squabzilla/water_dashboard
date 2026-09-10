@@ -199,14 +199,14 @@ def _convert_SWOBFormat_to_HourlyFormat(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFram
     gdf_hourly[HourlyWeatherCols.hwc_utc_date] = pd.to_datetime(gdf_hourly[HourlyWeatherCols.hwc_utc_date], utc=True)
 
     # add local date column
-    gdf_hourly[HourlyWeatherCols.hwc_local_date] = gdf_hourly[HourlyWeatherCols.hwc_utc_date].dt.tz_convert("America/Edmonton").astype('Int64')
+    gdf_hourly[HourlyWeatherCols.hwc_local_date] = gdf_hourly[HourlyWeatherCols.hwc_utc_date].dt.tz_convert("America/Edmonton")
+
+    # add local year column
+    gdf_hourly[HourlyWeatherCols.hwc_local_year] = gdf_hourly[HourlyWeatherCols.hwc_local_date].dt.year.astype('Int64')
     # making it the 'Int64' dtype means the d-type supports null-values, so it won't upcast to float if there's a null value
     # because if it upcasts to float, the year value becomes `2026.0` instead of `2026` and later code that expects an integer breaks
     # because it's not an integer
     # also not that I need to use specifically the `Int64` dtype (capital I), not `int64` (lowercase i) because pandas is dumb, dumb legacy issues I guess
-
-    # add local year column
-    gdf_hourly[HourlyWeatherCols.hwc_local_year] = gdf_hourly[HourlyWeatherCols.hwc_local_date].dt.year
 
     # re-order columns
     gdf_hourly = _reorder_cols(gdf_hourly)
