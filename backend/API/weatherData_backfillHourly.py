@@ -2,10 +2,20 @@
 file name: weather_hourly_backfill.py
 author: William Hovdestad
 
-This script is designed to call the `fetch_MSC_GeoMet_weather` from the `weather_APIlogic.py` file,
-in order to backfill the database with hourly-weather-values.
+This script is used to backfill our PostGIS-PSQL database with hourly-weather-values.
 
-It grabs the `climate-hourly` data from the Canada weather API
+This script has two parts. The first is a function called `hourly_MSC_GeoMet_weather_by_year`
+which is passed a year, and returns a geoDataFrame.
+It calls the `fetch_MSC_GeoMet_weather` from the `weather_APIlogic.py` file in order to retrieve
+the data from the API.
+
+The second part: it calls the `backfill_weather_years` function from `weather_helper_backfill.py`,
+as that script contains the logic to loop through all of the relevant years for backfilling our database.
+Note that the `backfill_weather_years` function is designed to TAKE a function as input -
+a function that takes an integer YEAR as input.
+
+The API in question:
+This script uses the `climate-hourly` data from the Canada weather API
 link: https://api.weather.gc.ca/openapi?f=html#/climate-hourly
 
 This data is designed to be used in tandem with Water-Main-Breaks data from the City-of-Calgary,
@@ -57,7 +67,7 @@ from backend.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "weatherData_backfillHourly.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -97,7 +107,9 @@ def hourly_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
     gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier, datetime_col=HourlyWeatherCols.hwc_local_date)
     # NOTE: dates should be unique now, so let's check that
     if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
-        raise DataUniquenessConstraintViolation(f"ERROR: dates not unique for daily-weather backfill year {year}")
+        msg = f"Error: DataUniquenessConstraintViolation: dates not unique for daily-weather backfill year {year}"
+        logger.error(msg)
+        raise DataUniquenessConstraintViolation(msg)
     return gdf
 
 
