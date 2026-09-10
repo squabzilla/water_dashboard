@@ -43,7 +43,7 @@ import logging
 # custom libraries!
 from backend.helper.helper_timezones import AB_TIME
 from backend.helper.helper_API_errors import APITimeoutError, APIConnectError, APIResponseError, \
-    APIZeroCountError, APICountMismatchError, DataUniquenessConstraintViolation, DBError
+    APIZeroCountError, APICountMismatchError, DataUniquenessConstraintViolation, DBError, DataPipelineError
 from backend.helper.helper_PSQL_config import default_SQL_engine
 from backend.helper.helper_DB_update import export_as_new_table, add_new_records_to_table
 from backend.helper.helper_progress_bar import update_progress_bar
@@ -105,50 +105,14 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
 
         try:
             gdf = MSC_GeoMet_weather_by_year(year)
-        except APITimeoutError:
-            logger.error(f"Network timeout for {year}")
-            # NOTE: `logger.error` records the error message, without traceback to previous error messages;
-            # because in this particular case, we know the whole story from the first message alone
-            # traceback will give us more messages saying the same "OMG THE API TIMED OUT" and we don't need that in our lives
+        except DataPipelineError:
+            # this catches every subset of datapipeline error, so I don't need to specify each one!
             failed_years.append(year)
             if year == start_year: break
-            else: continue
-        except APIConnectError:
-            logger.exception(f"Error connecting to network for {year}")
-            failed_years.append(year)
-            if year == start_year: break
-            else: continue
-        except APIResponseError:
-            logger.exception(f"Malformed response for {year}")
-            # NOTE: `logger.exception` does traceback, so it records all the error messages that triggered/preceded this one as well
-            # that's because we'll want to get more detail about WHAT, exactly, went wrong with the API call & response
-            # was it a bad HTTP status? asking the API for non-existant properties? we want fo figure out what caused it
-            # NOTE: this one is the same level as `logger.error`
-            failed_years.append(year)
-            if year == start_year: break
-            else: continue
-        except APIZeroCountError:
-            logger.warning(f"No records found for {year}")
-            # still no traceback, but we're not going "OMG SOMETHING WENT HORRIBLY WRONG" here
-            # this is "user made a mistake and queried something with 0 results" instead of an incorrectly formatted query
-            failed_years.append(year)
-            if year == start_year: break
-            else: continue
-        except APICountMismatchError:
-            logger.exception(f"Inconsistent number of records found for {year}")
-            failed_years.append(year)
-            if year == start_year: break
-            else: continue
-        except DataUniquenessConstraintViolation:
-            logger.error(f"Dates not unique for daily-weather backfill, year: {year}")
-            failed_years.append(year)
-            if year == start_year: break
-            else: continue
         except Exception as e:
-            logger.error(f"Unexpected error while backfilling daily-weather-records: {e}")
-            failed_years.append(year)
-            if year == start_year: break
-            else: continue
+            msg = f"Unexpected error while backfilling daily-weather-records: {e}"
+            logger.critical(msg, exc_info=True)
+            break
 
         # define variables for database updating
         gdf = gdf
@@ -172,7 +136,7 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
                                          staging_table_unique_constraint_name=staging_table_unique_constraint_name,
                                          dtype_dictionary=dtype_dictionary, overwrite=True)
             except:
-                logger.exception(f"DB write failed for {year}")
+                logger.exception(f"Warning: DBError: DB write failed for {year}")
                 failed_years.append(year)
 
         else:
@@ -182,9 +146,9 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
                 export_as_new_table(gdf=gdf, engine=engine, main_table_name=main_table_name, dtype_dictionary=dtype_dictionary,
                                     main_table_unique_constraint_name=main_table_unique_constraint_name, unique_column=unique_column)
             except DBError:
-                error_message = f"Cannot create table for start year {year}; aborting backfill."
+                error_message = f"Error: DBError: Cannot create table for start year {year}; aborting backfill."
                 logger.critical(error_message, exc_info=True)
-                raise DBError(error_message) # this will end things script - but somethings gone HORRIBLY wrong if db connection fails...
+                raise DBError(error_message) # this will end things script - but somethings gone HORRIBLY wrong if db connection fails here...
 
         progress_bar_count += 1
         # NOTE: let's update progress bar AFTER iteration of loop is done...
