@@ -38,15 +38,22 @@ Python file for that queries the *Water Main Breaks* data for any updates, by ch
 Python file that contains the core logic for querying *MSC GeoMet* data from `https://api.weather.gc.ca/`
 - `weather_helper_backfill.py`  
 Python file containing logic for backfilling weather from 1956 (first watermain break record) to current year,  
-using functions from `weatherHelper_API.py`.
+takes a *function* as input - the function is specified to take a year as input, and return a GeoDataFrame.
+The input function is one of two functions, defined in either: `weatherData_backfillDaily.py` or `weatherData_backfillHourly.py`
 - `weather_helper_filterStationPriority`  
 Python file containing a function to filter weather stations by priority (see [Weather-Stations](#weather-stations))  
+
 - `weatherData_backfillDaily.py`  
-Python file that will backfill my **weather_data_daily** table,  
-using data from `collections/climate-daily`, with functions from `weatherHelper_backfill.py`.
+Python file that will backfill my **weather_data_daily** table in my database.  
+Contains a function that is passed an input year, and returns a GeoDataFrame of daily-weather for that year,  
+using data from `collections/climate-daily`, and using functions from `weather_helper_API.py`.  
+It then uses logic defined in `weather_helper_backfill.py` to loop through all relevant years to perform the backfill.  
+
 - `weatherData_backfillHourly.py`  
-Python file that will backfill my **weather_data_hourly** table in my database,  
-using data from `collections/climate-hourly`, with functions from `weatherHelper_backfill.py`.
+Python file that will backfill my **weather_data_hourly** table in my database.  
+Contains a function that is passed an input year, and returns a GeoDataFrame of hourly-weather for that year,  
+using data from `collections/climate-hourly`, and using functions from `weather_helper_API.py`.
+It then uses logic defined in `weather_helper_backfill.py` to loop through all relevant years to perform the backfill.  
 
 
 - `weatherData_updateDailyWeather_runDaily.py`  
