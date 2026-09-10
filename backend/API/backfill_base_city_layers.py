@@ -131,7 +131,9 @@ def fetch_city_layer(layer_dict: dict) -> None:
         gdf.to_postgis(layer_name, engine, if_exists="replace", index=False,)
         logger.info(f"Posted {layer_name} to PostGIS Database")
     except:
-        raise DBError(f"Error - could not upload {layer_name} to PostGIS Database")
+        msg = f"Error: DBError: could not upload {layer_name} to PostGIS Database"
+        logger.error(msg)
+        raise DBError(msg)
 
 
 

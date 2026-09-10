@@ -70,7 +70,9 @@ def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> dict:
     response_expected = response_output["numberMatched"] # get the number of matches
     # NOTE: fail here if API meta-data says we have no results
     if response_expected == 0:
-        raise APIZeroCountError(f"ERROR - no matches found in job: {job_name}. Aborting.")
+        msg = f"Error: APIZeroCountError: no matches found in job: {job_name}. Aborting."
+        logger.error(msg)
+        raise APIZeroCountError(msg)
     page_count = (response_expected / params["limit"]).__ceil__()
 
 
@@ -85,7 +87,10 @@ def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> dict:
 
     while url: # stops if url = None
         current_page += 1
-        if current_page > page_count + 1: raise APICountMismatchError("Error: max page count exceeded")
+        if current_page > page_count + 1:
+            msg = f"Error: APICountMismatchError: max page count exceeded during job: {job_title}. Aborting."
+            logger.error(msg)
+            raise APICountMismatchError(msg)
 
         #response_output = _fetch_weather_page(url, params)
         job_name = f"paginating job: {job_title}, page: {current_page}"
@@ -113,7 +118,8 @@ def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> dict:
     # one more error message after this TRY-EXCEPT block
     if response_expected != len(all_data):
         expected_vs_actual_error =\
-            f"ERROR - Missmatch between expected number of results ({response_expected}) and actual number ({len(all_data)}) during {job_name}. Aborting."
+            f"Error: APICountMismatchError: Missmatch between expected number of results ({response_expected}) and actual number ({len(all_data)}) during {job_name}. Aborting."
+        logger.error(expected_vs_actual_error)
         raise APICountMismatchError(expected_vs_actual_error)
 
 
