@@ -71,7 +71,7 @@ from backend.helper.helper_API_errors import DataUniquenessConstraintViolation
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "weatherData_updateHourlyRecords_runDaily.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "weatherData_updateHourlyRecords_runHourly.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -198,7 +198,11 @@ def _convert_SWOBFormat_to_HourlyFormat(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFram
     gdf_hourly[HourlyWeatherCols.hwc_utc_date] = pd.to_datetime(gdf_hourly[HourlyWeatherCols.hwc_utc_date], utc=True)
 
     # add local date column
-    gdf_hourly[HourlyWeatherCols.hwc_local_date] = gdf_hourly[HourlyWeatherCols.hwc_utc_date].dt.tz_convert("America/Edmonton")
+    gdf_hourly[HourlyWeatherCols.hwc_local_date] = gdf_hourly[HourlyWeatherCols.hwc_utc_date].dt.tz_convert("America/Edmonton").astype('Int64')
+    # making it the 'Int64' dtype means the d-type supports null-values, so it won't upcast to float if there's a null value
+    # because if it upcasts to float, the year value becomes `2026.0` instead of `2026` and later code that expects an integer breaks
+    # because it's not an integer
+    # also not that I need to use specifically the `Int64` dtype (capital I), not `int64` (lowercase i) because pandas is dumb, dumb legacy issues I guess
 
     # add local year column
     gdf_hourly[HourlyWeatherCols.hwc_local_year] = gdf_hourly[HourlyWeatherCols.hwc_local_date].dt.year
@@ -223,8 +227,11 @@ def _filter_hourly_records(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     hourly_index = pd.date_range(gdf.index.min().floor("h"), gdf.index.max().ceil("h"), freq="h")
 
     # build a new dataframe by re-indexing the original one on the newly-created hourly index
-    new_gdf = gdf.reindex(hourly_index, method="nearest", tolerance=pd.Timedelta(minutes=5)).reset_index()
+    new_gdf = gdf.reindex(hourly_index, method="nearest", tolerance=pd.Timedelta(minutes=5))
+    # let's get rid of any empty rows (where ALL points are empty, does not include index in this)
+    new_gdf = new_gdf.dropna(how='all')
     # also, reset the index when we're done
+    new_gdf = new_gdf.reset_index()
 
     # rename the index to the datetime
     new_gdf = new_gdf.rename(columns={"index": HourlyWeatherCols.hwc_local_date})
