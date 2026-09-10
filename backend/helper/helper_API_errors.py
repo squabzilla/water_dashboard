@@ -7,6 +7,9 @@ class APITimeoutError(DataPipelineError):
 class APIConnectError(DataPipelineError):
     """Error connecting to network entirely."""
 
+class APIStatusError(DataPipelineError):
+    """API response returned a bad status-code."""
+
 class APIResponseError(DataPipelineError):
     """API responded, but the payload was malformed or unexpected."""
 
