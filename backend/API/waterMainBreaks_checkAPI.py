@@ -50,12 +50,12 @@ from tenacity import ( # for retrying APIs so a single timeout doesn't cause a c
 from backend.helper.helper_timezones import AB_TIME
 from backend.API.waterMainBreaks_backfill import waterMainBreaks_backfill
 from backend.helper.helper_PSQL_config import DATABASE_CONFIG, default_SQL_engine
-from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIResponseError
+from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIConnectError, APIResponseError, APIStatusError
 
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "waterMainBreaks_checkAPI.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -140,15 +140,25 @@ def main() -> None:
     try:
         response = _checkWaterMainBreaksAPI(JSON_QUERY_URL, payload)
     except httpx.TimeoutException as e:
-            raise APITimeoutError(f"Timed out fetching {JSON_QUERY_URL} after retries") from e
+        msg = f"Error: APITimeoutError: Timed out fetching {JSON_QUERY_URL} after retries"
+        logger.error(msg)
+        raise APITimeoutError(msg) from e
     except httpx.ConnectError as e:
-        raise APITimeoutError(f"Connection error fetching {JSON_QUERY_URL} after retries") from e
+        msg = f"Error: APIConnectError: Connection error fetching {JSON_QUERY_URL} after retries"
+        logger.error(msg)
+        raise APIConnectError(msg) from e
     except httpx.HTTPStatusError as e:
-        raise APIResponseError(f"Bad status fetching {JSON_QUERY_URL}: {e.response.status_code}") from e
+        msg = f"Error: APIStatusError: Bad status fetching {JSON_QUERY_URL}: {e.response.status_code}"
+        logger.error(msg)
+        raise APIStatusError(msg) from e
     except (KeyError, json.JSONDecodeError) as e:
-        raise APIResponseError(f"Malformed page while paginating {JSON_QUERY_URL}: {e}") from e
+        msg = f"Error: APIResponseError: Malformed page while paginating {JSON_QUERY_URL}: {e}"
+        logger.error(msg)
+        raise APIResponseError(msg) from e
     except Exception as e:
-        raise DataPipelineError(f"Unexpected error while fetching json {JSON_QUERY_URL}: {e}") from e
+        msg = f"Error: DataPipelineError: CRITICAL ERROR: Unexpected error while fetching json {JSON_QUERY_URL}: {e}"
+        logger.critical(msg, exc_info=True) # critical error since we aren't prepared for it, and we want ALL info
+        raise DataPipelineError(msg) from e
 
     API_response = response[0][':created_at']
 

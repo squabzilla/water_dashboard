@@ -59,7 +59,7 @@ from backend.helper.helper_API_errors import APICountMismatchError, APIZeroCount
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "waterMainBreaks_backfill.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -117,12 +117,14 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
     payload = {"query": soql_query, "includeSynthetic": False,}
     # `"includeSynthetic": False` prevents auto-generated, made-up columns from showing up, which are annoying
 
-    job_name = "count water-main-break-records"
+    job_name = "counting-water-main-break-records"
     record_count_response = try_except_city_API(job_name=job_name, url=JSON_QUERY_URL, payload=payload)
     record_count = record_count_response[0]["COUNT"]
     record_count = int(record_count)
     if record_count == 0:
-        raise APIZeroCountError(f"ERROR - no matches found during {job_name}. Aborting.")
+        msg = f"Error: APIZeroCountError: No matches found during {job_name}. Aborting."
+        logger.error(msg)
+        raise APIZeroCountError(msg)
     page_count = (record_count / page_size).__ceil__()
         
 
@@ -176,10 +178,12 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
     # lets confirm our results match...
     if not silent_function:
         print(f". Expected responses: {record_count}; actual: {len(gdf)}")
+
     # spit out an error if they don't
-    expected_vs_actual_error =\
-    f"ERROR - Missmatch between expected number of results ({record_count}) and actual number ({len(all_data)}). Aborting."
     if record_count != len(all_data):
+        expected_vs_actual_error =\
+        f"Error: APICountMismatchError: Missmatch between expected number of results ({record_count}) and actual number ({len(all_data)}). Aborting."
+        logger.error(expected_vs_actual_error)
         raise APICountMismatchError(expected_vs_actual_error)
 
 
@@ -203,7 +207,9 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
                        dtype=dict(WATERMAIN_BREAKS_DATA_TYPES) # unwrap to a regular dict for the function call
                        )
     except Exception as e:
-        raise DBError(f"Error - could not upload to PostGIS Database: {e}") from e
+        msg = f"Error: DBError: could not upload to PostGIS Database: {e}"
+        logger.error(msg)
+        raise DBError(msg) from e
 
 
 ########################################################################################################################

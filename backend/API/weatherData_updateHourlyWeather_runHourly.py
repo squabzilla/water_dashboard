@@ -71,7 +71,7 @@ from backend.helper.helper_API_errors import DataUniquenessConstraintViolation
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "weatherData_updateHourlyRecords_runHourly.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -158,7 +158,8 @@ def _fetch_swob_data(hours_back:int = args.hours_back) -> gpd.GeoDataFrame:
 
     # NOTE: dates should be unique now, so let's check that
     if not gdf[SWOBWeatherCols.swob_utc_date].is_unique:
-        err_mss = f"ERROR: dates not unique on hourly-update of SWOB-realtime from UTC:{utc_start_time} to UTC:{utc_current_time}"
+        err_mss = f"Error: DataUniquenessConstraintViolation: SWOB-realtime data datetimes not unique from UTC:{utc_start_time} to UTC:{utc_current_time}"
+        logger.error(err_mss)
         raise DataUniquenessConstraintViolation(err_mss)
 
     return gdf
@@ -241,7 +242,10 @@ def _filter_hourly_records(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
     # NOTE: dates should be unique now, so let's check that
     if not new_gdf[HourlyWeatherCols.hwc_local_date].is_unique:
-        raise DataUniquenessConstraintViolation(f"ERROR: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}")
+        #msg = f"Error: DataUniquenessConstraintViolation: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}"
+        msg = f"Error: DataUniquenessConstraintViolation: filtered-hourly-records not unique; suggests algorithm error in `_filter_hourly_records` function."
+        logger.error(msg)
+        raise DataUniquenessConstraintViolation()
 
     # return it
     return new_gdf

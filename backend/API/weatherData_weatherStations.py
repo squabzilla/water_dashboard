@@ -50,7 +50,7 @@ from backend.API.weather_helper_API import fetch_weather_pages
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "weather_stations_backfill.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -91,7 +91,9 @@ def main() -> None:
         engine = default_SQL_engine()
         gdf_weather_station.to_postgis(DatabaseTables.weather_stations, engine, if_exists="replace", index=False)
     except:
-        raise DBError("ERROR - could not upload weather stations to PostGIS Database.")
+        msg = "Error: DBError: could not upload weather stations to PostGIS Database."
+        logger.error(msg)
+        raise DBError(msg)
 
 
 

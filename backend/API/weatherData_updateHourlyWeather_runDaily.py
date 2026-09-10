@@ -63,7 +63,7 @@ from backend.helper.helper_DB_update import add_new_records_to_table
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / "weatherData_updateHourlyRecords_runDaily.log"
+logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -119,7 +119,9 @@ def _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days() -> gpd.GeoDataFrame
     # NOTE: dates should be unique now, so let's check that
     
     if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
-        raise DataUniquenessConstraintViolation(f"ERROR: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}")
+        msg = f"Error: DataUniquenessConstraintViolation: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}"
+        logger.error(msg)
+        raise DataUniquenessConstraintViolation(msg)
 
     return gdf
 
