@@ -51,6 +51,12 @@ APIZeroCountError, APICountMismatchError, DataUniquenessConstraintViolation, DBE
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CALL DAMNIT
 #logging.getLogger("httpcore").setLevel(logging.WARNING)
+# LOGGING ORDER:
+# debug
+# info
+# warning
+# error
+# critical
 
 
 
@@ -79,21 +85,31 @@ def try_except_weather_API(job_name: str, url: str, params: dict | None) -> dict
     try:
         response = _fetch_weather_page(url, params)
     except httpx.TimeoutException as e:
-            raise APITimeoutError(f"Timed out during '{job_name}' after retries") from e
-            # NOTE: we aren't including {e} in error message, as we already have relevant info, rest is likely noise
+        msg = f"Timed out during '{job_name}' after retries"
+        logger.error(msg)
+        raise APITimeoutError(msg) from e
+        # NOTE: we aren't including {e} in error message, as we already have relevant info, rest is likely noise
     except httpx.ConnectError as e:
-        raise APIConnectError(f"Connection error during '{job_name}' after retries: {e}") from e
+        msg = f"Connection error during '{job_name}' after retries: {e}"
+        logger.error(msg)
+        raise APIConnectError(msg) from e
         # NOTE: {e} here typically tells you specific underlying failture: 
         # DNS, connection refused, network unreachable, etc. - so worth keeping
     except httpx.HTTPStatusError as e:
-        raise APIResponseError(f"Bad status during '{job_name}': {e.response.status_code}") from e
+        msg = f"Bad status during '{job_name}': {e.response.status_code}"
+        logger.error(msg)
+        raise APIResponseError(msg) from e
         # NOTE: {e.response.status_code} will typically give us relevant information, 
         # while removing extraneous noise from error message by selecting SPECIFICALLY the status-code
     except (KeyError, json.JSONDecodeError) as e:
-        raise APIResponseError(f"Malformed page while paginating '{job_name}': {e}") from e
+        msg = f"Malformed page while paginating '{job_name}': {e}"
+        logger.error(msg)
+        raise APIResponseError() from e
         # NOTE: {e} here tells you WHAT was malformed, so its good to have here
     except Exception as e:
-        raise DataPipelineError(f"Unexpected error during '{job_name}': {e}") from e
+        msg = f"Unexpected error during '{job_name}': {e}"
+        logger.critical(msg, exc_info=True) # critical error since we aren't prepared for it, and we want ALL info
+        raise DataPipelineError() from e
         # NOTE: since ANYTHING could have happened here, we want whole error lol
     return response
 
@@ -131,20 +147,30 @@ def try_except_city_API(job_name: str, url: str, payload: dict | None) -> dict:
     try:
         response = _fetch_city_page(url, payload)
     except httpx.TimeoutException as e:
-        raise APITimeoutError(f"Timed out during '{job_name}' after retries") from e
+        msg = f"Timed out during '{job_name}' after retries"
+        logger.error(msg)
+        raise APITimeoutError() from e
         # NOTE: we aren't including {e} in error message, as we already have relevant info, rest is likely noise
     except httpx.ConnectError as e:
-        raise APIConnectError(f"Connection error during '{job_name}' after retries: {e}") from e
+        msg = f"Connection error during '{job_name}' after retries: {e}"
+        logger.error(msg)
+        raise APIConnectError(msg) from e
         # NOTE: {e} here typically tells you specific underlying failture: 
         # DNS, connection refused, network unreachable, etc. - so worth keeping
     except httpx.HTTPStatusError as e:
-        raise APIResponseError(f"Bad status during '{job_name}': {e.response.status_code}") from e
+        msg = f"Bad status during '{job_name}': {e.response.status_code}"
+        logger.error(msg)
+        raise APIResponseError() from e
         # NOTE: {e.response.status_code} will typically give us relevant information, 
         # while removing extraneous noise from error message by selecting SPECIFICALLY the status-code
     except (KeyError, json.JSONDecodeError) as e:
-        raise APIResponseError(f"Malformed page while paginating '{job_name}': {e}") from e
+        msg = f"Malformed page while paginating '{job_name}': {e}"
+        logger.error(msg)
+        raise APIResponseError() from e
         # NOTE: {e} here tells you WHAT was malformed, so its good to have here
     except Exception as e:
-        raise DataPipelineError(f"Unexpected error while during '{job_name}': {e}") from e
+        msg = f"Unexpected error while during '{job_name}': {e}"
+        logger.critical(msg, exc_info=True) # critical error since we aren't prepared for it, and we want ALL info
+        raise DataPipelineError() from e
         # NOTE: since ANYTHING could have happened here, we want whole error lol
     return response
