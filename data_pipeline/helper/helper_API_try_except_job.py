@@ -41,8 +41,8 @@ import json
 import logging
 
 # custom modules!
-from backend.helper.helper_PSQL_config import DATABASE_CONFIG
-from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIConnectError, APIResponseError, \
+from data_pipeline.helper.helper_PSQL_config import DATABASE_CONFIG
+from data_pipeline.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIConnectError, APIResponseError, \
 APIZeroCountError, APICountMismatchError, DataUniquenessConstraintViolation, DBError, APIStatusError
 
 

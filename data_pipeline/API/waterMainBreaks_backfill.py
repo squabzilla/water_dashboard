@@ -48,18 +48,18 @@ import logging # used to log stuff
 
 
 # custom modules!
-from backend.helper.helper_progress_bar import update_progress_bar
-from backend.helper.helper_timezones import AB_TIME
-from backend.helper.helper_PSQL_config import default_SQL_engine
-from backend.helper.helper_SQL_tables import DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES
-from backend.helper.helper_set_geojson_crs import set_geojson_crs
-from backend.helper.helper_API_try_except_job import try_except_city_API
-from backend.helper.helper_API_errors import APICountMismatchError, APIZeroCountError, DBError
+from data_pipeline.helper.helper_progress_bar import update_progress_bar
+from data_pipeline.helper.helper_timezones import AB_TIME
+from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
+from data_pipeline.helper.helper_SQL_tables import DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES
+from data_pipeline.helper.helper_set_geojson_crs import set_geojson_crs
+from data_pipeline.helper.helper_API_try_except_job import try_except_city_API
+from data_pipeline.helper.helper_API_errors import APICountMismatchError, APIZeroCountError, DBError
 
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

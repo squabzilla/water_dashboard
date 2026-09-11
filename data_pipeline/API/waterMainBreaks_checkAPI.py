@@ -47,15 +47,15 @@ from tenacity import ( # for retrying APIs so a single timeout doesn't cause a c
 )
 
 # custom modules!
-from backend.helper.helper_timezones import AB_TIME
-from backend.API.waterMainBreaks_backfill import waterMainBreaks_backfill
-from backend.helper.helper_PSQL_config import DATABASE_CONFIG, default_SQL_engine
-from backend.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIConnectError, APIResponseError, APIStatusError
+from data_pipeline.helper.helper_timezones import AB_TIME
+from data_pipeline.API.waterMainBreaks_backfill import waterMainBreaks_backfill
+from data_pipeline.helper.helper_PSQL_config import DATABASE_CONFIG, default_SQL_engine
+from data_pipeline.helper.helper_API_errors import DataPipelineError, APITimeoutError, APIConnectError, APIResponseError, APIStatusError
 
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

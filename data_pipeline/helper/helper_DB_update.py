@@ -57,20 +57,20 @@ import logging
 """
 # NOTE: Probably don't need this stuff
 # custom modules!
-from backend.helper.helper_progress_bar import update_progress_bar
-#from backend.helper_error import CustomErrorMessage
-from backend.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
+from data_pipeline.helper.helper_progress_bar import update_progress_bar
+#from data_pipeline.helper_error import CustomErrorMessage
+from data_pipeline.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
     DailyWeatherCols, HourlyWeatherCols, DatabaseTables, HOURLY_WEATHER_PROPERTIES, \
     PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID, \
     SWOB_PROPERTIES, HOURLY_SWOB_CONVERSION, DAILY_WEATHER_UNIQUE_DATE_CONSTRAINT, DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT
-from backend.helper.helper_set_geojson_crs import set_geojson_crs
-from backend.API_Current.weather_APIlogic import fetch_weather_pages, filter_stations_by_priority
+from data_pipeline.helper.helper_set_geojson_crs import set_geojson_crs
+from data_pipeline.API_Current.weather_APIlogic import fetch_weather_pages, filter_stations_by_priority
 
-from backend.helper.helper_API_errors import APITimeoutError, APIResponseError, APICountMismatchError, APIZeroCountError, DataUniquenessConstraintViolation
-from backend.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
-from backend.helper.helper_PSQL_config import default_SQL_engine
+from data_pipeline.helper.helper_API_errors import APITimeoutError, APIResponseError, APICountMismatchError, APIZeroCountError, DataUniquenessConstraintViolation
+from data_pipeline.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
+from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
 """
-from backend.helper.helper_API_errors import DBError
+from data_pipeline.helper.helper_API_errors import DBError
 
 
 ########################################################################################################################

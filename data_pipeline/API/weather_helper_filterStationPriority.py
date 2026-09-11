@@ -36,7 +36,7 @@ import geopandas as gpd
 import logging
 
 # custom libraries!
-from backend.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
+from data_pipeline.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
 
 
 

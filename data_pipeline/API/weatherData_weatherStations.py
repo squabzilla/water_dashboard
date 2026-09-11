@@ -41,16 +41,16 @@ import logging # used to log stuff
 
 
 # custom modules!
-from backend.helper.helper_PSQL_config import default_SQL_engine
-from backend.helper.helper_SQL_tables import DatabaseTables, PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
-from backend.helper.helper_API_errors import DBError
-from backend.API.weather_helper_API import fetch_weather_pages
+from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
+from data_pipeline.helper.helper_SQL_tables import DatabaseTables, PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
+from data_pipeline.helper.helper_API_errors import DBError
+from data_pipeline.API.weather_helper_API import fetch_weather_pages
 
 
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

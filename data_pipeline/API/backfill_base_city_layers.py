@@ -38,17 +38,17 @@ import json # used for handling export of json data
 import logging
 
 # custom modules!
-from backend.helper.helper_progress_bar import update_progress_bar
-from backend.helper.helper_API_try_except_job import try_except_city_API
-from backend.helper.helper_PSQL_config import default_SQL_engine, DATABASE_CONFIG
-from backend.helper.helper_timezones import AB_TIME
-from backend.helper.helper_API_errors import DBError
+from data_pipeline.helper.helper_progress_bar import update_progress_bar
+from data_pipeline.helper.helper_API_try_except_job import try_except_city_API
+from data_pipeline.helper.helper_PSQL_config import default_SQL_engine, DATABASE_CONFIG
+from data_pipeline.helper.helper_timezones import AB_TIME
+from data_pipeline.helper.helper_API_errors import DBError
 
 
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

@@ -1,17 +1,28 @@
 ####################################################################################################
-# file name: explore_weather_stations.py
+# file name: explore_hydrometric_stations.py
 # author: William Hovdestad
 #
-# the goal of this script is to get a list of relevant weather stations in calgary for our purposes,
+# the goal of this script is to get a list of relevant hydrometric stations in calgary for our purposes,
 # calling the api of official canadian climate data
-# API = "https://api.weather.gc.ca/collections/climate-stations/items"
+# API = "https://api.weather.gc.ca/collections/hydrometric-stations/items"
 # Steps:
-# 1. get weather stations in the calgary area
+# 1. get hydrometric stations in the calgary area
 # 2. calc distance between each station and calgary tower (used as semi-arbitary POINT for Calgary),
 #    and sort by said distance
-# 3.  filter them to stations currently active, have hourly values, and start at/before jan 1 2000
 # 4. (optional) - print data to console confirming above actually works
 # 5. save our data to a txt file
+
+"""
+NOTE:
+After exploring this, I'm not going to use hydrometric stations for my dashboard.
+I just don't have any ideas on incorporating them in a meaningful way,
+and I'm also a little concerned that I only have daily means to work with.
+
+Maybe at a later point I could explore if there's a correlation between high/low hydro levels
+and water main breaks - but I'm trying to make a mapping dashboard to show off skills, and
+hydro levels don't fit into that. Especially since the lay-person won't have any idea what to do
+with hydrometric station data on the map anyways.
+"""
 
 
 
@@ -86,19 +97,20 @@ def __bbox_from_radius(lat, long, km):
 def stations__fetch():
     min_x, min_y, max_x, max_y = __bbox_from_radius(CALGARY["lat"], CALGARY["long"], RADIUS_KM)
 
-    url = "https://api.weather.gc.ca/collections/climate-stations/items"
+    url = "https://api.weather.gc.ca/collections/hydrometric-stations/items"
 
     params = {
         "bbox": f"{min_x},{min_y},{max_x},{max_y}",
         # NOTE: bbox order is  standard order defined by the 
         # OGC (Open Geospatial Consortium) API spec that Environment Canada's API follows
         # basically, maps to west-boundary, south-boundary, east-boundary, north-boundary
-        "PROV_STATE_TERR_CODE": "AB",
+        "PROV_TERR_STATE_LOC": "AB",
         "f": "json", # this line says we want it in json format
         "limit": 200,
         # NOTE: above sets the limits of results;
         # 200 is higher than Environment Canada API's default limit of 10, 
         # but low enough not to upset API
+        # "STATION_NAME": "BOW RIVER AT CALGARY",
     }
 
     # actual API call - make request, do response.wait-for-update, return the response data
@@ -248,9 +260,9 @@ def __valid_daily_start(station):
 def stations__filter(all_stations):
     results = []
     for station in all_stations:
-        if not __is_active(station): continue # skip if we don't get TRUE for `is_active(station)`
-        if not __has_hourly(station): continue # skip if we don't get TRUE for `has_hourly(station)`
-        if not __valid_daily_start(station): continue # skip if we don't get TRUE for `valid_daily_start(station)`
+        #if not __is_active(station): continue # skip if we don't get TRUE for `is_active(station)`
+        #if not __has_hourly(station): continue # skip if we don't get TRUE for `has_hourly(station)`
+        #if not __valid_daily_start(station): continue # skip if we don't get TRUE for `valid_daily_start(station)`
         results.append(station)
     return results
 
@@ -265,6 +277,12 @@ def stations__filter(all_stations):
 stations = stations__fetch()
 stations = stations__distance_calc(stations)
 filtered = stations__filter(stations)
+
+# make some geodataframes
+gdf_stations = gpd.GeoDataFrame.from_features(stations, crs="EPSG:4326")
+gdf_filtered = gpd.GeoDataFrame.from_features(filtered, crs="EPSG:4326")
+
+print(f"Station is of type: {type(filtered)}")
 
 
 # see what an example station looks like
@@ -308,16 +326,18 @@ output_data_list.extend([starting_line_1, starting_line_2])
 # filter through stations, adding relevant station lines to `output_data_list`
 for s in filtered:
     station_delimiter_newline = "\n"
-    station_line_1 = f"STATION_NAME: {s["properties"]["STATION_NAME"]}; CLIMATE_IDENTIFIER: {s["properties"]["CLIMATE_IDENTIFIER"]};\n"
-    station_line_2 = f"Custom `is_active`         check: {__is_active(s)}; LAST_DATE: {s["properties"]["LAST_DATE"]};\n"
-    station_line_3 = f"Custom `has_hourly`        check: {__has_hourly(s)}; HAS_HOURLY_DATA: {s["properties"]["HAS_HOURLY_DATA"]};\n"
-    station_line_4 = f"Custom `valid_daily_start` check: {__valid_daily_start(s)}; DLY_FIRST_DATE: {s["properties"]["DLY_FIRST_DATE"]};\n"
-    output_data_list.extend([station_delimiter_newline, station_line_1, station_line_2, station_line_3, station_line_4])
-    # break
+    station_line_1 = f"STATION_NAME: {s["properties"]["STATION_NAME"]}; STATION_NUMBER: {s["properties"]["STATION_NUMBER"]}; IDENTIFIER: {s["properties"]["IDENTIFIER"]};\n"
+    station_line_2 = f"REAL_TIME: {s["properties"]["REAL_TIME"]}; STATUS_EN: {s["properties"]["STATUS_EN"]}; CONTRIBUTOR_EN: {s["properties"]["CONTRIBUTOR_EN"]};\n"
+    #station_line_2 = f"Custom `is_active`         check: {__is_active(s)}; LAST_DATE: {s["properties"]["LAST_DATE"]};\n"
+    #station_line_3 = f"Custom `has_hourly`        check: {__has_hourly(s)}; HAS_HOURLY_DATA: {s["properties"]["HAS_HOURLY_DATA"]};\n"
+    #station_line_4 = f"Custom `valid_daily_start` check: {__valid_daily_start(s)}; DLY_FIRST_DATE: {s["properties"]["DLY_FIRST_DATE"]};\n"
+    #output_data_list.extend([station_delimiter_newline, station_line_1, station_line_2, station_line_3, station_line_4])
+    output_data_list.extend([station_delimiter_newline, station_line_1, station_line_2])
+    break
 
 # write data to .txt file
-output_txt = Path(PROJECT_ROOT) / "backend" / "EDA" / "test_data" / "weather_stations_output.txt"
-with open(output_txt, "w") as f:
+#txt_output = Path(PROJECT_ROOT) / "data_pipeline" / "test_data" / "hydro_stations_output.txt "
+#with open("explore_stations_output.txt", "w") as f:
     f.writelines(output_data_list)
 
 
@@ -331,48 +351,15 @@ print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 print("")
 
 ####################################################################################################
-### step 5.2 - save our data as json, to make output data easier to use in the future
-output_json = Path(PROJECT_ROOT) / "backend" / "EDA" / "test_data" / "weather_stations.json"
-#with open(output_json, "w") as f: json.dump(filtered, f, indent=2)
+### step 5.2 - save our data as geojson, to make output data easier to use in the future
+#with open("weather_stations.json", "w") as f:
+    #json.dump(filtered, f, indent=2)
 
+gdf_single_station = gdf_stations.head(1).copy()
+output_single_station = Path(PROJECT_ROOT) / "data_pipeline" / "EDA" / "test_data" / "hydro_stations_gejson_output.geojson"
 
+gdf_single_station.to_file(output_single_station, driver="GeoJSON")
 
-####################################################################################################
-### step 6 - we're actually gonna make a dataframe of all our weather_stations, save to csv,
-###          and manually examine them ourself
-
-import pandas as pd
-import geopandas as gpd
-
-gdf = gpd.GeoDataFrame.from_features(stations)
-
-select_cols =\
-['STN_ID','STATION_NAME','LATITUDE','LONGITUDE','CLIMATE_IDENTIFIER','FIRST_DATE','LAST_DATE','HLY_FIRST_DATE',\
- 'HLY_LAST_DATE','DLY_FIRST_DATE','DLY_LAST_DATE','MLY_FIRST_DATE','MLY_LAST_DATE',\
- 'HAS_MONTHLY_SUMMARY','HAS_NORMALS_DATA','HAS_HOURLY_DATA','distance_km','geometry']
-gdf = gdf[select_cols]
-gdf = gdf.set_crs("EPSG:4326")
-output_file = Path(PROJECT_ROOT) / "backend" / "EDA" / "test_data" / "weather_stationgs_geojson.geojson"
-gdf.to_file(output_file, driver='GeoJSON')
-
-#print(gdf.head())
-
-temp_stations = []
-for s in stations:
-    temp_stations.append(s["properties"])
-    #temp_row = s['properties']
-df_stations = pd.DataFrame(temp_stations)
-print("df_station head:")
-print(df_stations.head(1))
-for col in df_stations.columns:
-    break
-    print(col)
-
-select_cols =\
-['STN_ID','STATION_NAME','LATITUDE','LONGITUDE','CLIMATE_IDENTIFIER','FIRST_DATE','LAST_DATE','HLY_FIRST_DATE',\
- 'HLY_LAST_DATE','DLY_FIRST_DATE','DLY_LAST_DATE','MLY_FIRST_DATE','MLY_LAST_DATE',\
- 'HAS_MONTHLY_SUMMARY','HAS_NORMALS_DATA','HAS_HOURLY_DATA','distance_km']
-df_stations = df_stations[select_cols]
-gdf_stations = gpd.GeoDataFrame(df_stations, geometry=gpd.points_from_xy(df_stations.LONGITUDE, df_stations.LATITUDE),crs="EPSG:4326")
-output_csv = Path(PROJECT_ROOT) / "backend" / "EDA" / "test_data" / "CSV_weather_stations.csv"
-df_stations.to_csv(output_csv, index=False)
+#C_drive_output = Path(r"C:\Users\willh\Documents\Water_Dashboard\New_folder\hydro.geojson")
+#gdf_single_station.to_file(C_drive_output, driver="GeoJSON")
+#print(single_station)

@@ -49,21 +49,21 @@ import json # used for handling export of json data
 import logging
 
 # custom modules!
-from backend.helper.helper_timezones import AB_TIME
-from backend.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, \
+from data_pipeline.helper.helper_timezones import AB_TIME
+from data_pipeline.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, \
     HourlyWeatherCols, DatabaseTables, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
-from backend.API.weather_helper_API import fetch_weather_pages
-from backend.API.weather_helper_filterStationPriority import filter_stations_by_priority
-from backend.helper.helper_API_errors import DataUniquenessConstraintViolation
-from backend.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
-from backend.helper.helper_PSQL_config import default_SQL_engine
-from backend.helper.helper_DB_update import add_new_records_to_table
+from data_pipeline.API.weather_helper_API import fetch_weather_pages
+from data_pipeline.API.weather_helper_filterStationPriority import filter_stations_by_priority
+from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
+from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
+from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
+from data_pipeline.helper.helper_DB_update import add_new_records_to_table
 
 
 
 ########################################################################################################################
 ### script-setup 3: logging config
-logfile = Path(PROJECT_ROOT) / "backend" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
