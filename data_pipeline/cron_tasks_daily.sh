@@ -92,9 +92,14 @@ NAME__weatherData_updateHourlyWeather_runDaily="weatherData_updateHourlyWeather_
 PYSCRIPT__weatherData_updateHourlyWeather_runDaily="$SCRIPT_DIR/weatherData_updateHourlyWeather_runDaily.py"
 JOB__weatherData_updateHourlyWeather_runDaily="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateHourlyWeather_runDaily 2>> $BASH_RUN_DAILY_LOG"
 
+NAME__waterMainBreaks_checkAPI_runDaily="waterMainBreaks_checkAPI_runDaily"
+PYSCRIPT__waterMainBreaks_checkAPI_runDaily="$SCRIPT_DIR/waterMainBreaks_checkAPI_runDaily.py"
+JOB__waterMainBreaks_checkAPI_runDaily="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__waterMainBreaks_checkAPI_runDaily 2>> $BASH_RUN_DAILY_LOG"
+
 
 
 ########################################################################################################################
 ### HIT IT
 run_job "$NAME__weatherData_updateDailyWeather_runDaily" "$JOB__weatherData_updateDailyWeather_runDaily"
 run_job "$NAME__weatherData_updateHourlyWeather_runDaily" "$JOB__weatherData_updateHourlyWeather_runDaily"
+run_job "$NAME__waterMainBreaks_checkAPI_runDaily" "$JOB__waterMainBreaks_checkAPI_runDaily"
