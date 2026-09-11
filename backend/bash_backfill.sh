@@ -125,10 +125,10 @@ run_job "$NAME__weatherData_updateHourlyWeather_runHourly" "$JOB__weatherData_up
 ########################################################################################################################
 ### test my cron_tasks scripts while we're at it, make sure they work
 
-echo "testing \`cron_tasks_daily.sh\`"
-cron_daily_cmd=".\\cron_tasks_daily.sh 2>> $BASH_BACKFILL_LOG"
-eval "$cron_daily_cmd"
+NAME__cron_tasks_daily="cron_tasks_daily"
+JOB__cron_tasks_daily="$BASH_DIR/cron_tasks_daily.sh 2>> $BASH_BACKFILL_LOG"
+run_job "$NAME__cron_tasks_daily" "$JOB__cron_tasks_daily"
 
-echo "testing \`cron_tasks_hourly.sh\`"
-cron_hourly_cmd=".\\cron_tasks_hourly.sh 2>> $BASH_BACKFILL_LOG"
-eval "$cron_hourly_cmd"
+NAME__cron_tasks_hourly="cron_tasks_hourly"
+JOB__cron_tasks_hourly="$BASH_DIR/cron_tasks_hourly.sh 2>> $BASH_BACKFILL_LOG"
+run_job "$NAME__cron_tasks_hourly" "$JOB__cron_tasks_hourly"
