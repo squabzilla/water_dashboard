@@ -246,7 +246,9 @@ class WatermainBreaksCols(StrEnum):
     break_date = "break_date"
     break_type = "break_type"
     status = "status"
-    created = ":created_at"
+    point = "point" # needed to get x/y coords
+    created_API_name = ":created_at"
+    created_PSQL_name = "created_at"
 
 WATERMAIN_BREAKS_DATA_TYPES = MappingProxyType({
     WatermainBreaksCols.break_date: Date,
@@ -256,5 +258,5 @@ WATERMAIN_BREAKS_DATA_TYPES = MappingProxyType({
     # source: https://dev.socrata.com/foundry/data.calgary.ca/dpcu-jr23
     WatermainBreaksCols.status: String(8),
     # "status" values are either ACTIVE or RETIRED
-    WatermainBreaksCols.created:  DateTime(timezone=False),
+    WatermainBreaksCols.created_PSQL_name:  DateTime(timezone=True),
 })

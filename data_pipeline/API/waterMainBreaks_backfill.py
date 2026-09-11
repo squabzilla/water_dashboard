@@ -55,6 +55,7 @@ from data_pipeline.helper.helper_SQL_tables import DatabaseTables, WatermainBrea
 from data_pipeline.helper.helper_set_geojson_crs import set_geojson_crs
 from data_pipeline.helper.helper_API_try_except_job import try_except_city_API
 from data_pipeline.helper.helper_API_errors import APICountMismatchError, APIZeroCountError, DBError
+from data_pipeline.helper.helper_timezones import AB_TIME
 
 
 ########################################################################################################################
@@ -140,7 +141,12 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
         update_progress_bar(iteration=0, total=total_iterations, prefix=prefix) # first iteration is 0
 
     # query to get the actual data itself
-    soql_query = f"SELECT `break_date`, `break_type`, `status`, `point`, `:created_at` WHERE date_extract_y(`{date_column_name}`) >= {starting_year} ORDER BY `{date_column_name}`"
+    soql_query = (
+        # f"SELECT `break_date`, `break_type`, `status`, `point`, `:created_at` 
+        f"SELECT `{WatermainBreaksCols.break_date}`, `{WatermainBreaksCols.break_type}`, "
+        f"`{WatermainBreaksCols.status}`, `{WatermainBreaksCols.point}`, `{WatermainBreaksCols.created_API_name}` "
+        f"WHERE date_extract_y(`{date_column_name}`) >= {starting_year} ORDER BY `{date_column_name}`"
+    )
     # fun fact, geojsons get weird about the geometry, it treats it special, so I can't do a simple SELECT *, I gotta name each column individually
     # but I STILL gotta tell it to grab the geometry column, or just returns a regular json without geometry...
 
@@ -149,9 +155,9 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
         page_number = i + 1 # since I want this 1-indexed, not 0-indexed
         # payload - basically the API parameters
         payload = {"query": soql_query,
-                "page": {"pageNumber": page_number, "pageSize": page_size},
-                "includeSynthetic": False,
-                # `"includeSynthetic": False` prevents auto-generated, made-up columns from showing up
+                   "page": {"pageNumber": page_number, "pageSize": page_size},
+                   "includeSynthetic": False,
+                   # `"includeSynthetic": False` prevents auto-generated, made-up columns from showing up
         }
         job_name = f"fetch-water-main-break-records-page-{page_number}"
         response_data = try_except_city_API(job_name=job_name, url=GEOJSON_QUERY_URL, payload=payload)
@@ -192,10 +198,14 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
     ##########################################################
 
     # make 'break_date' a DATE column, instead of DATETIME column, with useless minute values
-    gdf['break_date'] = pd.to_datetime(gdf['break_date']).dt.date # convert to datetime, then force it to just DATE
+    gdf[WatermainBreaksCols.break_date] = pd.to_datetime(gdf[WatermainBreaksCols.break_date]).dt.date # convert to datetime, then force it to just DATE
 
     # rename the `:created_at` column so I keep my sanity later...
-    gdf = gdf.rename(columns={':created_at': 'created_at'})
+    gdf = gdf.rename(columns={WatermainBreaksCols.created_API_name: WatermainBreaksCols.created_PSQL_name})
+
+    # let's convert the datetime to AB time
+    gdf[WatermainBreaksCols.created_PSQL_name] = pd.to_datetime(gdf[WatermainBreaksCols.created_PSQL_name])
+    gdf[WatermainBreaksCols.created_PSQL_name] = gdf[WatermainBreaksCols.created_PSQL_name].dt.tz_convert(AB_TIME)
 
 
     # set our SQL engine
