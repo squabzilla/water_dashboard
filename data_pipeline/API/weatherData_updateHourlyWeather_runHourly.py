@@ -65,6 +65,7 @@ from data_pipeline.API.weather_helper_filterStationPriority import filter_statio
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
 from data_pipeline.helper.helper_DB_update import add_new_records_to_table
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
+from data_pipeline.API.weather_helper_addTimezoneToHourlyWeather import hourlyWeatherAddTimezone
 
 
 
@@ -258,6 +259,8 @@ def main() -> None:
     gdf = _fetch_swob_data() # let this be the default value now lol
     gdf = _convert_SWOBFormat_to_HourlyFormat(gdf)
     gdf = _filter_hourly_records(gdf)
+    # I need timezones as well
+    gdf = hourlyWeatherAddTimezone(gdf)
 
     # add records to table
     # NOTE: should be the same as regular update-hourly-records now, because of `_convert_SWOBFormat_to_HourlyFormat`

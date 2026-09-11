@@ -34,6 +34,9 @@ Python file that backfills my PostGIS database, with *Water Main Breaks* data fr
 - `waterMainBreaks_checkAPI.py`  
 Python file for that queries the *Water Main Breaks* data for any updates, by checking the `:created_at` meta-data from Socrata.
 
+- `weather_helper_addTimezoneToHourlyWeather.py`  
+Python file with a simple function to add timezones to hourly weather data, since I need that in 3 spots
+
 - `weather_helper_API.py`  
 Python file that contains the core logic for querying *MSC GeoMet* data from `https://api.weather.gc.ca/`
 - `weather_helper_backfill.py`  

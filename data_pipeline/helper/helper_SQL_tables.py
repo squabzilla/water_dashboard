@@ -185,8 +185,8 @@ HOURLY_WEATHER_PROPERTIES=','.join(HourlyWeatherCols)
 HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
     HourlyWeatherCols.hwc_station_name: String(30), # name should be string less than 30 chars
     HourlyWeatherCols.hwc_climate_identifier: Integer,
-    HourlyWeatherCols.hwc_local_date: DateTime(timezone=False), # turns out this is a datetime variable???
-    HourlyWeatherCols.hwc_utc_date: DateTime(timezone=False), # turns out this is a datetime variable???
+    HourlyWeatherCols.hwc_local_date: DateTime(timezone=True), # turns out this is a datetime variable???
+    HourlyWeatherCols.hwc_utc_date: DateTime(timezone=True), # turns out this is a datetime variable???
     HourlyWeatherCols.hwc_local_year: Integer,
     HourlyWeatherCols.hwc_temp: Float,
     HourlyWeatherCols.hwc_precip_amount: Float,

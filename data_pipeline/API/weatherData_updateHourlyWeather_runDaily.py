@@ -58,6 +58,7 @@ from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViola
 from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
 from data_pipeline.helper.helper_DB_update import add_new_records_to_table
+from data_pipeline.API.weather_helper_addTimezoneToHourlyWeather import hourlyWeatherAddTimezone
 
 
 
@@ -92,7 +93,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 
 # def filter_stations_by_priority(df, station_id_col="CLIMATE_IDENTIFIER", datetime_col="LOCAL_DATE"):
 
-def _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days() -> gpd.GeoDataFrame:
+def _fetch_hourly_MSC_GeoMet_daily_weather_last_two_weeks() -> gpd.GeoDataFrame:
     
     # get proper datetime string to use! first, get current time, make it a date, subtract 2 weeks from current date
     day_minus_14 = datetime.now(AB_TIME).date() - timedelta(days=14) # being very explicit with timezones here
@@ -116,8 +117,11 @@ def _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days() -> gpd.GeoDataFrame
 
     gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier,
                                       datetime_col=HourlyWeatherCols.hwc_local_date)
+
+    # add timezones
+    gdf = hourlyWeatherAddTimezone(gdf)
+
     # NOTE: dates should be unique now, so let's check that
-    
     if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
         msg = f"Error: DataUniquenessConstraintViolation: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}"
         logger.error(msg)
@@ -130,7 +134,7 @@ def _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days() -> gpd.GeoDataFrame
 ### section 2 - define main function to call local helper
 
 def main() -> None:
-    gdf = _fetch_hourly_MSC_GeoMet_daily_weather_last_seven_days()
+    gdf = _fetch_hourly_MSC_GeoMet_daily_weather_last_two_weeks()
     engine = default_SQL_engine()
     main_table_name = DatabaseTables.weather_hourly
     staging_table_name = DatabaseTables.weather_hourly_staging

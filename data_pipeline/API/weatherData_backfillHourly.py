@@ -62,6 +62,7 @@ from data_pipeline.API.weather_helper_filterStationPriority import filter_statio
 from data_pipeline.API.weather_helper_backfill import backfill_weather_years
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
 from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
+from data_pipeline.API.weather_helper_addTimezoneToHourlyWeather import hourlyWeatherAddTimezone
 
 
 
@@ -103,6 +104,9 @@ def hourly_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
         "properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
     }
     gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params, job_title=f"historical-hourly-weather-records-year-{year}")
+
+    # add timezones
+    gdf = hourlyWeatherAddTimezone(gdf)
 
     gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier, datetime_col=HourlyWeatherCols.hwc_local_date)
     # NOTE: dates should be unique now, so let's check that
