@@ -41,7 +41,8 @@ import logging
 from data_pipeline.helper.helper_progress_bar import update_progress_bar
 from data_pipeline.helper.helper_API_try_except_job import try_except_city_API
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine, DATABASE_CONFIG
-from data_pipeline.helper.helper_SQL_tables import DatabaseTables
+from data_pipeline.helper.helper_SQL_tables import DatabaseTables, WaterPipes, WATER_PIPES_DATA_TYPES, \
+    Hydrology, HYDROLOGY_DATA_TYPES, CityDistricts, COMMUNITY_DATA_TYPES, CityBoundary, CITY_BOUNDARY_DATA_TYPES
 from data_pipeline.helper.helper_timezones import AB_TIME
 from data_pipeline.helper.helper_API_errors import DBError
 
@@ -50,18 +51,22 @@ from data_pipeline.helper.helper_API_errors import DBError
 ########################################################################################################################
 ### script-setup 3: logging config
 logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+
+# by making these their own objects, I can add filters to them
+file_handler = logging.FileHandler(logfile) # handles output file
+console_handler = logging.StreamHandler() # writes log to a "stream" which by default is terminal/console
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[ # handles output stuff
-        logging.FileHandler(logfile), # handles output file
-        logging.StreamHandler() # writes log to a "stream" which by default is terminal/console
-        ],
-    # NOTE: logging levels: affects labelling and filtering when looking through errors
-    # like remember how I'd tell Python "idgaf about that warning just stop telling me"
-    # but also not wanting to eliminate like SERIOUS errors?
-    # that's what the logging levels let us do
+    handlers=[file_handler, console_handler],
 )
+
+# NOTE: logging levels: affects labelling and filtering when looking through errors
+# like remember how I'd tell Python "idgaf about that warning just stop telling me"
+# but also not wanting to eliminate like SERIOUS errors?
+# that's what the logging levels let us do
+
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CALL DAMNIT
 # LOGGING ORDER:
@@ -71,6 +76,21 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 # error
 # critical
 
+# now I create a method to exclude stuff from console
+def exclude_from_console(record): # every time you call `logger.<level>(...), logging makes a LogRecord instance
+    # we can add extra stuff to it by adding `extra={}` to the log call
+    return not getattr(record, "console_exclude", False)
+# pass the function to `console_handler.addFilter` - note we don't want to CALL the method, but pass the entire method
+console_handler.addFilter(exclude_from_console)
+
+# explanation:
+# the `addFilter` instance needs to be passed some method/function that returns True/False
+# if that method returns True, the log proceeds normally; if it returns False, the log is filtered
+# the `getattr` function takes an object, the name of an attribute of the object, and a default value
+# it returns the value of object.attribute, or returns the default if it doesn't exist
+# "console_exclude" present and True  => getattr returns True  => function returns Not-True, aka False => log-statement-filtered
+# "console_exclude" not-present/False => getattr returns False => function returns Not-False, aka True => log-statement-unfiltered
+# and because I only attached it to the console-handler, only the console-handler is filtered
 
 
 ########################################################################################################################
@@ -84,22 +104,39 @@ CALGARY_API_SECRET = DATABASE_CONFIG.api_secret_key     # Key Secret -> Basic Au
 #### setup dictionaries of name/url variables
 NAME = "name"
 LINK = "link"
+TYPE_DICT = "type_dict"
+SQOL_QUERY = "query"
 
 PublicWaterMain_dict = {
     NAME: DatabaseTables.watermain_pipes, # NOTE: naming this one "..._Pipes" to distinguish more easily from BREAKS
-    LINK: """https://data.calgary.ca/api/v3/views/w6h9-w33i/query.geojson"""
+    LINK: """https://data.calgary.ca/api/v3/views/w6h9-w33i/query.geojson""",
+    TYPE_DICT: WATER_PIPES_DATA_TYPES,
+    SQOL_QUERY: (
+        f"SELECT `{WaterPipes.p_zone}`, `{WaterPipes.status_ind}`, `{WaterPipes.length}`, "
+        f"`{WaterPipes.diam}`, `{WaterPipes.material}`, `{WaterPipes.year}`, `{WaterPipes.multilinestring}`"
+    )
 }
 Hydrology_dict = {
     NAME: DatabaseTables.hydrology,
-    LINK: """https://data.calgary.ca/api/v3/views/47bt-eefd/query.geojson"""
+    LINK: """https://data.calgary.ca/api/v3/views/47bt-eefd/query.geojson""",
+    TYPE_DICT: HYDROLOGY_DATA_TYPES,
+    SQOL_QUERY: f"SELECT `{Hydrology.perimeter}`, `{Hydrology.feature_type}`, `{Hydrology.lake_name}`, `{Hydrology.multipolygon}`"
 }
 CommunityDistrictBoundaries_dict = {
     NAME: DatabaseTables.city_districts,
-    LINK: """https://data.calgary.ca/api/v3/views/surr-xmvs/query.geojson"""
+    LINK: """https://data.calgary.ca/api/v3/views/surr-xmvs/query.geojson""",
+    TYPE_DICT: COMMUNITY_DATA_TYPES,
+    SQOL_QUERY: (
+            f"SELECT `{CityDistricts.class_name}`, `{CityDistricts.class_code}`, `{CityDistricts.comm_code}`, "
+            f"`{CityDistricts.comm_name}`, `{CityDistricts.sector}`, `{CityDistricts.srg}`, `{CityDistricts.comm_structure}`, "
+            f"`{CityDistricts.created_dt}`, `{ CityDistricts.modified_dt}`, `{CityDistricts.multipolygon}` "
+        )
 }
 CityBoundary_dict = {
     NAME: DatabaseTables.city_boundary,
-    LINK: """https://data.calgary.ca/api/v3/views/erra-cqp9/query.geojson"""
+    LINK: """https://data.calgary.ca/api/v3/views/erra-cqp9/query.geojson""",
+    TYPE_DICT: CITY_BOUNDARY_DATA_TYPES,
+    SQOL_QUERY: f"SELECT `{CityBoundary.city}`, `{CityBoundary.created_dt}`, `{CityBoundary.multipolygon}`"
 }
 
 
@@ -120,7 +157,9 @@ def fetch_city_layer(layer_dict: dict) -> None:
     layer_name = layer_dict[NAME]
     #print(f"Fetching {layer_name}")
     geojson_url = layer_dict[LINK]
-    payload = {"includeSynthetic": False,}
+    soql_query = layer_dict[SQOL_QUERY]
+    type_dict = dict(layer_dict[TYPE_DICT])
+    payload = {"includeSynthetic": False, "query": soql_query,}
     job_name = f"fetching city layer {layer_name}"
     # `"includeSynthetic": False` prevents auto-generated, made-up columns from showing up, which are annoying
     
@@ -129,8 +168,9 @@ def fetch_city_layer(layer_dict: dict) -> None:
     gdf = gpd.GeoDataFrame.from_features(json_result, crs="EPSG:4326")
     engine = default_SQL_engine()
     try:
-        gdf.to_postgis(layer_name, engine, if_exists="replace", index=False,)
-        logger.info(f"Posted {layer_name} to PostGIS Database")
+        gdf.to_postgis(layer_name, engine, if_exists="replace", index=False, dtype=type_dict)
+        logger.info(f"Posted {layer_name} to PostGIS Database", extra={"console_exclude": True})
+        # I did a whole lot of work just to exclude this one line lol....
     except:
         msg = f"Error: DBError: could not upload {layer_name} to PostGIS Database"
         logger.error(msg)
@@ -144,6 +184,11 @@ def fetch_city_layer(layer_dict: dict) -> None:
 def main() -> None:
     # log start
     logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
+
+
+    #city_layers = [PublicWaterMain_dict, Hydrology_dict, CommunityDistrictBoundaries_dict, CityBoundary_dict,]
+    #city_layers = [CommunityDistrictBoundaries_dict]
+
 
     # start progress bar for fun
     progress_bar_count = 0

@@ -73,7 +73,7 @@ class DatabaseTables(StrEnum):
     watermain_breaks = "watermain_breaks"
     watermain_pipes = "PublicWaterMain_Pipes"
     hydrology = "Hydrology"
-    city_districts = "CommunityDistrictBoundaries"
+    city_districts = "Calgary_Communities"
     city_boundary = "CityBoundary"
 
 
@@ -258,5 +258,73 @@ WATERMAIN_BREAKS_DATA_TYPES = MappingProxyType({
     # source: https://dev.socrata.com/foundry/data.calgary.ca/dpcu-jr23
     WatermainBreaksCols.status: String(8),
     # "status" values are either ACTIVE or RETIRED
-    WatermainBreaksCols.created_PSQL_name:  DateTime(timezone=True),
+    WatermainBreaksCols.created_PSQL_name: DateTime(timezone=True),
+})
+
+
+
+########################################################################################################################
+### section 5: variables related to all the other base city layers
+
+class WaterPipes(StrEnum):
+    p_zone = "p_zone"
+    status_ind = "status_ind"
+    length = "length"
+    diam = "diam"
+    material = "material"
+    year = "year"
+    multilinestring = "multilinestring" # needed to get vector into
+
+WATER_PIPES_DATA_TYPES = MappingProxyType({
+    WaterPipes.p_zone: String(30), # pretty sure max length is 19
+    WaterPipes.length: Float,
+    WaterPipes.diam: Integer,
+    WaterPipes.material: String(8),
+    WaterPipes.year: Integer,
+})
+
+class Hydrology(StrEnum):
+    perimeter = "perimeter"
+    feature_type = "feature_type"
+    lake_name = "lake_name"
+    multipolygon = "multipolygon" # needed to get vector into
+
+HYDROLOGY_DATA_TYPES = MappingProxyType({
+    Hydrology.perimeter: Float,
+    Hydrology.feature_type: String(15), # max length is 13
+    Hydrology.lake_name: String(30), # max length is 29 lol
+})
+
+class CityDistricts(StrEnum):
+    class_name="class"
+    class_code="class_code"
+    comm_code="comm_code"
+    comm_name="name"
+    sector="sector"
+    srg="srg"
+    comm_structure="comm_structure"
+    created_dt="created_dt"
+    modified_dt="modified_dt"
+    multipolygon="multipolygon"
+
+COMMUNITY_DATA_TYPES = MappingProxyType({
+    CityDistricts.class_name: String(30), # max length is 18
+    CityDistricts.class_code: Integer, # it SAYS text, but the values are just "1", "2", "3", "4"
+    CityDistricts.comm_code: String(5), # max length is 3 lol
+    CityDistricts.comm_name: String(50), # max length is 30, but only 313 records (as of 2026 anyhoo)
+    CityDistricts.sector: String(12), # max length is 10
+    CityDistricts.srg: String(15), # max length 12
+    CityDistricts.comm_structure: String(50), # max length is 12, but appears to be open-ended text column
+    CityDistricts.created_dt: DateTime(timezone=True),
+    CityDistricts.modified_dt: DateTime(timezone=True),
+})
+
+class CityBoundary(StrEnum):
+    city="city"
+    created_dt="created_dt"
+    multipolygon="multipolygon"
+
+CITY_BOUNDARY_DATA_TYPES = MappingProxyType({
+    CityBoundary.city: String(8), # Calgary has 7 letters lol
+    CityBoundary.created_dt: DateTime(timezone=True),
 })
