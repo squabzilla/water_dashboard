@@ -66,12 +66,15 @@ STN_IDS_STR_CSV_LIST = ", ".join(STATION_CLIMATE_IDENTIFIERS)
 
 class DatabaseTables(StrEnum):
     weather_daily = "weather_daily"
-    # weather_data_daily_2 = "weather_data_daily_2"
     weather_daily_staging = "weather_daily_staging"
     weather_hourly = "weather_hourly"
     weather_hourly_staging = "weather_hourly_staging"
     weather_stations = "weather_stations"
     watermain_breaks = "watermain_breaks"
+    watermain_pipes = "PublicWaterMain_Pipes"
+    hydrology = "Hydrology"
+    city_districts = "CommunityDistrictBoundaries"
+    city_boundary = "CityBoundary"
 
 
 

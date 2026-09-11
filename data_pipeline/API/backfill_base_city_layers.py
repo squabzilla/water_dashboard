@@ -41,6 +41,7 @@ import logging
 from data_pipeline.helper.helper_progress_bar import update_progress_bar
 from data_pipeline.helper.helper_API_try_except_job import try_except_city_API
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine, DATABASE_CONFIG
+from data_pipeline.helper.helper_SQL_tables import DatabaseTables
 from data_pipeline.helper.helper_timezones import AB_TIME
 from data_pipeline.helper.helper_API_errors import DBError
 
@@ -85,19 +86,19 @@ NAME = "name"
 LINK = "link"
 
 PublicWaterMain_dict = {
-    NAME: "PublicWaterMain_Pipes", # NOTE: naming this one "..._Pipes" to distinguish more easily from BREAKS
+    NAME: DatabaseTables.watermain_pipes, # NOTE: naming this one "..._Pipes" to distinguish more easily from BREAKS
     LINK: """https://data.calgary.ca/api/v3/views/w6h9-w33i/query.geojson"""
 }
 Hydrology_dict = {
-    NAME: "Hydrology",
+    NAME: DatabaseTables.hydrology,
     LINK: """https://data.calgary.ca/api/v3/views/47bt-eefd/query.geojson"""
 }
 CommunityDistrictBoundaries_dict = {
-    NAME: "CommunityDistrictBoundaries",
+    NAME: DatabaseTables.city_districts,
     LINK: """https://data.calgary.ca/api/v3/views/surr-xmvs/query.geojson"""
 }
 CityBoundary_dict = {
-    NAME: "CityBoundary",
+    NAME: DatabaseTables.city_boundary,
     LINK: """https://data.calgary.ca/api/v3/views/erra-cqp9/query.geojson"""
 }
 
