@@ -27,6 +27,7 @@ if str(PROJECT_ROOT) not in sys.path:
 ### script-setup 2: library imports
 from datetime import datetime # for getting date-time stuff
 from fastapi import FastAPI
+import logging # for logging errors
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
 import httpx # used for calling API
@@ -36,6 +37,27 @@ import json # used for handling export of json data
 
 ########################################################################################################################
 ### script-setup 3: logging config
+logfile = Path(PROJECT_ROOT) / "frontend" / "logs" / f"{Path(__file__).stem}.log" # base log name on file name
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[ # handles output stuff
+        logging.FileHandler(logfile), # handles output file
+        logging.StreamHandler() # writes log to a "stream" which by default is terminal/console
+        ],
+    # NOTE: logging levels: affects labelling and filtering when looking through errors
+    # like remember how I'd tell Python "idgaf about that warning just stop telling me"
+    # but also not wanting to eliminate like SERIOUS errors?
+    # that's what the logging levels let us do
+)
+logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CALL DAMNIT
+# LOGGING ORDER:
+# debug
+# info
+# warning
+# error
+# critical
 
 
 
