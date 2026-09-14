@@ -57,12 +57,10 @@ import logging
 from data_pipeline.helper.helper_timezones import AB_TIME
 from data_pipeline.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, DatabaseTables, \
     HourlyWeatherCols, HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
-from data_pipeline.API.weather_helper_API import fetch_weather_pages
-from data_pipeline.API.weather_helper_filterStationPriority import filter_stations_by_priority
+from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority, hourlyWeatherAddTimezone
 from data_pipeline.API.weather_helper_backfill import backfill_weather_years
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
 from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
-from data_pipeline.API.weather_helper_addTimezoneToHourlyWeather import hourlyWeatherAddTimezone
 
 
 

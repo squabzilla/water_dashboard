@@ -2,9 +2,48 @@
 file name: weather_helper_API.py
 author: William Hovdestad
 
-This script contains the logic for fetching the API response from a given request,
-including paginating through results.
-It assumes it is passed a url, and a parameters dictionary with a "limit" key
+This script contains helper functions for querying, filtering, and processing data from the Canada Weather API
+Link: https://api.weather.gc.ca/openapi?f=html#
+
+These functions are located in the API folder,
+because they are specifically tailored to work with the Weather API data.
+They were deemed to have a use-case that is too narrow and niche to meet the standards
+of being a "helper" file in the "helper" folder.
+
+
+
+# Section 1: function `fetch_weather_pages`
+The first function contains the logic for actually making a HTTP GET request to the REST API to get data
+it includes a preliminary query to count the number of results, and pagination through those results
+It assumes it is passed a URL, and a parameters dictionary for the API call that includes a "limit" key
+
+
+
+# Section 2: function `filter_stations_by_priority`
+The second function contains logic for filtering weather stations,
+with hard-coded weather-station-IDs and a hard-coded prioritization order based on the project requirements.
+We want the date-time column of hourly-weather-records, and the date of daily-weather-records to be unique.
+In other words, at any given time, we want to only have ONE weather record to look at.
+However, when we query weather data, we are retrieving data from THREE weather-stations,
+so the raw-data retrieved via API can have up to three records for each distinct date/datetime.
+This function defines a prioritization for the three weather stations,
+and drops all but the highest-priority record that exists for each distinct date/datetime.
+
+
+
+# Section 3: function `hourlyWeatherAddTimezone`
+The third function properly process the datetime columns (specifically the "LOCAL_DATE" and "UTC_DATE" columns)
+for data/dataframes retrieved from the `climate-hourly` section of the Canada weather API.
+(Basically, it goes "THIS IS A DATETIME" and "THIS IS THE TIME-ZONE FOR THAT DATETIME")
+NOTE:
+This function is not to be used on `SWOB-realtime` data, as that has seperate logic for addressing datetime columns.
+
+
+
+########################################################################################################################
+### section 3: function `hourlyWeatherAddTimezone`
+### function adding proper timezone to hourly-weather-data retrieved from `climate-hourly` section of Canada weather API
+### NOTE: Do not use on `SWOB-realtime` data, as that has seperate logic for addressing datetime columns.
 """
 
 
@@ -41,6 +80,10 @@ import logging
 from data_pipeline.helper.helper_API_errors import APICountMismatchError, APIZeroCountError
 from data_pipeline.helper.helper_set_geojson_crs import set_geojson_crs
 from data_pipeline.helper.helper_API_try_except_job import try_except_weather_API
+from data_pipeline.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
+from data_pipeline.helper.helper_SQL_tables import HourlyWeatherCols
+from data_pipeline.helper.helper_timezones import AB_TIME, UTC_TIME
+
 
 
 ########################################################################################################################
@@ -51,7 +94,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 
 
 ########################################################################################################################
-### section 1: function to fetch weather
+### section 1: function `fetch_weather_pages` (function to fetch weather data)
 
 def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> dict:
     ##############################################################
@@ -127,4 +170,48 @@ def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> dict:
     # section 1.2 - convert to gdf, add CRS, return it
     gdf = gpd.GeoDataFrame.from_features(all_data) # I already selected the "features" key while looping thru data
     gdf = set_geojson_crs(gdf)
+    return gdf
+
+
+
+########################################################################################################################
+### section 2: function `filter_stations_by_priority` 
+### (keep only the weather record with the highest weather-station-priority-order for each distinct date-time)
+
+def filter_stations_by_priority(df: pd.DataFrame | gpd.GeoDataFrame, station_id_col: str="CLIMATE_IDENTIFIER",
+                                datetime_col: str="LOCAL_DATE") -> pd.DataFrame | gpd.GeoDataFrame:
+    df = df.copy()
+    STATION_PRIORITY_COL = "station_priority"
+    STATION_PRIORITY_ORDER = {
+        PRIMARY_STATION_ID: 1,
+        SECONDARY_STATION_ID: 2,
+        TERTIARY_STATION_ID: 3,
+    }
+    df[STATION_PRIORITY_COL] = df[station_id_col].map(STATION_PRIORITY_ORDER)
+    df = ( # operation we're doing to df
+        df # start with df
+        .sort_values([datetime_col, STATION_PRIORITY_COL]) # order df by DATETIME, then STATION-PRIORITY
+        .drop_duplicates(subset=datetime_col, keep="first") # drop duplicate datetimes - keep only first record
+        .sort_values(datetime_col) # let's resort stuff by date
+        .reset_index(drop=True) # nasty shit happens if you do operations like this and don't reset index lol
+    )
+    df = df.drop(columns=[STATION_PRIORITY_COL]) # we don't need this column anymore, lets remove it
+    return df
+
+
+
+########################################################################################################################
+### section 3: function `hourlyWeatherAddTimezone`
+### function adding proper timezone to hourly-weather-data retrieved from `climate-hourly` section of Canada weather API
+### NOTE: Do not use on `SWOB-realtime` data, as that has seperate logic for addressing datetime columns.
+
+def hourlyWeatherAddTimezone(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    # convert local date and utc date to datetime
+    gdf[HourlyWeatherCols.hwc_local_date] = pd.to_datetime(gdf[HourlyWeatherCols.hwc_local_date])
+    gdf[HourlyWeatherCols.hwc_utc_date] = pd.to_datetime(gdf[HourlyWeatherCols.hwc_utc_date])
+
+    # add time zones
+    gdf[HourlyWeatherCols.hwc_local_date] = gdf[HourlyWeatherCols.hwc_local_date].dt.tz_localize(AB_TIME)
+    gdf[HourlyWeatherCols.hwc_utc_date] = gdf[HourlyWeatherCols.hwc_utc_date].dt.tz_localize(UTC_TIME)
+
     return gdf

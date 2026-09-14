@@ -60,8 +60,7 @@ import logging # want to log data
 from data_pipeline.helper.helper_timezones import AB_TIME, UTC_TIME
 from data_pipeline.helper.helper_SQL_tables import HOURLY_WEATHER_DATA_TYPES, HourlyWeatherCols, DatabaseTables, SWOBWeatherCols,\
     STN_IDS_STR_CSV_LIST, SWOB_PROPERTIES, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT, HOURLY_SWOB_CONVERSION
-from data_pipeline.API.weather_helper_API import fetch_weather_pages
-from data_pipeline.API.weather_helper_filterStationPriority import filter_stations_by_priority
+from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
 from data_pipeline.helper.helper_DB_update import add_new_records_to_table
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation

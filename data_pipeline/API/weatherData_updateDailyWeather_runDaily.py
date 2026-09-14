@@ -52,8 +52,7 @@ import logging
 from data_pipeline.helper.helper_timezones import AB_TIME
 from data_pipeline.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, DatabaseTables, \
     DailyWeatherCols, DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT
-from data_pipeline.API.weather_helper_API import fetch_weather_pages
-from data_pipeline.API.weather_helper_filterStationPriority import filter_stations_by_priority
+from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
 from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
