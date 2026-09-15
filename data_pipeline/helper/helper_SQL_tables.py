@@ -178,8 +178,13 @@ class HourlyWeatherCols(StrEnum):
     hwc_wind_direction = "WIND_DIRECTION"
     hwc_dew_point = "DEW_POINT_TEMP"
 
-# create comma-seperated text of HourlyWeatherCols
-HOURLY_WEATHER_PROPERTIES=','.join(HourlyWeatherCols)
+# removing "LOCAL_DATE" from API call, because AB switching off daylight savings time broke shit
+_HOURLY_WEATHER_API_EXCLUDED = {HourlyWeatherCols.hwc_local_date}
+
+# create comma-seperated text of HourlyWeatherCols - except no "local-date" because timezones are breaking shit...
+HOURLY_WEATHER_PROPERTIES=','.join(
+    col for col in HourlyWeatherCols if col not in _HOURLY_WEATHER_API_EXCLUDED
+)
 
 # mapping-proxy-type of HourlyWeatherCols data-types
 HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
