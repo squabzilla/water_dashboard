@@ -119,6 +119,7 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
             # this catches every subset of datapipeline error, so I don't need to specify each one!
             failed_years.append(year)
             if year == start_year: break
+            continue # skip to next iteration if we don't break
         except Exception as e:
             EXIT_CODE = 1
             msg = f"Unexpected error while backfilling daily-weather-records: {e}"
