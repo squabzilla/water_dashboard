@@ -75,6 +75,10 @@ run_job() {
     eval "$job_cmd"
     local exit_code=$?
     echo "$(date '+%F %T') $job_name exit=$exit_code" | tee -a "$BASH_BACKFILL_LOG"
+    # make non-zero exit codes REALLY obvious
+    if [[ "$exit_code" -ne 0 ]]; then
+        echo "$(date '+%F %T') ##### ERROR: $job_name EXITED WITH NON-ZERO EXIT CODE: $exit_code" | tee -a "$BASH_BACKFILL_LOG"
+    fi
 }
 # (date '+%F %T') -> gets date in 'YYYY-MM-DD HH:MM:SS' format
 
