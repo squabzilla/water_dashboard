@@ -95,6 +95,7 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
 
     #current_year = date.today().year
     current_year = datetime.now(AB_TIME).year # yeah I'm just being overly thorough with timezones lol
+    # however, my API call is grabbing everything where LOCAL_YEAR = passed_year, so I want current_year in AB time lol
     stop_year = current_year + 1 # stop when we reach this year, BUT DO NOT PROCESS THIS YEAR
 
     failed_years = []
