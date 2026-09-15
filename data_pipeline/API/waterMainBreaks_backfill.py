@@ -150,7 +150,8 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
 
         # update progress bar
         if not silent_function:
-            update_progress_bar(iteration=page_number, total=total_iterations, prefix=prefix)
+            update_progress_bar(iteration=page_number, total=total_iterations, prefix=prefix, trailingNewline=False)
+            # I want to write stuff one same line as progress bar when its done
 
     # done loop
 

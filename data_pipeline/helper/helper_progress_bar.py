@@ -32,7 +32,7 @@ def _progress_bar_padstring(string):
     return string
 
 
-def update_progress_bar(iteration, total, prefix="Progress"):
+def update_progress_bar(iteration, total, prefix="Progress", trailingNewline=True):
     # Call in a loop to create a terminal progress bar.
     prefix = _progress_bar_padstring(prefix)
     fill='█' # fill for progress bar
@@ -42,3 +42,6 @@ def update_progress_bar(iteration, total, prefix="Progress"):
     percent = ("{0:.1f}").format(100 * (iteration / float(total)))
     sys.stdout.write(f'\r{prefix} |{bar}| {percent}% Complete')
     sys.stdout.flush() # Ensures the output is immediately displayed
+    # add logic for trailing newline when done NOTE: percent is type `str`
+    if trailingNewline == True:
+        if percent == "100.0": print("")

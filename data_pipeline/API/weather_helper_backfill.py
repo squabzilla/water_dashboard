@@ -165,7 +165,6 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
         update_progress_bar(iteration=progress_bar_count, total=total_iterations, prefix=progress_bar_prefix)
         # NOTE: progress bar output isn't recorded by Python log! Woo!
 
-    print("") # ending-newline-statement for progress bar lol
     logger.info(f"Number of failed years: {len(failed_years)}.")
     if len(failed_years) > 0:
         failed_years_string = ', '.join(failed_years)

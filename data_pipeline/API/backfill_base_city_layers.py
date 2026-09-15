@@ -168,7 +168,6 @@ def main() -> None:
         update_progress_bar(iteration=progress_bar_count, total=total_iterations, prefix=progress_bar_prefix)
 
     # log end
-    print("") # print statement to fixup progress bar
     logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
 
 
