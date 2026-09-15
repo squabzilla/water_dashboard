@@ -50,7 +50,7 @@ import logging
 
 # custom modules!
 from data_pipeline.helper.helper_logging_config import setup_logging
-from data_pipeline.helper.helper_timezones import AB_TIME
+from data_pipeline.helper.helper_timezones import UTC_TIME
 from data_pipeline.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, \
     HourlyWeatherCols, DatabaseTables, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
 from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority, hourlyWeather_FixDatetimes
@@ -77,7 +77,8 @@ logger = logging.getLogger(__name__)
 def _fetch_hourly_MSC_GeoMet_daily_weather_last_two_weeks() -> gpd.GeoDataFrame:
     
     # get proper datetime string to use! first, get current time, make it a date, subtract 2 weeks from current date
-    day_minus_14 = datetime.now(AB_TIME).date() - timedelta(days=14) # being very explicit with timezones here
+    day_minus_14 = datetime.now(UTC_TIME).date() - timedelta(days=14) # being very explicit with timezones here
+    # NOTE: the date-time format you're using, that ends in "Z", is UTC-ZERO-OFFSET, so I want UTC-time here
     # now, convert it to proper parameter to API call
     datetime_param = str(day_minus_14) + "T00:00:00Z/.."
     # NOTE: This gives me 12:00am from 14 days ago
@@ -96,11 +97,11 @@ def _fetch_hourly_MSC_GeoMet_daily_weather_last_two_weeks() -> gpd.GeoDataFrame:
     gdf = fetch_weather_pages(start_url=hourly_weather_url, params=hourly_weather_params,
                               job_title=f"last-14-hourly-weather-records")
 
+    # add timezones # actually, fix datetimes since AB dropping daylight savings time broke everything
+    gdf = hourlyWeather_FixDatetimes(gdf) # NOTE: do this BEFORE filtering stations
+
     gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier,
                                       datetime_col=HourlyWeatherCols.hwc_local_date)
-
-    # add timezones # actually, fix datetimes since AB dropping daylight savings time broke everything
-    gdf = hourlyWeather_FixDatetimes(gdf)
 
     # NOTE: dates should be unique now, so let's check that
     if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
