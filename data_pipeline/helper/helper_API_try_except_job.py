@@ -66,7 +66,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 @retry(
     retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError)),
     # decorator itself, and the condition for retrying anything at all
-    stop=stop_after_attempt(4), # tells tenacity when to give up - after 4 attemps (1 initial call, 3 retries)
+    stop=stop_after_attempt(6), # tells tenacity when to give up - after 4 attemps (1 initial call, 5 retries)
     wait=wait_exponential(multiplier=1, min=2, max=30),
     # wait an increasing time between each attempt;
     # the `max` setting is redundant since we stop after attempt 4, but redundancy is good in this case
