@@ -61,8 +61,10 @@ from data_pipeline.helper.helper_timezones import AB_TIME
 
 ########################################################################################################################
 ### script-setup 3: logging config - now with a helper function!
-logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-setup_logging(logfile)
+# NOTE: 
+# moved most logging config logic to `main()`, so we don't make duplicate `setup_logging` calls 
+# in the case that waterMainBreaks_backfill() is called from another script
+
 logger = logging.getLogger(__name__)
 
 
@@ -210,6 +212,10 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
 ### section 3 - logic for script to run by itself if called
 
 def main() -> None:
+    # setup logging in main, when its run by itself
+    logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+    setup_logging(logfile)
+    # log start-time, end-time, run function
     logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
     waterMainBreaks_backfill(silent_function=False)
     logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
