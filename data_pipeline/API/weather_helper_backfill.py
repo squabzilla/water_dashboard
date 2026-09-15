@@ -73,9 +73,17 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDataFrame],
                            main_table_name: str, staging_table_name: str, datetimecol: str,
                            main_table_unique_constraint_name: str, staging_table_unique_constraint_name: str,
-                           dtype_dictionary: dict, progress_bar_prefix: str) -> None:
+                           dtype_dictionary: dict, progress_bar_prefix: str) -> int:
 
     start_year = 1956 # first date in watermain break data
+
+    EXIT_CODE = 0
+    # NOTE: I want to manually define and return the exit code,
+    # so that the scripts that call this one can end themselves with that code
+    # that way, if there's an error, the script can exit with a non-zero error code
+    # and then when bash runs it, it can identify that the error code is not-zero, meaning THERE BE A PROBLEM GUYS
+    # so if I hit any of my exceptions, the exit code becomes 1
+
     TESTING_CODE = False
     if TESTING_CODE == True: start_year = 2025
     if start_year == 2025:
@@ -106,10 +114,12 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
         try:
             gdf = MSC_GeoMet_weather_by_year(year)
         except DataPipelineError:
+            EXIT_CODE = 1
             # this catches every subset of datapipeline error, so I don't need to specify each one!
             failed_years.append(year)
             if year == start_year: break
         except Exception as e:
+            EXIT_CODE = 1
             msg = f"Unexpected error while backfilling daily-weather-records: {e}"
             logger.critical(msg, exc_info=True)
             break
@@ -160,3 +170,6 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
     if len(failed_years) > 0:
         failed_years_string = ', '.join(failed_years)
         logger.error(f"Years failed: {failed_years_string}")
+
+    # now we return the exit code
+    return EXIT_CODE

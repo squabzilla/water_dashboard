@@ -112,11 +112,13 @@ def main() -> None:
     dtype_dictionary = dict(HOURLY_WEATHER_DATA_TYPES)
     progress_bar_prefix = "Backfilling hourly weather records"
 
+    EXIT_CODE = \
     backfill_weather_years(MSC_GeoMet_weather_by_year=hourly_MSC_GeoMet_weather_by_year,
                                main_table_name=main_table_name, staging_table_name=staging_table_name, 
                                datetimecol=unique_column, main_table_unique_constraint_name=main_table_unique_constraint_name,
                                staging_table_unique_constraint_name=staging_table_unique_constraint_name,
                                dtype_dictionary=dtype_dictionary, progress_bar_prefix=progress_bar_prefix)
+    return EXIT_CODE
 
 
 
@@ -125,5 +127,6 @@ def main() -> None:
 # this function will run by itself if this script is called, including the start & end time pieces
 if __name__ == "__main__":
     logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
-    main()
-    logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
+    EXIT_CODE = main() # let's get our exit code
+    logger.info(f"Script: {__file__} completed with EXIT_CODE({EXIT_CODE}) at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
+    sys.exit(EXIT_CODE) # exit with exit code
