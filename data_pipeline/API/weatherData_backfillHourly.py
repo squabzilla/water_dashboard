@@ -58,7 +58,7 @@ from data_pipeline.helper.helper_logging_config import setup_logging
 from data_pipeline.helper.helper_timezones import AB_TIME
 from data_pipeline.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, DatabaseTables, \
     HourlyWeatherCols, HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
-from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority, hourlyWeatherAddTimezone
+from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority, hourlyWeather_FixDatetimes
 from data_pipeline.API.weather_helper_backfill import backfill_weather_years
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
 from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
@@ -86,8 +86,8 @@ def hourly_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
     }
     gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params, job_title=f"historical-hourly-weather-records-year-{year}")
 
-    # add timezones
-    gdf = hourlyWeatherAddTimezone(gdf)
+    # add timezones # actually, fix datetimes since AB dropping daylight savings time broke everything
+    gdf = hourlyWeather_FixDatetimes(gdf)
 
     gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier, datetime_col=HourlyWeatherCols.hwc_local_date)
     # NOTE: dates should be unique now, so let's check that

@@ -205,13 +205,24 @@ def filter_stations_by_priority(df: pd.DataFrame | gpd.GeoDataFrame, station_id_
 ### function adding proper timezone to hourly-weather-data retrieved from `climate-hourly` section of Canada weather API
 ### NOTE: Do not use on `SWOB-realtime` data, as that has seperate logic for addressing datetime columns.
 
-def hourlyWeatherAddTimezone(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def hourlyWeather_FixDatetimes(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    # NOTE: AB daylight-savings-time changes broke "LOCAL_DATE" which is actually "LOCAL_DATETIME"...
+
     # convert local date and utc date to datetime
-    gdf[HourlyWeatherCols.hwc_local_date] = pd.to_datetime(gdf[HourlyWeatherCols.hwc_local_date])
+    # gdf[HourlyWeatherCols.hwc_local_date] = pd.to_datetime(gdf[HourlyWeatherCols.hwc_local_date])
     gdf[HourlyWeatherCols.hwc_utc_date] = pd.to_datetime(gdf[HourlyWeatherCols.hwc_utc_date])
 
     # add time zones
-    gdf[HourlyWeatherCols.hwc_local_date] = gdf[HourlyWeatherCols.hwc_local_date].dt.tz_localize(AB_TIME)
+    #gdf[HourlyWeatherCols.hwc_local_date] = gdf[HourlyWeatherCols.hwc_local_date].dt.tz_localize(AB_TIME)
     gdf[HourlyWeatherCols.hwc_utc_date] = gdf[HourlyWeatherCols.hwc_utc_date].dt.tz_localize(UTC_TIME)
+
+    # okay, since timezone changes broke my "local_date" what if I just calc it from UTC time afterwards?
+    gdf[HourlyWeatherCols.hwc_local_date] = gdf[HourlyWeatherCols.hwc_utc_date].dt.tz_convert(AB_TIME)
+
+    # should re-order columns, since there's no way they're in "proper" order right now
+    # get list for column order, but don't forget to include geometry column at start!
+    col_order_list = ["geometry", *(col.value for col in HourlyWeatherCols)]
+    # re-organize the columns
+    gdf = gdf.reindex(columns=col_order_list)
 
     return gdf

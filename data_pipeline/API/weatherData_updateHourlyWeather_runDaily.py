@@ -53,7 +53,7 @@ from data_pipeline.helper.helper_logging_config import setup_logging
 from data_pipeline.helper.helper_timezones import AB_TIME
 from data_pipeline.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, \
     HourlyWeatherCols, DatabaseTables, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
-from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority, hourlyWeatherAddTimezone
+from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority, hourlyWeather_FixDatetimes
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
 from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
@@ -99,8 +99,8 @@ def _fetch_hourly_MSC_GeoMet_daily_weather_last_two_weeks() -> gpd.GeoDataFrame:
     gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier,
                                       datetime_col=HourlyWeatherCols.hwc_local_date)
 
-    # add timezones
-    gdf = hourlyWeatherAddTimezone(gdf)
+    # add timezones # actually, fix datetimes since AB dropping daylight savings time broke everything
+    gdf = hourlyWeather_FixDatetimes(gdf)
 
     # NOTE: dates should be unique now, so let's check that
     if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
