@@ -56,6 +56,7 @@ import json # used for handling export of json data
 import logging
 
 # custom modules!
+from data_pipeline.helper.helper_logging_config import setup_logging
 from data_pipeline.helper.helper_timezones import AB_TIME
 from data_pipeline.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
     DailyWeatherCols, DatabaseTables, DAILY_WEATHER_UNIQUE_DATE_CONSTRAINT, DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT
@@ -67,29 +68,10 @@ from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 
 
 ########################################################################################################################
-### script-setup 3: logging config
+### script-setup 3: logging config - now with a helper function!
 logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[ # handles output stuff
-        logging.FileHandler(logfile), # handles output file
-        #logging.StreamHandler() # writes log to a "stream" which by default is terminal/console
-        # NOTE: turning this on breaks my progress bar lol
-        ],
-    # NOTE: logging levels: affects labelling and filtering when looking through errors
-    # like remember how I'd tell Python "idgaf about that warning just stop telling me"
-    # but also not wanting to eliminate like SERIOUS errors?
-    # that's what the logging levels let us do
-)
+setup_logging(logfile)
 logger = logging.getLogger(__name__)
-logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CALL DAMNIT
-# LOGGING ORDER:
-# debug
-# info
-# warning
-# error
-# critical
 
 
 

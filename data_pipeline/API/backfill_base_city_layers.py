@@ -40,6 +40,7 @@ import logging
 # custom modules!
 from data_pipeline.helper.helper_progress_bar import update_progress_bar
 from data_pipeline.helper.helper_API_try_except_job import try_except_city_API
+from data_pipeline.helper.helper_logging_config import setup_logging
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine, DATABASE_CONFIG
 from data_pipeline.helper.helper_SQL_tables import DatabaseTables, WaterPipes, WATER_PIPES_DATA_TYPES, \
     Hydrology, HYDROLOGY_DATA_TYPES, CityDistricts, COMMUNITY_DATA_TYPES, CityBoundary, CITY_BOUNDARY_DATA_TYPES
@@ -49,48 +50,11 @@ from data_pipeline.helper.helper_API_errors import DBError
 
 
 ########################################################################################################################
-### script-setup 3: logging config
+### script-setup 3: logging config - now with a helper function!
 logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-
-# by making these their own objects, I can add filters to them
-file_handler = logging.FileHandler(logfile) # handles output file
-console_handler = logging.StreamHandler() # writes log to a "stream" which by default is terminal/console
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[file_handler, console_handler],
-)
-
-# NOTE: logging levels: affects labelling and filtering when looking through errors
-# like remember how I'd tell Python "idgaf about that warning just stop telling me"
-# but also not wanting to eliminate like SERIOUS errors?
-# that's what the logging levels let us do
-
+setup_logging(logfile)
 logger = logging.getLogger(__name__)
-logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CALL DAMNIT
-# LOGGING ORDER:
-# debug
-# info
-# warning
-# error
-# critical
 
-# now I create a method to exclude stuff from console
-def exclude_from_console(record): # every time you call `logger.<level>(...), logging makes a LogRecord instance
-    # we can add extra stuff to it by adding `extra={}` to the log call
-    return not getattr(record, "console_exclude", False)
-# pass the function to `console_handler.addFilter` - note we don't want to CALL the method, but pass the entire method
-console_handler.addFilter(exclude_from_console)
-
-# explanation:
-# the `addFilter` instance needs to be passed some method/function that returns True/False
-# if that method returns True, the log proceeds normally; if it returns False, the log is filtered
-# the `getattr` function takes an object, the name of an attribute of the object, and a default value
-# it returns the value of object.attribute, or returns the default if it doesn't exist
-# "console_exclude" present and True  => getattr returns True  => function returns Not-True, aka False => log-statement-filtered
-# "console_exclude" not-present/False => getattr returns False => function returns Not-False, aka True => log-statement-unfiltered
-# and because I only attached it to the console-handler, only the console-handler is filtered
 
 
 ########################################################################################################################
