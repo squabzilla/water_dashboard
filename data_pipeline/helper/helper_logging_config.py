@@ -1,5 +1,13 @@
 """
-stuff
+file name: helper_logging_config.py
+author: William Hovdestad
+
+This script is a helper-function for my data-pipeline where I setup all the logging-logic for my data pipeline
+so that I don't need to copy+paste in every script
+
+Also makes it easy to make blanket changes to my logging
+
+and finally, having a single place where I make all my notes to myself about how the hell logging works
 """
 
 
