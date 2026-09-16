@@ -96,6 +96,7 @@ def backfill_single_year(year: int, MSC_GeoMet_weather_by_year: Callable[[int], 
     except DataPipelineError: # NOTE: API errors logged by function that actually makes raw API calls
         if year == start_year:
             msg = f"Error: DataPipelineError: Cannot retrieve data for start year {year}; aborting backfill."
+            logger.critical(msg)
             raise DataPipelineError(msg)
         return year
     except Exception as e:
@@ -162,7 +163,7 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
     failed_years = []
 
     # adding some logic just to be used during testing
-    TESTING_CODE = True
+    TESTING_CODE = False
     if TESTING_CODE == True:
         start_year = 2025
         warning_message = ("\n#############################################\nWARNING: START YEAR IS 2025 FOR TEST\n#############################################\n")
@@ -184,7 +185,7 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
 
         # run backfill single year, get exit code
         backfillExitCode = backfill_single_year(\
-            start_year=start_year, year=year, MSC_GeoMet_weather_by_year=MSC_GeoMet_weather_by_year,
+            year=year, MSC_GeoMet_weather_by_year=MSC_GeoMet_weather_by_year,
             main_table_name=main_table_name, staging_table_name=staging_table_name, datetimecol=datetimecol,
             main_table_unique_constraint_name=main_table_unique_constraint_name,
             staging_table_unique_constraint_name=staging_table_unique_constraint_name,
