@@ -47,6 +47,9 @@ env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
 
 ########################################################################################################################
 ### section 1: variables for tables, and main station for weather data
+
+START_YEAR = 1956 # first date in watermain break data 
+
 """
 STATIONA FOR REFERENCE
 | STATION_NAME     | CLIMATE_IDENTIFIER   | DLY_FIRST_DATE | DLY_LAST_DATE | HLY_FIRST_DATE | HLY_LAST_DATE | source-of-truth |

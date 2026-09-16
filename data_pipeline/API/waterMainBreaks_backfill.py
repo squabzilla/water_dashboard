@@ -52,7 +52,7 @@ from data_pipeline.helper.helper_progress_bar import update_progress_bar
 from data_pipeline.helper.helper_logging_config import setup_logging
 from data_pipeline.helper.helper_timezones import AB_TIME
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
-from data_pipeline.helper.helper_SQL_tables import DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES
+from data_pipeline.helper.helper_SQL_tables import DatabaseTables, WatermainBreaksCols, WATERMAIN_BREAKS_DATA_TYPES, START_YEAR
 from data_pipeline.helper.helper_set_geojson_crs import set_geojson_crs
 from data_pipeline.helper.helper_API_try_except_job import try_except_city_API
 from data_pipeline.helper.helper_API_errors import APICountMismatchError, APIZeroCountError, DBError
@@ -80,7 +80,7 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
     ########################################################
 
     # NOTE: first recorded watermain break is 1956/01/01
-    starting_year = 1956
+    starting_year = START_YEAR
     all_data = []
 
     date_column_name = WatermainBreaksCols.break_date
