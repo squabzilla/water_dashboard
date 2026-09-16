@@ -63,8 +63,6 @@ from data_pipeline.helper.helper_DB_update import add_new_records_to_table
 
 ########################################################################################################################
 ### script-setup 3: logging config - now with a helper function!
-logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-setup_logging(logfile)
 logger = logging.getLogger(__name__)
 
 
@@ -108,7 +106,7 @@ def _fetch_daily_MSC_GeoMet_daily_weather_last_14_days() -> gpd.GeoDataFrame:
 ########################################################################################################################
 ### section 2 - define main function to call local helper
 
-def main() -> None:
+def _update_daily_weather_run_daily() -> None:
     gdf = _fetch_daily_MSC_GeoMet_daily_weather_last_14_days()
     engine = default_SQL_engine()
     main_table_name = DatabaseTables.weather_daily
@@ -125,9 +123,29 @@ def main() -> None:
 
 
 ########################################################################################################################
-### section 3:  call main
+### section 3:  setup and call main
+
+def main() -> None:
+    # setup logging in main
+    logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+    setup_logging(logfile) # NOTE: logging config already adds current time
+
+    # log start
+    logger.info(f"Script: {__file__} started.")# print statement for start of script, and current time
+
+    # try _update_daily_weather, log error if fails
+    try:
+        _update_daily_weather_run_daily()
+    except Exception as e:
+        msg = f"Unexpected error while running {Path(__name__).name}: {e}"
+        logger.critical(msg, exc_info=True)
+        raise Exception(msg)
+
+    # log end
+    logger.info(f"Script: {__file__} completed.")# print statement for end of script, and current time
+
+
+# call main
 # this function will run by itself if this script is called, including the start & end time pieces
 if __name__ == "__main__":
-    logger.info(f"Script: {__file__} started at {datetime.now()}")# print statement for start of script, and current time
     main()
-    logger.info(f"Script: {__file__} completed at {datetime.now()}")# print statement for end of script, and current time

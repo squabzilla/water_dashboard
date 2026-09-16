@@ -72,8 +72,6 @@ from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViola
 
 ########################################################################################################################
 ### script-setup 3: logging config - now with a helper function!
-logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-setup_logging(logfile)
 logger = logging.getLogger(__name__)
 
 
@@ -245,7 +243,7 @@ def _filter_hourly_records(gdf:gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 ########################################################################################################################
 ### section 5 - define main function to call local helpers
 
-def main() -> None:
+def _update_hourly_weather_run_hourly() -> None:
     gdf = _fetch_swob_data() # let this be the default value now lol
     gdf = _convert_SWOBFormat_to_HourlyFormat(gdf)
     # NOTE: remember that this adds time-zone data, in order to derive "LOCAL_DATE" column from "UTC_DATE" column
@@ -269,9 +267,29 @@ def main() -> None:
 
 
 ########################################################################################################################
-### section 5:  actually call main
+### section 5: setup and call main
+
+def main() -> None:
+    # setup logging in main
+    logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+    setup_logging(logfile) # NOTE: logging config already adds current time
+
+    # log start
+    logger.info(f"Script: {__file__} started.")# print statement for start of script, and current time
+
+    # try fetch_all_layers, log error if fails
+    try:
+        _update_hourly_weather_run_hourly()
+    except Exception as e:
+        msg = f"Unexpected error while running {Path(__name__).name}: {e}"
+        logger.critical(msg, exc_info=True)
+        raise Exception(msg)
+
+    # log end
+    logger.info(f"Script: {__file__} completed.")# print statement for end of script, and current time
+
+
+# call main
 # this function will run by itself if this script is called, including the start & end time pieces
 if __name__ == "__main__":
-    logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
     main()
-    logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time

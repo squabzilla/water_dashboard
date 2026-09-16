@@ -51,8 +51,6 @@ from data_pipeline.API.weather_helper_API import fetch_weather_pages
 
 ########################################################################################################################
 ### script-setup 3: logging config - now with a helper function!
-logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-setup_logging(logfile)
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +58,7 @@ logger = logging.getLogger(__name__)
 ########################################################################################################################
 ### section 1: main - script that gets weather stations
 
-def main() -> None:
+def _get_weather_stations() -> None:
     WEATHER_STATION_URL = "https://api.weather.gc.ca/collections/climate-stations/items"
     ids_clause = f"{PRIMARY_STATION_ID}, {SECONDARY_STATION_ID}, {TERTIARY_STATION_ID}"
     params = {
@@ -81,9 +79,28 @@ def main() -> None:
 
 
 ########################################################################################################################
-### section 2 - call main
-
+### section 2 - setup and call main
 # this function will run by itself if this script is called, including the start & end time pieces
+
+def main() -> None:
+    # setup logging in main, when its run by itself
+    logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+    setup_logging(logfile) # NOTE: logging config already adds current time
+
+    # log start
+    logger.info(f"Script: {__file__} started.")# print statement for start of script, and current time
+    
+    # try _get_weather_stations, log error if fails
+    try:
+        _get_weather_stations
+    except Exception as e:
+        msg = f"Unexpected error while running {Path(__name__).name}: {e}"
+        logger.critical(msg, exc_info=True)
+        raise Exception(msg)
+
+    # log end
+    logger.info(f"Script: {__file__} complete.") # print statement for end of script, and current time
+
 
 if __name__ == "__main__":
     logger.info(f"Script: {__file__} started at {datetime.now()}")# print statement for start of script, and current time

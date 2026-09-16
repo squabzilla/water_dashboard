@@ -80,8 +80,6 @@ from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 
 ########################################################################################################################
 ### script-setup 3: logging config - now with a helper function!
-logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-setup_logging(logfile)
 logger = logging.getLogger(__name__)
 
 
@@ -99,7 +97,7 @@ parser.add_argument(
     "-y", "--years", # NOTE: `-h` is reserved for "help" lol
     type=int,
     default=DEFAULT_YEARS,
-    help=f"Year we want to fill; the default, 0, backfills all relevant years. (Can leave blank if we want all years.)",
+    help=f"Year we want to fill; the default, 0, backfills all relevant years. (Can leave CLI blank if we want all years.)",
 )
 args = parser.parse_args()
 
@@ -132,9 +130,9 @@ def hourly_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
 
 
 ########################################################################################################################
-### section 2: main-function to loop through years
+### section 2: main-function to either backfill all years, or fill a specific year (depending on CLI arguments)
 
-def main(years_code:int = args.years) -> int:
+def _backfill_hourly_weather(years_code:int = args.years) -> int:
     valid_year(years_code) # checks validity of entered year
 
     main_table_name = DatabaseTables.weather_hourly
@@ -165,11 +163,28 @@ def main(years_code:int = args.years) -> int:
 
 
 ########################################################################################################################
-### section 2:  call main
+### section 3:  call main
 # this function will run by itself if this script is called, including the start & end time pieces
-if __name__ == "__main__":
-    logger.info(f"Script: {__file__} started.")# print statement for start of script, and current time 
-    # NOTE: logging config already adds current time lol
-    EXIT_CODE = main() # let's get our exit code
+
+def main() -> None:
+    # setup logging in main, when its run by itself
+    logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+    setup_logging(logfile) # NOTE: logging config already adds current time
+
+    # log start
+    logger.info(f"Script: {__file__} started.")# print statement for start of script, and current time
+
+    # try _backfill_hourly_weather, log error if fails
+    try:
+        EXIT_CODE = _backfill_hourly_weather() # let's get our exit code
+    except Exception as e:
+        msg = f"Unexpected error while running {Path(__name__).name}: {e}"
+        logger.critical(msg, exc_info=True)
+        raise Exception(msg)
+
+    # log end
     logger.info(f"Script: {__file__} completed with EXIT_CODE({EXIT_CODE}).")# print statement for end of script, and current time
-    sys.exit(EXIT_CODE) # exit with exit code
+    sys.exit(EXIT_CODE) # exit with exit code - important for making if a single year failed, but we continued onwards
+
+if __name__ == "__main__":
+    main()

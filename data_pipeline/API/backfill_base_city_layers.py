@@ -51,8 +51,6 @@ from data_pipeline.helper.helper_API_errors import DBError
 
 ########################################################################################################################
 ### script-setup 3: logging config - now with a helper function!
-logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-setup_logging(logfile)
 logger = logging.getLogger(__name__)
 
 
@@ -143,16 +141,9 @@ def fetch_city_layer(layer_dict: dict) -> None:
 
 
 ########################################################################################################################
-### section 3: main - loop through all my layers
+### section 3: fetch_all_layers - loop through all my layers
          
-def main() -> None:
-    # log start
-    logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
-
-
-    #city_layers = [PublicWaterMain_dict, Hydrology_dict, CommunityDistrictBoundaries_dict, CityBoundary_dict,]
-    #city_layers = [CommunityDistrictBoundaries_dict]
-
+def fetch_all_layers() -> None:
 
     # start progress bar for fun
     progress_bar_count = 0
@@ -167,8 +158,29 @@ def main() -> None:
         progress_bar_count += 1
         update_progress_bar(iteration=progress_bar_count, total=total_iterations, prefix=progress_bar_prefix)
 
+
+
+########################################################################################################################
+### section 4: setup and call main
+
+def main() -> None:
+    # setup logging in main
+    logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+    setup_logging(logfile) # NOTE: logging config already adds current time
+
+    # log start
+    logger.info(f"Script: {__file__} started.")# print statement for start of script, and current time
+
+    # try fetch_all_layers, log error if fails
+    try:
+        fetch_all_layers()
+    except Exception as e:
+        msg = f"Unexpected error while running {Path(__name__).name}: {e}"
+        logger.critical(msg, exc_info=True)
+        raise Exception(msg)
+
     # log end
-    logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
+    logger.info(f"Script: {__file__} completed.")# print statement for end of script, and current time
 
 
 # call main

@@ -56,8 +56,6 @@ from data_pipeline.helper.helper_API_errors import DataPipelineError, APITimeout
 
 ########################################################################################################################
 ### script-setup 3: logging config  - now with a helper function!
-logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-setup_logging(logfile)
 logger = logging.getLogger(__name__)
 
 
@@ -93,7 +91,7 @@ def _checkWaterMainBreaksAPI(JSON_QUERY_URL: str, payload: dict) -> dict:
 ########################################################################################################################
 ### section 2 - check API, get new results if there are updates
 
-def main() -> None:
+def _check_watermainBreaks_for_updates() -> None:
     ### step 1 - log current time
     logger.info(f"Script: {__file__} started.")
 
@@ -157,7 +155,27 @@ def main() -> None:
 
 
 ########################################################################################################################
-### section 2 - logic for script to run by itself if called
+### section 2 - setup and call main
+
+def main() -> None:
+    # setup logging in main
+    logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
+    setup_logging(logfile) # NOTE: logging config already adds current time
+
+    # log start
+    logger.info(f"Script: {__file__} started.")# print statement for start of script, and current time
+
+    # try fetch_all_layers, log error if fails
+    try:
+        _check_watermainBreaks_for_updates()
+    except Exception as e:
+        msg = f"Unexpected error while running {Path(__name__).name}: {e}"
+        logger.critical(msg, exc_info=True)
+        raise Exception(msg)
+
+    # log end
+    logger.info(f"Script: {__file__} completed.")# print statement for end of script, and current time
+
 
 # call main
 # this function will run by itself if this script is called, including the start & end time pieces

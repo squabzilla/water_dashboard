@@ -64,7 +64,6 @@ from data_pipeline.helper.helper_timezones import AB_TIME
 # NOTE: 
 # moved most logging config logic to `main()`, so we don't make duplicate `setup_logging` calls 
 # in the case that waterMainBreaks_backfill() is called from another script
-
 logger = logging.getLogger(__name__)
 
 
@@ -209,16 +208,26 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
 
 
 ########################################################################################################################
-### section 3 - logic for script to run by itself if called
+### section 2 - logic for script to run by itself if called
 
 def main() -> None:
     # setup logging in main, when its run by itself
     logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
-    setup_logging(logfile)
+    setup_logging(logfile) # NOTE: logging config already adds current time
+
     # log start-time, end-time, run function
-    logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
-    waterMainBreaks_backfill(silent_function=False)
-    logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
+    logger.info(f"Script: {__file__} started.")# print statement for start of script, and current time
+
+    # try waterMainBreaks_backfill, log error if fails
+    try:
+        waterMainBreaks_backfill(silent_function=False)
+    except Exception as e:
+        msg = f"Unexpected error while running {Path(__name__).name}: {e}"
+        logger.critical(msg, exc_info=True)
+        raise Exception(msg)
+
+    # log end
+    logger.info(f"Script: {__file__} complete.") # print statement for end of script, and current time
 
 
 # call main - this function will run by itself if this script is called, including the start & end time pieces
