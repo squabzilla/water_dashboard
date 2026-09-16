@@ -65,13 +65,15 @@ def valid_year(year: int) -> None:
     if not type(year) is int:
         msg = f"Error: TypeError: Expecting an integer; got {year} which is a {type(year)}."
         raise TypeError(msg)
+        # NOTE: since this is only expected to occur during command-line-argument usage, not logging the error
+        # if there's an invalid year during regular backfill, another error will probably trigger lol
     start_year = START_YEAR
     current_year = datetime.now(AB_TIME).year # yeah I'm just being overly thorough with timezones lol
     # however, my API call is grabbing everything where LOCAL_YEAR = passed_year, so I want current_year in AB time lol
     stop_year = current_year + 1 # stop when we reach this year, BUT DO NOT PROCESS THIS YEAR
     valid_years = range(start_year, stop_year)
     #return(year in valid_years) # the statement `year in valid_years` will eval. to True or False
-    if year not in (0, valid_years):
+    if year not in [0, *valid_years]:
         msg = f"Error: ValueError: valid years are 0, or from {start_year} to {current_year} (inclusive). {year} not within that set."
         raise ValueError(msg)
 
