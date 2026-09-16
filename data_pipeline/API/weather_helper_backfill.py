@@ -169,7 +169,7 @@ def backfill_weather_years(MSC_GeoMet_weather_by_year: Callable[[int], gpd.GeoDa
 
     logger.info(f"Number of failed years: {len(failed_years)}.")
     if len(failed_years) > 0:
-        failed_years_string = ', '.join(failed_years)
+        failed_years_string = ', '.join(str(year) for year in failed_years)
         logger.error(f"Years failed: {failed_years_string}")
 
     # now we return the exit code
