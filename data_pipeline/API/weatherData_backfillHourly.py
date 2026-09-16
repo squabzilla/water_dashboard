@@ -4,13 +4,25 @@ author: William Hovdestad
 
 This script is used to backfill our PostGIS-PSQL database with hourly-weather-values.
 
+This script can be used to backfill all years of daily-weather into our database,
+or backfill a single year via command line arguments.
+The command-line argument usage is as follows:
+`uv run weather_hourly_backfill.py -y <year>`
+where <year> is a valid integer for a valid-year to backfill.
+Valid years are from 1956 to current year.
+
 This script has two parts. The first is a function called `hourly_MSC_GeoMet_weather_by_year`
 which is passed a year, and returns a geoDataFrame.
 It calls the `fetch_MSC_GeoMet_weather` from the `weather_APIlogic.py` file in order to retrieve
 the data from the API.
 
-The second part: it calls the `backfill_weather_years` function from `weather_helper_backfill.py`,
-as that script contains the logic to loop through all of the relevant years for backfilling our database.
+The second part: it calls either the `backfill_weather_years` function 
+or `backfill_single_year` function from `weather_helper_backfill.py`.
+
+The `backfill_single_year` function has the logic to backfill the database for a single given year.
+
+The `backfill_weather_years` function contains the logic 
+to loop through all of the relevant years for backfilling our database.
 Note that the `backfill_weather_years` function is designed to TAKE a function as input -
 a function that takes an integer YEAR as input.
 
