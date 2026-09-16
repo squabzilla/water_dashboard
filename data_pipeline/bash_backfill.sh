@@ -107,6 +107,10 @@ NAME__weatherData_weatherStations="weatherData_weatherStations"
 PYSCRIPT__weatherData_weatherStations="$SCRIPT_DIR/weatherData_weatherStations.py"
 JOB__weatherData_weatherStations="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_weatherStations 2>> $BASH_BACKFILL_LOG"
 
+NAME__watermain_custom_GEOJSONs_import="watermain_custom_GEOJSONs_import"
+PYSCRIPT__watermain_custom_GEOJSONs_import="$SCRIPT_DIR/watermain_custom_GEOJSONs_import.py"
+JOB__watermain_custom_GEOJSONs_import="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__watermain_custom_GEOJSONs_import 2>> $BASH_BACKFILL_LOG"
+
 # backfill of hourly-swob-records to be ran with backfill as well!
 NAME__weatherData_updateHourlyWeather_runHourly="weatherData_updateHourlyWeather_runHourly"
 PYSCRIPT__weatherData_updateHourlyWeather_runHourly="$SCRIPT_DIR/weatherData_updateHourlyWeather_runHourly.py"
