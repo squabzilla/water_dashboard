@@ -179,7 +179,8 @@ def main(years_code:int = args.years) -> int:
 ### section 2:  call main
 # this function will run by itself if this script is called, including the start & end time pieces
 if __name__ == "__main__":
-    logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")# print statement for start of script, and current time
+    logger.info(f"Script: {__file__} started.")# print statement for start of script, and current time
+    # NOTE: logging config already adds current time lol
     EXIT_CODE = main() # let's get our exit code
-    logger.info(f"Script: {__file__} completed with EXIT_CODE({EXIT_CODE}) at {datetime.now(AB_TIME)}")# print statement for end of script, and current time
+    logger.info(f"Script: {__file__} completed with EXIT_CODE({EXIT_CODE}).")# print statement for end of script, and current time
     sys.exit(EXIT_CODE) # exit with exit code
