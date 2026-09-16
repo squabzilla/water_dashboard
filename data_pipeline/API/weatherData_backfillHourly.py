@@ -43,6 +43,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
+import argparse # used for adding command line arguments to script
 from datetime import datetime # for getting date-time stuff
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
@@ -59,7 +60,7 @@ from data_pipeline.helper.helper_timezones import AB_TIME
 from data_pipeline.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HOURLY_WEATHER_DATA_TYPES, DatabaseTables, \
     HourlyWeatherCols, HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT
 from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority, hourlyWeather_FixDatetimes
-from data_pipeline.API.weather_helper_backfill import backfill_weather_years
+from data_pipeline.API.weather_helper_backfill import valid_year, backfill_single_year, backfill_weather_years
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
 from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 
@@ -70,6 +71,25 @@ from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 setup_logging(logfile)
 logger = logging.getLogger(__name__)
+
+
+
+########################################################################################################################
+### script-setup 4: setup command line arguments for script
+#
+
+parser = argparse.ArgumentParser(description=__doc__)
+
+DEFAULT_YEARS = 0
+
+# We have a command-line argument for how many hours we look back
+parser.add_argument(
+    "-y", "--years", # NOTE: `-h` is reserved for "help" lol
+    type=int,
+    default=DEFAULT_YEARS,
+    help=f"Year we want to fill; the default, 0, backfills all relevant years. (Can leave blank if we want all years.)",
+)
+args = parser.parse_args()
 
 
 
@@ -102,7 +122,8 @@ def hourly_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
 ########################################################################################################################
 ### section 2: main-function to loop through years
 
-def main() -> None:
+def main(years_code:int = args.years) -> int:
+    valid_year(years_code) # checks validity of entered year
 
     main_table_name = DatabaseTables.weather_hourly
     staging_table_name = DatabaseTables.weather_hourly_staging
@@ -112,12 +133,21 @@ def main() -> None:
     dtype_dictionary = dict(HOURLY_WEATHER_DATA_TYPES)
     progress_bar_prefix = "Backfilling hourly weather records"
 
-    EXIT_CODE = \
-    backfill_weather_years(MSC_GeoMet_weather_by_year=hourly_MSC_GeoMet_weather_by_year,
-                               main_table_name=main_table_name, staging_table_name=staging_table_name, 
-                               datetimecol=unique_column, main_table_unique_constraint_name=main_table_unique_constraint_name,
-                               staging_table_unique_constraint_name=staging_table_unique_constraint_name,
-                               dtype_dictionary=dtype_dictionary, progress_bar_prefix=progress_bar_prefix)
+    if years_code == 0: # NOTE: this means we do all years
+        EXIT_CODE = backfill_weather_years( \
+            MSC_GeoMet_weather_by_year=hourly_MSC_GeoMet_weather_by_year,
+            main_table_name=main_table_name, staging_table_name=staging_table_name, 
+            datetimecol=unique_column, main_table_unique_constraint_name=main_table_unique_constraint_name,
+            staging_table_unique_constraint_name=staging_table_unique_constraint_name,
+            dtype_dictionary=dtype_dictionary, progress_bar_prefix=progress_bar_prefix
+        )
+    else:
+        EXIT_CODE = backfill_single_year( \
+            year=years_code, MSC_GeoMet_weather_by_year=hourly_MSC_GeoMet_weather_by_year,
+            main_table_name=main_table_name, staging_table_name=staging_table_name, datetimecol=unique_column,
+            main_table_unique_constraint_name=main_table_unique_constraint_name,
+            staging_table_unique_constraint_name=staging_table_unique_constraint_name, dtype_dictionary=dtype_dictionary
+        )
     return EXIT_CODE
 
 

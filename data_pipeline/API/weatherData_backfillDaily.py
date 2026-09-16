@@ -43,6 +43,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
+import argparse # used for adding command line arguments to script
 from datetime import datetime # for getting date-time stuff
 import psycopg # stuff needed to connect with postgis database
 import sqlalchemy # stuff needed to connect with postgis database
@@ -58,11 +59,11 @@ import logging
 # custom modules!
 from data_pipeline.helper.helper_logging_config import setup_logging
 from data_pipeline.helper.helper_timezones import AB_TIME
-from data_pipeline.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
+from data_pipeline.helper.helper_SQL_tables import START_YEAR, DAILY_WEATHER_PROPERTIES, DAILY_WEATHER_DATA_TYPES, \
     DailyWeatherCols, DatabaseTables, DAILY_WEATHER_UNIQUE_DATE_CONSTRAINT, DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT
 from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority
-from data_pipeline.API.weather_helper_backfill import backfill_weather_years
-from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
+from data_pipeline.API.weather_helper_backfill import valid_year, backfill_single_year, backfill_weather_years
+from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation, DataPipelineError
 from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 
 
@@ -72,6 +73,25 @@ from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
 logfile = Path(PROJECT_ROOT) / "data_pipeline" / "API" / "log_files" / f"{Path(__file__).stem}.log" # base log name on file name
 setup_logging(logfile)
 logger = logging.getLogger(__name__)
+
+
+
+########################################################################################################################
+### script-setup 4: setup command line arguments for script
+#
+
+parser = argparse.ArgumentParser(description=__doc__)
+
+DEFAULT_YEARS = 0
+
+# We have a command-line argument for how many hours we look back
+parser.add_argument(
+    "-y", "--years", # NOTE: `-h` is reserved for "help" lol
+    type=int,
+    default=DEFAULT_YEARS,
+    help=f"Year we want to fill; the default, 0, backfills all relevant years. (Can leave blank if we want all years.)",
+)
+args = parser.parse_args()
 
 
 
@@ -107,7 +127,15 @@ def daily_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
 ########################################################################################################################
 ### section 2: main-function to loop through years
 
-def main() -> None:
+def main(years_code:int = args.years) -> int:
+    valid_year(years_code) # checks validity of entered year
+    if years_code == START_YEAR:
+        msg = (
+            f"Error: DataPipelineError: Attempting to fetch start year ({START_YEAR}) will overwrite existing data. "
+            f"Only do this as part of full backfill pipeline."
+        ) # NOTE: since this is only expected to occur during command-line-argument usage, not logging the error
+        raise DataPipelineError(msg)
+
     main_table_name = DatabaseTables.weather_daily
     staging_table_name = DatabaseTables.weather_daily_staging
     unique_column = DailyWeatherCols.dwc_local_date
@@ -116,12 +144,21 @@ def main() -> None:
     dtype_dictionary = dict(DAILY_WEATHER_DATA_TYPES)
     progress_bar_prefix = "Backfilling daily weather records"
 
-    EXIT_CODE = \
-    backfill_weather_years(MSC_GeoMet_weather_by_year=daily_MSC_GeoMet_weather_by_year,
-                           main_table_name=main_table_name, staging_table_name=staging_table_name, 
-                           datetimecol=unique_column, main_table_unique_constraint_name=main_table_unique_constraint_name,
-                           staging_table_unique_constraint_name=staging_table_unique_constraint_name,
-                           dtype_dictionary=dtype_dictionary, progress_bar_prefix=progress_bar_prefix)
+    if years_code == 0: # NOTE: this means we do all years
+        EXIT_CODE = backfill_weather_years( \
+            MSC_GeoMet_weather_by_year=daily_MSC_GeoMet_weather_by_year,
+            main_table_name=main_table_name, staging_table_name=staging_table_name,
+            datetimecol=unique_column, main_table_unique_constraint_name=main_table_unique_constraint_name,
+            staging_table_unique_constraint_name=staging_table_unique_constraint_name,
+            dtype_dictionary=dtype_dictionary, progress_bar_prefix=progress_bar_prefix
+        )
+    else:
+        EXIT_CODE = backfill_single_year( \
+            year=years_code, MSC_GeoMet_weather_by_year=daily_MSC_GeoMet_weather_by_year,
+            main_table_name=main_table_name, staging_table_name=staging_table_name, datetimecol=unique_column,
+            main_table_unique_constraint_name=main_table_unique_constraint_name,
+            staging_table_unique_constraint_name=staging_table_unique_constraint_name, dtype_dictionary=dtype_dictionary
+        )
     return EXIT_CODE
 
 
