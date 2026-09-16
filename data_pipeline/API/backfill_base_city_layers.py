@@ -128,6 +128,12 @@ def fetch_city_layer(layer_dict: dict) -> None:
     response = try_except_city_API(job_name=job_name, url=geojson_url, payload=payload)
     json_result = gpd.GeoDataFrame(response)["features"]
     gdf = gpd.GeoDataFrame.from_features(json_result, crs="EPSG:4326")
+
+    # I need to round waterpipe lengths because of floating-point-math-weirdness
+    if layer_name == DatabaseTables.watermain_pipes:
+        gdf[WaterPipes.length] = gdf[WaterPipes.length].round(4)
+
+
     engine = default_SQL_engine()
     try:
         gdf.to_postgis(layer_name, engine, if_exists="replace", index=False, dtype=type_dict)
