@@ -5,6 +5,8 @@ author: William Hovdestad
 This script is designed to call the `fetch_MSC_GeoMet_weather` from the `weather_APIlogic.py` file,
 in order to update the hourly-weather values in the PostGIS database; this script is intended to be run hourly.
 
+Command line usage: `uv run weatherData_updateHourlyRecords_runHourly.py -hrs <int>`
+
 It grabs the `swob-realtime` data from the Canada weather API
 link: https://api.weather.gc.ca/openapi?f=html#/swob-realtime
 
@@ -99,6 +101,14 @@ args = parser.parse_args()
 ### section 1: grab hourly weather data
 
 def _fetch_swob_data(hours_back:int = args.hours_back) -> gpd.GeoDataFrame:
+    # let's just raise some errors if data not good
+    if not type(hours_back) is int:
+        msg = f"Error: TypeError: Expecting an integer; got {hours_back} which is a {type(hours_back)}."
+        raise TypeError(msg)
+    if hours_back not in range(0,100):
+        msg = f"Error: ValueError: valid hours_back are from 0 to 99 (inclusive). {hours_back} not within that range."
+        raise ValueError(msg)
+
     # url of API
     url = "https://api.weather.gc.ca/collections/swob-realtime/items"
 
