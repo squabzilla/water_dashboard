@@ -126,6 +126,7 @@ run_job "$NAME__waterMainBreaks_backfill" "$JOB__waterMainBreaks_backfill"
 run_job "$NAME__weatherData_backfillDaily" "$JOB__weatherData_backfillDaily"
 run_job "$NAME__weatherData_backfillHourly" "$JOB__weatherData_backfillHourly"
 run_job "$NAME__weatherData_weatherStations" "$JOB__weatherData_weatherStations"
+run_job "$NAME__watermain_custom_GEOJSONs_import" "$JOB__watermain_custom_GEOJSONs_import"
 run_job "$NAME__weatherData_updateHourlyWeather_runHourly" "$JOB__weatherData_updateHourlyWeather_runHourly"
 
 
