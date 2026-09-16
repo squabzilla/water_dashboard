@@ -95,7 +95,7 @@ def _checkWaterMainBreaksAPI(JSON_QUERY_URL: str, payload: dict) -> dict:
 
 def main() -> None:
     ### step 1 - log current time
-    logger.info(f"Script: {__file__} started at {datetime.now(AB_TIME)}")
+    logger.info(f"Script: {__file__} started.")
 
     engine = default_SQL_engine()
 
@@ -144,13 +144,15 @@ def main() -> None:
         raise DataPipelineError(msg) from e
 
     API_response = response[0][':created_at']
+    # convert API response to proper datetime variable, so I can compare the two objects properly
+    API_response = datetime.fromisoformat(API_response)
 
     if sql_result != API_response:
         logger.info("New results; updating watermain breaks...")
         waterMainBreaks_backfill()
 
     ### END - log end time
-    logger.info(f"Script: {__file__} completed at {datetime.now(AB_TIME)}")
+    logger.info(f"Script: {__file__} completed.")
 
 
 
