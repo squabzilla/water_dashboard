@@ -68,8 +68,8 @@ PG_TYPES_TO_COLUMN_CATEGORY: MappingProxyType[str, ColumnCategory] = MappingProx
     "text": ColumnCategory.TEXT, "varchar": ColumnCategory.TEXT, "character varying": ColumnCategory.TEXT,
     "integer": ColumnCategory.NUMERIC, "bigint": ColumnCategory.NUMERIC, "numeric": ColumnCategory.NUMERIC,
     "double precision": ColumnCategory.NUMERIC, "real": ColumnCategory.NUMERIC,
-    "date": ColumnCategory.DATE, "timestamp": ColumnCategory.DATE, "timestamp without time zone": ColumnCategory.DATE,
-    "timestamp with time zone": ColumnCategory.DATE,
+    "date": ColumnCategory.DATE, "timestamp": ColumnCategory.DATE,
+    "timestamp without time zone": ColumnCategory.DATE, "timestamp with time zone": ColumnCategory.DATE,
     "boolean": ColumnCategory.BOOLEAN,
     "USER-DEFINED": ColumnCategory.GEOMETRY,  # PostGIS geometry shows as USER-DEFINED
 })
