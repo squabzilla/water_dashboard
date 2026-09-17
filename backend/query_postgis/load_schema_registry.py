@@ -1,5 +1,5 @@
 """
-file name: main.y
+file name: load_schema_registry.py
 author: William Hovdestad
 
 this file contains logic to return the schema of my database in the form of a nested dictionary
@@ -40,6 +40,8 @@ import sqlalchemy # stuff needed to connect with postgis database
 import httpx # used for calling API
 import json # used for handling export of json data
 
+from data_pipeline.helper.helper_SQL_tables import DatabaseTables
+
 
 ########################################################################################################################
 ### script-setup 3: logging config
@@ -53,7 +55,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 
 # let's declare an error type for schema registry
 class SchemaError(Exception):
-    """Base class for backfill-related failures."""
+    """Raised when the database schema doesn't match what the query layer expects."""
 
 # class containing all the data types I care about in Python code
 class ColumnCategory(StrEnum):
@@ -63,8 +65,15 @@ class ColumnCategory(StrEnum):
     BOOLEAN = "boolean"
     GEOMETRY = "geometry"
 
+OPERATORS_BY_COLUMN_CATEGORY: MappingProxyType[ColumnCategory, frozenset[str]] = MappingProxyType({
+    ColumnCategory.TEXT: frozenset({"eq", "ilike"}),
+    ColumnCategory.NUMERIC: frozenset({"eq", "gt", "gte", "lt", "lte"}),
+    ColumnCategory.DATE: frozenset({"eq", "gt", "gte", "lt", "lte"}),
+    ColumnCategory.BOOLEAN: frozenset({"eq"}),
+})
+
 # a MappingProxyType, that maps all the various PostGres data types to my Python data-types
-PG_TYPES_TO_COLUMN_CATEGORY: MappingProxyType[str, ColumnCategory] = MappingProxyType({
+PG_TYPE_TO_CATEGORY: MappingProxyType[str, ColumnCategory] = MappingProxyType({
     "text": ColumnCategory.TEXT, "varchar": ColumnCategory.TEXT, "character varying": ColumnCategory.TEXT,
     "integer": ColumnCategory.NUMERIC, "bigint": ColumnCategory.NUMERIC, "numeric": ColumnCategory.NUMERIC,
     "double precision": ColumnCategory.NUMERIC, "real": ColumnCategory.NUMERIC,
@@ -80,11 +89,15 @@ PG_TYPES_TO_COLUMN_CATEGORY: MappingProxyType[str, ColumnCategory] = MappingProx
 #   The inner-dict keys are all the columns belonging to a given table
 # and the values of the inner-dict are the (Python) data-types of a specific column
 def load_schema_registry(conn) -> dict[str, dict[str, ColumnCategory]]:
-    rows = conn.execute("""
+    known_tables = tuple(table.value for table in DatabaseTables) # hey I'm using a tuple, I don't want this to be changing!
+    rows = conn.execute(
+        """
         SELECT table_name, column_name, data_type
         FROM information_schema.columns
-        WHERE table_schema = 'public'
-    """).fetchall()
+        WHERE table_schema = 'public' AND table_name = ANY(%s)
+        """,
+        (known_tables,),
+    ).fetchall()
 
     # create empty registry
     # the type annotation here just reminds us what it's supposed to look like
@@ -94,13 +107,13 @@ def load_schema_registry(conn) -> dict[str, dict[str, ColumnCategory]]:
         # make sure table is in registry - add table_name as empty-dict if not there
         if table_name not in registry: registry[table_name] = {}
         # get data type of column
-        ColCategory = PG_TYPES_TO_COLUMN_CATEGORY.get(data_type)
+        column_category = PG_TYPE_TO_CATEGORY.get(data_type)
         # error and quit if bad data-type
-        if ColCategory is None:
+        if column_category is None:
             msg = f"Error: SchemaError: table {table_name} column {column_name}: unknown data type."
             logger.error(msg)
             raise SchemaError(msg)
         # add column-name and column-type now
-        registry[table_name][column_name] = ColCategory
+        registry[table_name][column_name] = column_category
     # done for-loop, now return registry
     return registry
