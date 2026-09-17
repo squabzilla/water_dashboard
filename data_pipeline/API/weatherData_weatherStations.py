@@ -92,7 +92,7 @@ def main() -> None:
     
     # try _get_weather_stations, log error if fails
     try:
-        _get_weather_stations
+        _get_weather_stations()
     except Exception as e:
         msg = f"Unexpected error while running {Path(__name__).name}: {e}"
         logger.critical(msg, exc_info=True)
@@ -103,6 +103,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    logger.info(f"Script: {__file__} started at {datetime.now()}")# print statement for start of script, and current time
     main()
-    logger.info(f"Script: {__file__} completed at {datetime.now()}")# print statement for end of script, and current time
