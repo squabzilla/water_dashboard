@@ -67,7 +67,7 @@ class DBConfig(BaseSettings):
     postgres_port: int = 5433 # using 5433 instead of 5432 so I don't get port conflict on local machine from native vs containerized PSQL install
     database_name: str = "calgary_watermains"
 
-DATABASE_CONFIG = DBConfig()
+DATABASE_CONFIG = DBConfig() # pyright: ignore[reportCallIssue]
 
 
 def default_SQL_engine(config: DBConfig = DATABASE_CONFIG) -> Engine:

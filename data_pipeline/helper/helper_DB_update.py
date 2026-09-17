@@ -164,7 +164,7 @@ def _build_upsert_statement(engine: Engine, main_table: str, staging_table: str,
 
 def add_new_records_to_table(gdf: gpd.GeoDataFrame, engine: Engine,
                              main_table_name: str, staging_table_name: str, unique_column: str, 
-                             staging_table_unique_constraint_name: str, dtype_dictionary :str,
+                             staging_table_unique_constraint_name: str, dtype_dictionary :dict,
                              overwrite: bool) -> None:
 
     # write to staging table

@@ -128,7 +128,7 @@ def try_except_weather_API(job_name: str, url: str, params: dict | None) -> dict
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
 )
-def _fetch_city_page(url: str, payload: dict) -> dict:
+def _fetch_city_page(url: str, payload: dict | None) -> dict:
     """Fetch a single page. Retried individually on transient failures."""
     with httpx.Client(timeout=30.0) as client:
         response = client.post(

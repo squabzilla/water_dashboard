@@ -87,7 +87,7 @@ logger.info("shows up everywhere")
 logger.info("file only", extra={"console_exclude": True})
 """
 
-def setup_logging(logfile: str, logging_level: int = logging.INFO, disable_API_spam=True):
+def setup_logging(logfile: Path, logging_level: int = logging.INFO, disable_API_spam=True):
     """
     Configures logging level. Call it once from entry-point script;
     will raise error if called twice in a "module"

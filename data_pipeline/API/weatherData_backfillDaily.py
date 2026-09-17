@@ -124,11 +124,14 @@ def daily_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
     gdf = filter_stations_by_priority(gdf, station_id_col=DailyWeatherCols.dwc_climate_identifier,
                                       datetime_col=DailyWeatherCols.dwc_local_date)
 
+    # double check that it's a GDF to make Pylance happy
+    try: assert isinstance(gdf, gpd.GeoDataFrame), "Error: the `gdf` variable should be a geodataframe."
+    except AssertionError as e: logger.error(e); raise TypeError(e)
+
     # NOTE: dates should be unique now, so let's check that
-    if not gdf[DailyWeatherCols.dwc_local_date].is_unique:
-        msg = f"Error: DataUniquenessConstraintViolation: dates not unique for daily-weather backfill year {year}"
-        logger.error(msg)
-        raise DataUniquenessConstraintViolation(msg)
+    unq_err = f"Error: DataUniquenessConstraintViolation: dates not unique for daily-weather backfill year {year}"
+    try: assert gdf[DailyWeatherCols.dwc_local_date].is_unique, unq_err
+    except AssertionError as e: logger.error(e); raise DataUniquenessConstraintViolation(e)
 
     return gdf
 

@@ -101,12 +101,15 @@ def _fetch_hourly_MSC_GeoMet_daily_weather_last_two_weeks() -> gpd.GeoDataFrame:
     gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier,
                                       datetime_col=HourlyWeatherCols.hwc_local_date)
 
-    # NOTE: dates should be unique now, so let's check that
-    if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
-        msg = f"Error: DataUniquenessConstraintViolation: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}"
-        logger.error(msg)
-        raise DataUniquenessConstraintViolation(msg)
+    # double check that it's a GDF to make Pylance happy
+    try: assert isinstance(gdf, gpd.GeoDataFrame), "Error: the `gdf` variable should be a geodataframe."
+    except AssertionError as e: logger.error(e); raise TypeError(e)
 
+    # NOTE: dates should be unique now, so let's check that
+    unq_err = f"Error: DataUniquenessConstraintViolation: dates not unique on daily-update of daily-weather-values on day: {datetime.now().date()}"
+    try: assert gdf[HourlyWeatherCols.hwc_local_date].is_unique, unq_err
+    except AssertionError as e: logger.error(e); raise DataUniquenessConstraintViolation(e)
+    
     return gdf
 
 

@@ -114,17 +114,24 @@ def hourly_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
         f"{HourlyWeatherCols.hwc_local_year}": year,
         "properties": HOURLY_WEATHER_PROPERTIES, # filter to specific properties I want from station
     }
-    gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params, job_title=f"historical-hourly-weather-records-year-{year}")
+    gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params,
+                              job_title=f"historical-hourly-weather-records-year-{year}")
 
     # add timezones # actually, fix datetimes since AB dropping daylight savings time broke everything
     gdf = hourlyWeather_FixDatetimes(gdf)
 
-    gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier, datetime_col=HourlyWeatherCols.hwc_local_date)
+    gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier,
+                                      datetime_col=HourlyWeatherCols.hwc_local_date)
+
+    # double check that it's a GDF to make Pylance happy
+    try: assert isinstance(gdf, gpd.GeoDataFrame), "Error: the `gdf` variable should be a geodataframe."
+    except AssertionError as e: logger.error(e); raise TypeError(e)
+
     # NOTE: dates should be unique now, so let's check that
-    if not gdf[HourlyWeatherCols.hwc_local_date].is_unique:
-        msg = f"Error: DataUniquenessConstraintViolation: dates not unique for daily-weather backfill year {year}"
-        logger.error(msg)
-        raise DataUniquenessConstraintViolation(msg)
+    unq_err = f"Error: DataUniquenessConstraintViolation: dates not unique for daily-weather backfill year {year}"
+    try: assert gdf[HourlyWeatherCols.hwc_local_date].is_unique, unq_err
+    except AssertionError as e: logger.error(e); raise DataUniquenessConstraintViolation(e)
+
     return gdf
 
 

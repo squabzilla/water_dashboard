@@ -142,14 +142,17 @@ def _fetch_swob_data(hours_back:int = args.hours_back) -> gpd.GeoDataFrame:
     gdf = filter_stations_by_priority(gdf, station_id_col=SWOBWeatherCols.swob_climate_identifier,
                                       datetime_col=SWOBWeatherCols.swob_utc_date)
 
+    # double check that it's a GDF to make Pylance happy
+    try: assert isinstance(gdf, gpd.GeoDataFrame), "Error: the `gdf` variable should be a geodataframe."
+    except AssertionError as e: logger.error(e); raise TypeError(e)
+
     # for some gods-forsaken reason, the SWOB-realtime data API includes the Z dimension...
     gdf.geometry = gdf.geometry.force_2d()
 
     # NOTE: dates should be unique now, so let's check that
-    if not gdf[SWOBWeatherCols.swob_utc_date].is_unique:
-        err_mss = f"Error: DataUniquenessConstraintViolation: SWOB-realtime data datetimes not unique from UTC:{utc_start_time} to UTC:{utc_current_time}"
-        logger.error(err_mss)
-        raise DataUniquenessConstraintViolation(err_mss)
+    unq_err = f"Error: DataUniquenessConstraintViolation: SWOB-realtime data datetimes not unique from UTC:{utc_start_time} to UTC:{utc_current_time}"
+    try: assert gdf[SWOBWeatherCols.swob_utc_date].is_unique, unq_err
+    except AssertionError as e: logger.error(e); raise DataUniquenessConstraintViolation(e)
 
     return gdf
 

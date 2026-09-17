@@ -96,19 +96,20 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 ########################################################################################################################
 ### section 1: function `fetch_weather_pages` (function to fetch weather data)
 
-def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> dict:
+def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> gpd.GeoDataFrame:
     ##############################################################
     # section 1.1 - quick query to determine total number of items
     ##############################################################
+    params_temp = params.copy()
     
-    og_limit = params["limit"]
-    params["limit"] = 1
+    og_limit = params_temp["limit"]
+    params_temp["limit"] = 1
 
     # logic to fetch page-count lol...
     job_name = f"fetching-page-count for job: {job_title}"
-    response_output = try_except_weather_API(job_name=job_name, url=start_url, params=params)
+    response_output = try_except_weather_API(job_name=job_name, url=start_url, params=params_temp)
 
-    params["limit"] = og_limit # reset limit back to what it should be
+    params_temp["limit"] = og_limit # reset limit back to what it should be
 
     response_expected = response_output["numberMatched"] # get the number of matches
     # NOTE: fail here if API meta-data says we have no results
@@ -116,7 +117,7 @@ def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> dict:
         msg = f"Error: APIZeroCountError: no matches found in job: {job_name}. Aborting."
         logger.error(msg)
         raise APIZeroCountError(msg)
-    page_count = (response_expected / params["limit"]).__ceil__()
+    page_count = (response_expected / params_temp["limit"]).__ceil__()
 
 
     ###########################################################
@@ -137,14 +138,14 @@ def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> dict:
 
         #response_output = _fetch_weather_page(url, params)
         job_name = f"paginating job: {job_title}, page: {current_page}"
-        response_output = try_except_weather_API(job_name=job_name, url=url, params=params)
+        response_output = try_except_weather_API(job_name=job_name, url=url, params=params_temp)
         page = response_output.get("features",[])
         # get items from "features" key, returns empty list (square-brackets) is key missing
         all_data.extend(page)
         # add `page` to `all_data`, extend works better than append for REASONS
         
         # now we look for the URL of the "next" page, and call this function again if we find it
-        params = None # remove parameters, next-link URLs carry their own query params
+        params_temp = None # remove parameters, next-link URLs carry their own query params
         # set url = None, then see if we find one lol
         url = None
 

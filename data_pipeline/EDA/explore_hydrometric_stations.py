@@ -156,8 +156,10 @@ def __calc_distance(lat_1, long_1, lat_2, long_2, distance_crs='EPSG:3776'):
     df_2 = df_2.to_crs(distance_crs)
 
     # calculate distance
-    series_distance = df_1.distance(df_2)
+    series_distance = df_1.distance(df_2.geometry)
     dist_val = round(series_distance[0],3)
+    # add checking to make sure crs exists
+    assert df_1.crs is not None, "CRIS should be set after `to_crs()`"
     dist_unit = df_1.crs.axis_info[0].unit_name
     dist_dict = {"value":dist_val, "unit":dist_unit}
     return dist_dict
