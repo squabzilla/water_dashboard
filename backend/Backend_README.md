@@ -50,8 +50,9 @@ However, it looks *real* ugly as a url: `break_date%5Bgte%5D=2020-01-01`
 | `OPERATOR_TO_SQL_SYMBOL` mapping | Done, located in `schema_constants.py` | Maps the internal operations defined in `OPERATORS_BY_COLUMN_CATEGORY` into proper SQL operator. |
 | `KNOWN_TABLES` | Done, located in `schema_constants.py` | A tuple of my defined tables. Also hey I'm intentionally using a tuple! |
 | `schema_constants.py` | Done | Hey, it's the actual .py file for all the above. |
-| `load_schema_registry(conn)` | Written, needs unit tests | builds `{table_1: {col_1: type, col_2: type}, table_2 {col_1: type, col_2:type} }` nested `dict`s |
-| `build_where_clause(table, filters, registry)` | Claude thinks its done, still needs work | validates tables, helps builds parameterized `WHERE` clauses for PSQL |
+| `load_schema_registry(conn)` | Written, needs unit tests, in `query_builder.py` | builds `{table_1: {col_1: type, col_2: type}, table_2 {col_1: type, col_2:type} }` nested `dict`s |
+| `build_where_clause(table, filters, registry)` | Written, needs unit tests in `query_builder.py` | validates tables, helps builds parameterized `WHERE` clauses for PSQL |
+| `get_geometry_column(table)` | Done, in `query_builder.py` | small helper to look up geometry column based on table |
 | `FilterError` | Written | Raises my error messages. |
 
 NOTE: the `build_where_clause` function needs to build an SQL function that grabs a `jsonb_build_object`  
@@ -71,11 +72,10 @@ Which is why I'll need to unwrap them later.
 
 | Function | Status | Note |
 | -------- | ------ | ---- |
-| `app = FastAPI()` skeleton | Not yet build | trivial, but required for `@app.get` to work |
-| `SPATIAL_LAYER_TABLES` | Designed, not built | renamed from `ALLOWED_FULL_TABLES` to current |
-| `get_full_table(table: DatabaseTables)` | Designed, not yet built | fetch from PostGIS with GET; should give `403` error if fail |
-| `get_geometry_column(table)` | Not yet written | small helper to look up geometry column based on table |
-| `execute_scalar(sql, params)` | Not yet written | executes SQL clause from `build_where_clause`, and unwraps the returned object |
+| `app = FastAPI()` skeleton | Done | Endpoints done, needs testing |
+| `SPATIAL_LAYER_TABLES` | Done | renamed from `ALLOWED_FULL_TABLES` to current |
+| `get_full_table(table: DatabaseTables)` | Done, needs testing | fetch from PostGIS with GET; should give `403` error if fail |
+| `execute_scalar(sql, params)` | Done, needs testing | executes SQL clause from `build_where_clause`, and unwraps the returned object |
 | `TestClient` to test both endpoints | Not started | FastAPI's built-in testing tool, letting me test API routes without starting a server or listening on a port. |
 
 NOTE: The `TestClient` function is useful from a portfolio development standpoint,  

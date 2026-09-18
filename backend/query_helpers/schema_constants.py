@@ -3,7 +3,7 @@ Name: schema_constants.py
 Author: William Hovdestad
 
 Purpose:
-This file holds constant values for any of my scheme and query logic functions
+This file holds constant values for any of my schema and query logic functions
 """
 
 
@@ -77,7 +77,7 @@ OPERATOR_TO_SQL_SYMBOL: MappingProxyType[str, str] = MappingProxyType({
 
 KNOWN_TABLES = tuple(table.value for table in DatabaseTables) # hey I'm using a tuple, I don't want this to be changing!
 
-ALLOWED_FULL_TABLES: frozenset[DatabaseTables] = frozenset({
+SPATIAL_LAYER_TABLES: frozenset[DatabaseTables] = frozenset({
     DatabaseTables.city_boundary,
     DatabaseTables.city_districts,
     DatabaseTables.hydrology,
