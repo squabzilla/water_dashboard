@@ -1,5 +1,28 @@
 # Title
 
+## API Query Design Choice
+
+The standard we're following for setting up our internal API to our PostGIS database is:  
+`column__op=value` or `column=value`
+Where `column` is the column-name, `op` is the operation (`eq`,`gt`,`gte`,`ilike`,etc)  
+and `value` is obviously the value we're comparing to. The `__` portion is a seperator.  
+In the `column=value` case, the operation is implicitly assumed to be equals, or `eq`
+
+This convention is the same convention that Django's ORM uses in *Python* code: `Model.objects.filter(price__get=100)`  
+Translating that into an HTTP query string: `?price__get=100` is what *django-filter* does  
+(*django-filter* is a separate, very popular, Django-REST-Framework)  
+
+Since our endpoint is generic across every table in `DatabaseTables`, with an open-ended set of columns and  
+operators per table, we can't know in advanced what will needed to be filtered on.  
+*django-filter*'s convention was explicitly built for arbitrary field-lookup combinations like this.  
+It also has the added benefit of being very readable as a URL: `break_date__gte=2020-01-01` is a very readable portion of a URL.  
+There is an alternate convention, using square brackets: `break_date[gte]=2020-01-01`  
+However, it looks *real* ugly as a url: `break_date%5Bgte%5D=2020-01-01`  
+
+
+
+
+
 ## List of tables in DB
 
 | Table | Full retrieval | Why |
