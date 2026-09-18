@@ -41,6 +41,9 @@ import httpx # used for calling API
 import json # used for handling export of json data
 
 from data_pipeline.helper.helper_SQL_tables import DatabaseTables
+from backend.query_helpers.schema_errors import SchemaError, FilterError
+from backend.query_helpers.schema_constants import \
+    ColumnCategory, KNOWN_TABLES, PG_TYPE_TO_CATEGORY, OPERATORS_BY_COLUMN_CATEGORY, OPERATOR_TO_SQL_SYMBOL
 
 
 ########################################################################################################################
@@ -51,37 +54,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING) # STOP LOGGING EVERY API CA
 
 
 ########################################################################################################################
-### section 1: setup some classes and stuff
-
-# let's declare an error type for schema registry
-class SchemaError(Exception):
-    """Raised when the database schema doesn't match what the query layer expects."""
-
-# class containing all the data types I care about in Python code
-class ColumnCategory(StrEnum):
-    TEXT = "text"
-    NUMERIC = "numeric"
-    DATE = "date"
-    BOOLEAN = "boolean"
-    GEOMETRY = "geometry"
-
-OPERATORS_BY_COLUMN_CATEGORY: MappingProxyType[ColumnCategory, frozenset[str]] = MappingProxyType({
-    ColumnCategory.TEXT: frozenset({"eq", "ilike"}),
-    ColumnCategory.NUMERIC: frozenset({"eq", "gt", "gte", "lt", "lte"}),
-    ColumnCategory.DATE: frozenset({"eq", "gt", "gte", "lt", "lte"}),
-    ColumnCategory.BOOLEAN: frozenset({"eq"}),
-})
-
-# a MappingProxyType, that maps all the various PostGres data types to my Python data-types
-PG_TYPE_TO_CATEGORY: MappingProxyType[str, ColumnCategory] = MappingProxyType({
-    "text": ColumnCategory.TEXT, "varchar": ColumnCategory.TEXT, "character varying": ColumnCategory.TEXT,
-    "integer": ColumnCategory.NUMERIC, "bigint": ColumnCategory.NUMERIC, "numeric": ColumnCategory.NUMERIC,
-    "double precision": ColumnCategory.NUMERIC, "real": ColumnCategory.NUMERIC,
-    "date": ColumnCategory.DATE, "timestamp": ColumnCategory.DATE,
-    "timestamp without time zone": ColumnCategory.DATE, "timestamp with time zone": ColumnCategory.DATE,
-    "boolean": ColumnCategory.BOOLEAN,
-    "USER-DEFINED": ColumnCategory.GEOMETRY,  # PostGIS geometry shows as USER-DEFINED
-})
+### section 1: load_schema_registry
 
 #   This function returns a nested-dict representing the schema of my database.
 #   The keys on the outside-dict are all the valid tables in my database, 
@@ -89,7 +62,7 @@ PG_TYPE_TO_CATEGORY: MappingProxyType[str, ColumnCategory] = MappingProxyType({
 #   The inner-dict keys are all the columns belonging to a given table
 # and the values of the inner-dict are the (Python) data-types of a specific column
 def load_schema_registry(conn) -> dict[str, dict[str, ColumnCategory]]:
-    known_tables = tuple(table.value for table in DatabaseTables) # hey I'm using a tuple, I don't want this to be changing!
+    known_tables = KNOWN_TABLES
     rows = conn.execute(
         """
         SELECT table_name, column_name, data_type
@@ -103,7 +76,7 @@ def load_schema_registry(conn) -> dict[str, dict[str, ColumnCategory]]:
     # the type annotation here just reminds us what it's supposed to look like
     registry: dict[str, dict[str, ColumnCategory]] = {}
 
-    for table_name, column_name, data_type in rows:
+    for table_name, column_name, data_type in rows: # note: loops through each "row" and grabs 3 values from said row
         # make sure table is in registry - add table_name as empty-dict if not there
         if table_name not in registry: registry[table_name] = {}
         # get data type of column
@@ -117,3 +90,41 @@ def load_schema_registry(conn) -> dict[str, dict[str, ColumnCategory]]:
         registry[table_name][column_name] = column_category
     # done for-loop, now return registry
     return registry
+
+
+
+########################################################################################################################
+### section 2: build_where_clause
+
+
+
+# def build_where_clause(table, filters, registry) -> tuple[str, list]: pass
+
+def build_where_clause(
+        table: str, filters: dict[str, str], registry: dict[str, dict[str, ColumnCategory]]
+    ) -> tuple[str, list[str]]:
+
+    """filters: {'column__op': 'value'}, e.g. {'break_date__gte': '2020-01-01'}"""
+
+    table_schema = registry.get(table)
+    if table_schema is None:
+        raise FilterError(f"unknown table '{table}'")
+
+    clauses, params = [], []
+    for key, value in filters.items():
+        column, _, op = key.partition("__")
+        op = op or "eq"
+
+        column_category = table_schema.get(column)
+        if column_category is None:
+            raise FilterError(f"unknown column '{column}' on '{table}'")
+        if column_category == ColumnCategory.GEOMETRY:
+            raise FilterError(f"column '{column}' is a geometry column, not filterable this way")
+        if op not in OPERATORS_BY_COLUMN_CATEGORY[column_category]:
+            raise FilterError(f"operator '{op}' not valid for column '{column}' (type={column_category})")
+
+        clauses.append(f"{column} {OPERATOR_TO_SQL_SYMBOL[op]} %s")  # column validated against registry above
+        params.append(value)
+
+    where_sql = " AND ".join(clauses) if clauses else "TRUE"
+    return where_sql, params
