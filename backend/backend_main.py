@@ -3,6 +3,27 @@ file name: main.y
 author: William Hovdestad
 
 basic main-file for running back-end of app, making sure my web-app can query my PostGIS database
+
+the primary purpose of this script is to have "endpoints" that the front-end can call
+in order to retrieve data from my PostGIS PSQL database
+
+It also has like helper/supporting logic to aid this
+
+ENDPOINT-1: Full table / spatial-layer-tables
+this retrieves an entire GeoJSON - all of it - used for when we want the whole thing for our spatial/mapping layers
+
+ENDPOINT-2: Filtered query
+Kinda self-descriptive, used when we want to do some filtered-query of a DB
+to search for a subset of data
+
+ENDPOINT-3: `get_summary`
+gets us some summary statistics of watermain breaks
+has logic to filter it in different ways
+TODO: can this filter by community, if we want stats of a particular community?
+later problem, get V1 of this webapp to actually be a web-app people can view online
+remember, having SOMETHING to show for your portfolio website
+- no matter how unpolished - 
+still puts you miles ahead of "we're working on it" portfolio project
 """
 
 
@@ -25,7 +46,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
-from datetime import datetime # for getting date-time stuff
+from datetime import datetime, date # for getting date-time stuff
 from fastapi import FastAPI, Request, HTTPException, Depends
 import logging # for logging errors
 import psycopg # stuff needed to connect with postgis database
@@ -40,7 +61,8 @@ from data_pipeline.helper.helper_SQL_tables import DatabaseTables
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
 from backend.query_helpers.schema_constants import SPATIAL_LAYER_TABLES
 from backend.query_helpers.schema_errors import FilterError
-from backend.query_helpers.query_builders import get_geometry_column, execute_scalar, build_where_clause, load_schema_registry
+from backend.query_helpers.query_builders import get_geometry_column, execute_geojson_scalar,\
+      build_where_clause, load_schema_registry, execute_json_scalar
 
 
 
@@ -69,6 +91,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 ########################################################################################################################
+### Section 2:
 ### setup get-db-connection function, as route-handlers shouldn't open connections themselves or reuse startup one
 ### each request needs its own
 def get_db_connection():
@@ -109,7 +132,7 @@ def get_full_table(
         FROM "{table.value}" t
     """
     # NOTE: TODO: figure out how the hell the above SQL query works lol
-    return execute_scalar(conn, sql)
+    return execute_geojson_scalar(conn, sql)
 
 """
 NOTE: Explaining that SQL structure
@@ -213,4 +236,60 @@ def query_table(
         WHERE {where_sql}
     """
     # NOTE: TODO: figure out how the hell the above SQL query works lol
-    return execute_scalar(conn, sql, params)
+    return execute_geojson_scalar(conn, sql, params)
+
+
+
+########################################################################################################################
+### Endpoint 3: get_summary
+
+@app.get("/api/summary")
+def get_summary(
+    start_date: date | None = None, # ensures this is a date, otherwise shit crashes
+    end_date: date | None = None, # ensures this is a date, otherwise shit crashes
+    conn: Connection = Depends(get_db_connection),
+):
+    filters: dict[str, str] = {}
+    if start_date:
+        filters["break_date__gte"] = start_date.isoformat() # converts date, time, datetime in string object formatted as ISO 8601 standard
+    if end_date:
+        filters["break_date__lte"] = end_date.isoformat() # converts date, time, datetime in string object formatted as ISO 8601 standard
+
+    where_sql, params = build_where_clause(
+        DatabaseTables.watermain_breaks.value, filters, app.state.schema_registry
+    )
+
+    sql = f"""
+        SELECT jsonb_build_object(
+            'total_breaks', COUNT(*),
+            'earliest_break', MIN(break_date),
+            'latest_break', MAX(break_date),
+            'avg_breaks_per_year', ROUND(
+                COUNT(*)::numeric / GREATEST(
+                    (EXTRACT(YEAR FROM MAX(break_date)) - EXTRACT(YEAR FROM MIN(break_date)) + 1), 1
+                ), 
+                2
+            )
+        )
+        FROM "{DatabaseTables.watermain_breaks.value}"
+        WHERE {where_sql}
+    """
+    return execute_json_scalar(conn, sql, params)
+
+"""
+okay let's go over that SQL code lol
+
+SELECT jsonb_build_object(
+    'total_breaks', COUNT(*),
+    'earliest_break', MIN(break_date),
+    'latest_break', MAX(break_date),
+    'avg_breaks_per_year', ROUND(
+        COUNT(*)::numeric / GREATEST( -- we count the objects, make sure they're `numeric` and not `int`
+            (EXTRACT(YEAR FROM MAX(break_date)) - EXTRACT(YEAR FROM MIN(break_date)) + 1), 1
+            -- above line gets greatest of maxyear-minyear+1 and 1, ensuring we aren't dividing by 0 at any point
+        ), 
+        2 -- final part of ROUND, to 2 decimal places
+    )
+)
+
+"""
