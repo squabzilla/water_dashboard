@@ -22,11 +22,12 @@ This function gets passed a table name, cross-references the scheme registry cre
 and returns the geometry column of a table
 (later logic depends on knowing this column)
 
-4. execute_scalar
+4. execute_geojson_scalar / execute_json_scalar
 Idk what it's called this, but this basically wraps the first half of a query
 (made in our endpoints in `backend/query_helpers/main.py`)
 and the WHERE class, made by the `build_where_clause` function,
 slaps them together, then unwraps the weird way that SQL packages up JSONs/GeoJSONs.
+we have a separate one for GeoJSONs and JSONs just to be safe.
 """
 
 
@@ -49,7 +50,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
-from datetime import datetime # for getting date-time stuff
+from datetime import datetime, date # for getting date-time stuff
 import logging
 from enum import StrEnum
 from types import MappingProxyType
@@ -169,6 +170,9 @@ def build_where_clause(
             raise FilterError(f"column '{column}' is a geometry column, not filterable this way")
         if op not in OPERATORS_BY_COLUMN_CATEGORY[column_category]: # error if we aren't using a valid operator for the column-type
             raise FilterError(f"operator '{op}' not valid for column '{column}' (type={column_category})")
+        if column_category == ColumnCategory.DATE: # adding verification to make sure dates here are all good!
+            try: date.fromisoformat(value)
+            except: raise FilterError(f"invalid date value '{value}' — expected ISO-8601 format (YYYY-MM-DD)")
 
         # create portion of SQL-clause, using placeholder syntax to prevent SQL-injection
         temp_placeholder = f"p{i}"
@@ -223,13 +227,49 @@ def get_geometry_column(
 ### section 4: shorthand to execute SQL and extract JSON from JSONB-dict-thing
 
 #def execute_scalar(conn, sql_command: str, params: Sequence | None = None) -> dict:
-def execute_scalar(conn: Connection, sql_command: str, sql_placeholder_values: dict[str, str] | None = None) -> dict:
-    with conn:
-        row = conn.execute(
-            text(sql_command), sql_placeholder_values
-        ).fetchone() # NOTE: will return None if it doesn't found results
-        # row = conn.fetchone() # NOTE: will return None if it doesn't found results
-        return row[0] if row else {"type": "FeatureCollection", "features": []}
-        if row: output = row[0] # output is `row[0]` assuming `fetchone` found something, and didn't return None
-        else: output = {"type": "FeatureCollection", "features": []} # this is what we return if `fetchone` gave us None
-        return output
+def execute_geojson_scalar(
+        conn: Connection,
+        sql_command: str,
+        sql_placeholder_values: dict[str, str] | None = None
+    ) -> dict:
+
+    """Runs a query whose single jsonb column is a GeoJSON FeatureCollection.
+    No matching row is a valid, expected result here — jsonb_agg() over zero
+    rows returns SQL NULL, not an empty array — so it maps to an empty
+    FeatureCollection rather than an error."""
+
+    # NOTE: we *don't* want to wrap this in a `with conn:` clause,
+    # as handling the db-connection is already done in Section 2 of `backend_main.py`
+    # short version, a resource like that should only be opened and closed by exactly one piece of code
+    # if we opened/closed it here, stuff would probably crash back in `backend_main.py` when it attempts
+    # to close a connection that's already closed, or use a connection that it expects to be open, but was closed
+
+    row = conn.execute(
+        text(sql_command), sql_placeholder_values
+    ).fetchone() # NOTE: will return None if it doesn't found results
+    # row = conn.fetchone() # NOTE: will return None if it doesn't found results
+    #return row[0] if row else {"type": "FeatureCollection", "features": []}
+    if row is None:
+        return {"type": "FeatureCollection", "features": []} # return empty object if we didn't find anything
+    return row[0] # proper output is `row[0]` assuming `fetchone` found something, and didn't return None
+
+def execute_json_scalar(
+        conn: Connection,
+        sql_command: str,
+        sql_placeholder_values: dict[str, str] | None = None,
+) -> dict:
+
+    """Runs a query whose single jsonb column is a plain JSON object (not
+    GeoJSON) — e.g. an aggregate summary. An aggregate query with no
+    GROUP BY always returns exactly one row, even over zero matching rows
+    (COUNT becomes 0, MIN/MAX become NULL), so a missing row here means
+    something is actually wrong, not that the result is empty."""
+
+    # NOTE: see other function for why we aren't wrapping this in a `with conn:` clause
+
+    row = conn.execute(
+        text(sql_command), sql_placeholder_values
+    ).fetchone() # NOTE: will return None if it doesn't found results
+    if row is None:
+        raise RuntimeError("expected exactly one row from scalar query, got none")
+    return row[0]
