@@ -111,6 +111,75 @@ def get_full_table(
     # NOTE: TODO: figure out how the hell the above SQL query works lol
     return execute_scalar(conn, sql)
 
+"""
+NOTE: Explaining that SQL structure
+SELECT jsonb_build_object(
+            'type', 'FeatureCollection',
+            'features', jsonb_agg(
+                jsonb_build_object(
+                    'type', 'Feature',
+                    'geometry', ST_AsGeoJSON("{geom_col}")::jsonb,
+                    'properties', to_jsonb(t) - '{geom_col}'
+                )
+            )
+        )
+FROM "{table.value}" t
+
+jsonb_build_object(key_1,value_1, key_2,value_2, ..., key_n,value_n)
+builds a json-structured-object for each line in the table;
+doesn't *technically* need to actually grab table objects lol
+each line is structured as {key_1:value_1, key_2:value_2, ..., key_n:value_n}
+remember, this goes LINE-BY-LINE, and returns as many lines as the SQL query
+{line1_keyA:line1_valueA, line1_keyB:line1_valueB}
+{line2_keyA:line2_valueA, line2_keyB:line2_valueB}
+etc.
+
+jsonb_agg(jsonb_build_object())
+takes a json_b_build_object, compresses all the lines in a single list
+example:
+[ {line1_keyA:line1_valueA, line1_keyB:line1_keyB}, {line2_keyA:line2_keyA, line2_keyB:line2_valueB} ]
+
+ST_AsGeoJSON("INSERT_GEOMETRY_COLUMN_HERE")::jsonb
+so first off, INSERT_GEOMETRY_COLUMN_HERE is a placeholder for the geometry column of a table lol
+first half: `ST_AsGeoJSON("INSERT_GEOMETRY_COLUMN_HERE")`
+returns the geometry column as text - but text means string, so formatting is fucky, 
+so the second half: `::jsonb` converts it to proper JSON object
+tbh, limited testing shows that `::jsonb` only really adds spaces, and might not be necessary?
+on the other hand, it's more likely to break down the road if I don't do that conversion, so let's leave that in
+
+'properties', to_jsonb(t) - '{geom_col}'
+`to_jsonb(t)` converts entire row into JSON object - one key per column, right?
+so for row X: {'col_name':''rowX_colValue'}, right
+BUT when it hits the geometry column, because of how geometry is representing internally, it might look real fuck
+so we add `- 'INSERT_GEOMETRY_COLUMN_HERE'` to remove it lol
+
+now, let's talk about how GeoJSONs are structured
+remember there's no separate meta-data in a JSON, but you can add more parts to add to fufill the role of metadata
+So if we have a GeoJSON, we want to make sure we COMMUNICATE that it's a GeoJSON, right? So:
+{"type": "FeatureCollection", "features": [...]} is the formatting for declaring that this is a GeoJSON,
+and everything inside "features" is the actual content, while the top-level shit is all meta-data
+also gives us more room to add more meta-data later
+
+so let's go through the query:
+SELECT jsonb_build_object(
+            'type', 'FeatureCollection',
+            'features', jsonb_agg([...])
+        )
+this part is the high level wrapper for the GeoJSON, with the value for 'features' being the actual data
+note the value of: jsonb_agg([...]) 
+so [...] is our representation of ANOTHER jsonb_build_object() - one with all the data - that we've compressed into a single list
+that [...] is actually:
+jsonb_build_object(
+                    'type', 'Feature', # just some names and shit
+                    'geometry', ST_AsGeoJSON("{geom_col}")::jsonb, # value is converting the geometry column to string, then converting to jsonb to be safe
+                    'properties', to_jsonb(t) - '{geom_col}' # converts everything in row (mins '{geom_col}') into jsonb-object, with key-value pair of col:line-value
+                )
+which returns everything we've described earlier - but remember it applies that to every line of table,
+so we need the jsonb_agg() to compress it into single list
+
+HOPEFULLY this makes sense next time I read through it lol
+"""
+
 
 
 ########################################################################################################################
