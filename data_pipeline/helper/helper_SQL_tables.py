@@ -138,23 +138,24 @@ DAILY_WEATHER_DATA_TYPES = MappingProxyType({
     DailyWeatherCols.dwc_climate_identifier: Integer,
     DailyWeatherCols.dwc_local_date: Date,
     DailyWeatherCols.dwc_local_year: Integer,
-    DailyWeatherCols.dwc_mean_temperature: Float,
-    DailyWeatherCols.dwc_max_temperature: Float,
-    DailyWeatherCols.dwc_min_temperature: Float,
-    DailyWeatherCols.dwc_total_precipitation: Float,
-    DailyWeatherCols.dwc_min_rel_humidity: Float,
-    DailyWeatherCols.dwc_max_rel_humidity: Float,
-    DailyWeatherCols.dwc_snow_on_ground: Float,
-    DailyWeatherCols.dwc_heating_degree_days: Float, # documentation says `Int`, but I think it lied to me and it's float
-    DailyWeatherCols.dwc_cooling_degree_days: Float, # documentation says `Int`, but I think it lied to me and it's float
-    # DailyWeatherCols.total_rain: Float, # NOTE: cut from project - see `API_Readme.md` for more details
-    # DailyWeatherCols.total_snow: Float, # NOTE: cut from project - see `API_Readme.md` for more details
+    DailyWeatherCols.dwc_mean_temperature: Numeric(precision=14, scale=4), # now has 14 digits total, 4 to right of 
+    DailyWeatherCols.dwc_max_temperature: Numeric(precision=14, scale=4),
+    DailyWeatherCols.dwc_min_temperature: Numeric(precision=14, scale=4),
+    DailyWeatherCols.dwc_total_precipitation: Numeric(precision=14, scale=4),
+    DailyWeatherCols.dwc_min_rel_humidity: Numeric(precision=14, scale=4),
+    DailyWeatherCols.dwc_max_rel_humidity: Numeric(precision=14, scale=4),
+    DailyWeatherCols.dwc_snow_on_ground: Numeric(precision=14, scale=4),
+    DailyWeatherCols.dwc_heating_degree_days: Numeric(precision=14, scale=4), # documentation says `Int`, but I think it lied to me and it's float
+    DailyWeatherCols.dwc_cooling_degree_days: Numeric(precision=14, scale=4), # documentation says `Int`, but I think it lied to me and it's float
+    # DailyWeatherCols.total_rain: Numeric(precision=14, scale=4), # NOTE: cut from project - see `API_Readme.md` for more details
+    # DailyWeatherCols.total_snow: Numeric(precision=14, scale=4), # NOTE: cut from project - see `API_Readme.md` for more details
 })
 # NOTE: I could generate this from API call, but it's probably easier to do it manually
 # I'm not querying enough different APIs that have a separate schema API to be worth automating it
 # I just need to set dtypes when I need to make sure that newly-queried hourly/daily data matches existing historical data
 # especially if there's no data for that period, so GeoPandas arbitrarily decides what to assign a column with NULL
 # NOTE: names with `CAPS_` always register as "valid" by VS Code linter, so making them all lowercase now
+# NOTE: 2026-09sep-23: changed all "float" column types to "Numeric(precision=14, scale=4)" to get rid of weird floating-point rounding
 
 # ADD CONSTRAINT uq_{DatabaseTables.weather_data_daily_staging}_{DailyWeatherCols.datetime_station} UNIQUE ("{DailyWeatherCols.datetime_station}");
 # uniqueness constraint for SQL
@@ -198,13 +199,13 @@ HOURLY_WEATHER_DATA_TYPES = MappingProxyType({
     HourlyWeatherCols.hwc_local_date: DateTime(timezone=True), # turns out this is a datetime variable???
     HourlyWeatherCols.hwc_utc_date: DateTime(timezone=True), # turns out this is a datetime variable???
     HourlyWeatherCols.hwc_local_year: Integer,
-    HourlyWeatherCols.hwc_temp: Float,
-    HourlyWeatherCols.hwc_precip_amount: Float,
-    HourlyWeatherCols.hwc_relative_humidity: Float,
-    HourlyWeatherCols.hwc_station_pressure: Float,
-    HourlyWeatherCols.hwc_wind_speed: Float,
-    HourlyWeatherCols.hwc_wind_direction: Float,
-    HourlyWeatherCols.hwc_dew_point: Float,
+    HourlyWeatherCols.hwc_temp: Numeric(precision=14, scale=4),
+    HourlyWeatherCols.hwc_precip_amount: Numeric(precision=14, scale=4),
+    HourlyWeatherCols.hwc_relative_humidity: Numeric(precision=14, scale=4),
+    HourlyWeatherCols.hwc_station_pressure: Numeric(precision=14, scale=4),
+    HourlyWeatherCols.hwc_wind_speed: Numeric(precision=14, scale=4),
+    HourlyWeatherCols.hwc_wind_direction: Numeric(precision=14, scale=4),
+    HourlyWeatherCols.hwc_dew_point: Numeric(precision=14, scale=4),
 })
 
 class SWOBWeatherCols(StrEnum):
@@ -307,7 +308,7 @@ class WaterPipes(StrEnum):
 
 WATER_PIPES_DATA_TYPES = MappingProxyType({
     WaterPipes.p_zone: String(30), # pretty sure max length is 19
-    WaterPipes.length: Float,
+    WaterPipes.length: Numeric(precision=14, scale=4),
     WaterPipes.diam: Integer,
     WaterPipes.material: String(8),
     WaterPipes.year: Integer,
@@ -320,7 +321,7 @@ class Hydrology(StrEnum):
     multipolygon = "multipolygon" # needed to get vector into
 
 HYDROLOGY_DATA_TYPES = MappingProxyType({
-    Hydrology.perimeter: Float,
+    Hydrology.perimeter: Numeric(precision=20, scale=10), # fuck it, you're higher if I want this info, still a numeric tho
     Hydrology.feature_type: String(15), # max length is 13
     Hydrology.lake_name: String(30), # max length is 29 lol
 })
