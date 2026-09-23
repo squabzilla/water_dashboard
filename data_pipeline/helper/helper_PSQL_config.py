@@ -1,3 +1,4 @@
+"""
 ########################################################################################################################
 # file name: helper_PSQL.py
 # author: William Hovdestad
@@ -9,7 +10,7 @@
 # need to modify .env file so `postgres_host`, `post_gres_port` and `database_name` aren't hardcoded
 # - see line 196 at `class DBConfig(BaseSettings):`
 # note from Claude about this:
-"""
+
 One thing worth reconsidering: postgres_host, postgres_port, and database_name are hardcoded as class defaults rather than pulled from .env.
 That's fine for now since your DB is local, but you've mentioned a DigitalOcean droplet as your deployment target for this project - 
 once you deploy, the host almost certainly won't be localhost and the port likely won't be 5433 (no native/containerized conflict to dodge on a droplet).
@@ -47,8 +48,9 @@ from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL, Engine
 
+from data_pipeline.helper.helper_env_dir import ENV_DIRPATH
 # setup environment directory which contains the `.env` file
-env_dir = os.path.expanduser(r"~/.config/water_dashboard/.env")
+env_dir = os.path.expanduser(ENV_DIRPATH)
 
 
 
@@ -68,6 +70,7 @@ class DBConfig(BaseSettings):
     database_name: str = "calgary_watermains"
 
 DATABASE_CONFIG = DBConfig() # pyright: ignore[reportCallIssue]
+# NOTE: pylance is unhapp with the above line, but it's actually fine, so comment tells pylance to ignore it
 
 
 def default_SQL_engine(config: DBConfig = DATABASE_CONFIG) -> Engine:
