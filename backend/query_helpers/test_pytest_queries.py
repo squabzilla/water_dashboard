@@ -72,3 +72,17 @@ def test_no_filters_returns_true():
     where_sql, params = build_where_clause("watermain_breaks", {}, FAKE_REGISTRY)
     assert where_sql == "TRUE"
     assert params == {}
+
+def test_invalid_date_value_raises():
+    with pytest.raises(FilterError):
+        build_where_clause("watermain_breaks", {"break_date__gte": "not-a-date"}, FAKE_REGISTRY)
+
+def test_valid_date_value_passes():
+    where_sql, params = build_where_clause("watermain_breaks", {"break_date__gte": "2020-01-01"}, FAKE_REGISTRY)
+    assert "break_date >= :p0" in where_sql
+    assert params == {"p0": "2020-01-01"}
+
+def test_date_validation_only_applies_to_date_columns():
+    # a TEXT column with a non-date value should NOT raise — the check is DATE-only
+    where_sql, params = build_where_clause("watermain_breaks", {"status": "not-a-date"}, FAKE_REGISTRY)
+    assert params == {"p0": "not-a-date"}

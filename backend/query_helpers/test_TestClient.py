@@ -60,3 +60,24 @@ def test_query_with_valid_filter():
 def test_invalid_table_returns_422():
     response = client.get("/api/tables/not_a_real_table/full")
     assert response.status_code == 422
+
+def test_query_with_no_matches_returns_empty_feature_collection():
+    response = client.get("/api/tables/watermain_breaks/query?status__eq=nonexistent_status")
+    assert response.status_code == 200
+    assert response.json() == {"type": "FeatureCollection", "features": []}
+
+def test_summary_returns_full_history_with_no_dates():
+    response = client.get("/api/summary")
+    assert response.status_code == 200
+    body = response.json()
+    assert "total_breaks" in body and "avg_breaks_per_year" in body
+
+def test_summary_rejects_malformed_date():
+    response = client.get("/api/summary?start_date=not-a-date")
+    assert response.status_code == 422  # caught by the `date` type annotation, not FilterError
+
+def test_summary_with_date_range_matching_no_rows():
+    response = client.get("/api/summary?start_date=1900-01-01&end_date=1900-01-02")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_breaks"] == 0
