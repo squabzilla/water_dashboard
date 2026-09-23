@@ -309,7 +309,7 @@ class WaterPipes(StrEnum):
 WATER_PIPES_DATA_TYPES = MappingProxyType({
     WaterPipes.p_zone: String(30), # pretty sure max length is 19
     WaterPipes.length: Numeric(precision=14, scale=4),
-    WaterPipes.diam: Integer,
+    WaterPipes.diam: Integer, # unit: mm
     WaterPipes.material: String(8),
     WaterPipes.year: Integer,
 })
