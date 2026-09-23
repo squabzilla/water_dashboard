@@ -62,7 +62,7 @@ import logging # want to log data
 from data_pipeline.helper.helper_logging_config import setup_logging
 from data_pipeline.helper.helper_timezones import AB_TIME, UTC_TIME
 from data_pipeline.helper.helper_SQL_tables import HOURLY_WEATHER_DATA_TYPES, HourlyWeatherCols, DatabaseTables, SWOBWeatherCols,\
-    STN_IDS_STR_CSV_LIST, SWOB_PROPERTIES, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT, HOURLY_SWOB_CONVERSION
+    STN_IDS_STR_CSV_LIST, SWOB_PROPERTIES, HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT, HOURLY_SWOB_CONVERSION, WeatherDataSource
 from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
 from data_pipeline.helper.helper_DB_update import add_new_records_to_table
@@ -139,7 +139,8 @@ def _fetch_swob_data(hours_back:int = args.hours_back) -> gpd.GeoDataFrame:
 
     gdf = fetch_weather_pages(start_url=url, params=params, job_title=job_title)
 
-    gdf = filter_stations_by_priority(gdf, station_id_col=SWOBWeatherCols.swob_climate_identifier,
+    gdf = filter_stations_by_priority(gdf, WeatherDataSource.SWOB,
+                                      station_id_col=SWOBWeatherCols.swob_climate_identifier,
                                       datetime_col=SWOBWeatherCols.swob_utc_date)
 
     # double check that it's a GDF to make Pylance happy

@@ -74,7 +74,7 @@ from data_pipeline.helper.helper_SQL_tables import HOURLY_WEATHER_PROPERTIES, HO
 from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority, hourlyWeather_FixDatetimes
 from data_pipeline.API.weather_helper_backfill import valid_year, backfill_single_year, backfill_weather_years
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
-from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
+from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST, WeatherDataSource
 
 
 
@@ -120,7 +120,8 @@ def hourly_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
     # add timezones # actually, fix datetimes since AB dropping daylight savings time broke everything
     gdf = hourlyWeather_FixDatetimes(gdf)
 
-    gdf = filter_stations_by_priority(gdf, station_id_col=HourlyWeatherCols.hwc_climate_identifier,
+    gdf = filter_stations_by_priority(gdf, WeatherDataSource.hourly,
+                                      station_id_col=HourlyWeatherCols.hwc_climate_identifier,
                                       datetime_col=HourlyWeatherCols.hwc_local_date)
 
     # double check that it's a GDF to make Pylance happy

@@ -81,7 +81,7 @@ from data_pipeline.helper.helper_API_errors import APICountMismatchError, APIZer
 from data_pipeline.helper.helper_set_geojson_crs import set_geojson_crs
 from data_pipeline.helper.helper_API_try_except_job import try_except_weather_API
 from data_pipeline.helper.helper_SQL_tables import PRIMARY_STATION_ID, SECONDARY_STATION_ID, TERTIARY_STATION_ID
-from data_pipeline.helper.helper_SQL_tables import HourlyWeatherCols
+from data_pipeline.helper.helper_SQL_tables import HourlyWeatherCols, WeatherDataSource, FILTER_COLS_BY_SOURCE
 from data_pipeline.helper.helper_timezones import AB_TIME, UTC_TIME
 
 
@@ -178,25 +178,44 @@ def fetch_weather_pages(start_url: str, params: dict, job_title: str) -> gpd.Geo
 ########################################################################################################################
 ### section 2: function `filter_stations_by_priority` 
 ### (keep only the weather record with the highest weather-station-priority-order for each distinct date-time)
+### NOTE: UPDATE
+### First, for every record per distinct date-time, 
+### I want to keep the one with the least amount of NA vals in the temperature and precipitations columns
+### THEN I want to filter by column priority
+### so first we make a column adding up the number of NA-columns (out of just temp and precip columns)
+### then we want the stations by priority
+### and we sort ascending, dropping all but the first record, so we have lowest-highest out of missing-valus
+### and if there's a tie there, lowest-to-highest out of station priority
 
-def filter_stations_by_priority(df: pd.DataFrame | gpd.GeoDataFrame, station_id_col: str="CLIMATE_IDENTIFIER",
+def filter_stations_by_priority(df: pd.DataFrame | gpd.GeoDataFrame,
+                                data_source: WeatherDataSource,
+                                station_id_col: str="CLIMATE_IDENTIFIER",
                                 datetime_col: str="LOCAL_DATE") -> pd.DataFrame | gpd.GeoDataFrame:
+    #value_cols = 
+    # NOTE: we want to be selective about which columns we search for missing values from
+    # for daily-weather, probably go with MEAN_TEMPERATURE and PRECIPITATION
+    
     df = df.copy()
+
+    value_cols = FILTER_COLS_BY_SOURCE[data_source]
+    NUM_NA_COLS = "num_na_cols"
     STATION_PRIORITY_COL = "station_priority"
     STATION_PRIORITY_ORDER = {
         PRIMARY_STATION_ID: 1,
         SECONDARY_STATION_ID: 2,
         TERTIARY_STATION_ID: 3,
     }
+
+    df[NUM_NA_COLS] = df[value_cols].isna().sum(axis=1)
     df[STATION_PRIORITY_COL] = df[station_id_col].map(STATION_PRIORITY_ORDER)
     df = ( # operation we're doing to df
         df # start with df
-        .sort_values([datetime_col, STATION_PRIORITY_COL]) # order df by DATETIME, then STATION-PRIORITY
+        .sort_values([datetime_col, STATION_PRIORITY_COL]) # order df by DATETIME, then NUM_NA_COLS, then STATION-PRIORITY
         .drop_duplicates(subset=datetime_col, keep="first") # drop duplicate datetimes - keep only first record
         .sort_values(datetime_col) # let's resort stuff by date
         .reset_index(drop=True) # nasty shit happens if you do operations like this and don't reset index lol
     )
-    df = df.drop(columns=[STATION_PRIORITY_COL]) # we don't need this column anymore, lets remove it
+    df = df.drop(columns=[NUM_NA_COLS, STATION_PRIORITY_COL]) # we don't need these columns anymore, lets remove it
     return df
 
 

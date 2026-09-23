@@ -55,7 +55,7 @@ from data_pipeline.helper.helper_SQL_tables import DAILY_WEATHER_PROPERTIES, DAI
     DailyWeatherCols, DAILY_WEATHER_STAGING_UNIQUE_DATE_CONSTRAINT
 from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation
-from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
+from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST, WeatherDataSource
 from data_pipeline.helper.helper_PSQL_config import default_SQL_engine
 from data_pipeline.helper.helper_DB_update import add_new_records_to_table
 
@@ -91,7 +91,8 @@ def _fetch_daily_MSC_GeoMet_daily_weather_last_14_days() -> gpd.GeoDataFrame:
     gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params,
                               job_title=f"last-14-daily-weather-records")
 
-    gdf = filter_stations_by_priority(gdf, station_id_col=DailyWeatherCols.dwc_climate_identifier,
+    gdf = filter_stations_by_priority(gdf, WeatherDataSource.daily,
+                                      station_id_col=DailyWeatherCols.dwc_climate_identifier,
                                       datetime_col=DailyWeatherCols.dwc_local_date)
 
     # double check that it's a GDF to make Pylance happy

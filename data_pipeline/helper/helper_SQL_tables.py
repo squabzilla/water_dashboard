@@ -37,7 +37,7 @@ import sqlalchemy # stuff needed to connect with postgis database
 from geoalchemy2 import Geometry # used for "POINT" type
 from sqlalchemy import text # make pylance happy by recognizing this as a keyword lol
 from sqlalchemy import create_engine # stuff needed to connect with postgis database
-from sqlalchemy import String, Date, DateTime, SmallInteger, Integer, Float, Boolean
+from sqlalchemy import String, Date, DateTime, SmallInteger, Integer, Float, Boolean, Numeric
 import geopandas as gpd # geospatial library, used for GeoDataFrames
 
 # setup environment directory which contains the `.env` file
@@ -240,6 +240,26 @@ SWOB_PROPERTIES = ','.join(HOURLY_SWOB_CONVERSION)
 # uniqueness constraint for SQL
 HOURLY_WEATHER_UNIQUE_DATETIME_CONSTRAINT = f"uq_{DatabaseTables.weather_hourly}_{HourlyWeatherCols.hwc_local_date}"
 HOURLY_WEATHER_STAGING_UNIQUE_DATETIME_CONSTRAINT = f"uq_{DatabaseTables.weather_hourly_staging}_{HourlyWeatherCols.hwc_local_date}"
+
+
+
+########################################################################################################################
+### section 4 - variables for the `filter_stations_by_priority` function in `weather_helper_API.py`
+
+
+
+# NOTE: stuff for my `filter_stations_by_priority` function in `weather_helper_API.py`,
+# it's kinda a misc. category thing so I'm throwing it here
+class WeatherDataSource(StrEnum):
+    daily = "daily"
+    hourly = "hourly"
+    SWOB = "swob"
+
+FILTER_COLS_BY_SOURCE = MappingProxyType({
+    WeatherDataSource.daily: [DailyWeatherCols.dwc_mean_temperature, DailyWeatherCols.dwc_total_precipitation],
+    WeatherDataSource.hourly: [HourlyWeatherCols.hwc_temp, HourlyWeatherCols.hwc_precip_amount],
+    WeatherDataSource.SWOB: [SWOBWeatherCols.swob_temp, SWOBWeatherCols.swob_precip_amount],
+})
 
 
 

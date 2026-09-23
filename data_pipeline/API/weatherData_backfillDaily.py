@@ -76,7 +76,7 @@ from data_pipeline.helper.helper_SQL_tables import START_YEAR, DAILY_WEATHER_PRO
 from data_pipeline.API.weather_helper_API import fetch_weather_pages, filter_stations_by_priority
 from data_pipeline.API.weather_helper_backfill import valid_year, backfill_single_year, backfill_weather_years
 from data_pipeline.helper.helper_API_errors import DataUniquenessConstraintViolation, DataPipelineError
-from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST
+from data_pipeline.helper.helper_SQL_tables import STN_IDS_STR_CSV_LIST, WeatherDataSource
 
 
 
@@ -121,7 +121,8 @@ def daily_MSC_GeoMet_weather_by_year(year: int) -> gpd.GeoDataFrame:
     gdf = fetch_weather_pages(start_url=daily_weather_url, params=daily_weather_params,
                               job_title=f"historical-daily-weather-records-year-{year}")
 
-    gdf = filter_stations_by_priority(gdf, station_id_col=DailyWeatherCols.dwc_climate_identifier,
+    gdf = filter_stations_by_priority(gdf, WeatherDataSource.daily,
+                                      station_id_col=DailyWeatherCols.dwc_climate_identifier,
                                       datetime_col=DailyWeatherCols.dwc_local_date)
 
     # double check that it's a GDF to make Pylance happy
