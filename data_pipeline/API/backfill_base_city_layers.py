@@ -132,6 +132,8 @@ def fetch_city_layer(layer_dict: dict) -> None:
     # I need to round waterpipe lengths because of floating-point-math-weirdness
     if layer_name == DatabaseTables.watermain_pipes:
         gdf[WaterPipes.length] = gdf[WaterPipes.length].round(4)
+        gdf[WaterPipes.length] = gdf[WaterPipes.length].astype(float)
+        # turning it into base Python float instead of numpy float 64, as numpy float64 still keeps floating-point errors....
 
 
     engine = default_SQL_engine()
@@ -148,7 +150,7 @@ def fetch_city_layer(layer_dict: dict) -> None:
 
 ########################################################################################################################
 ### section 3: fetch_all_layers - loop through all my layers
-         
+
 def fetch_all_layers() -> None:
 
     # start progress bar for fun
