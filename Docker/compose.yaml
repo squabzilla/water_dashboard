@@ -11,6 +11,3 @@ services:
     volumes:
       - ./postgres_data_folder:/var/lib/postgresql/data
     restart: unless-stopped
-
-volumes:
-  postgres-data:
