@@ -91,7 +91,10 @@ def _checkWaterMainBreaksAPI(JSON_QUERY_URL: str, payload: dict) -> dict:
 ########################################################################################################################
 ### section 2 - check API, get new results if there are updates
 
-def _check_watermainBreaks_for_updates() -> None:
+def _check_watermainBreaks_for_updates() -> int:
+    ### step 0: set default return_code
+    return_code: int = 0
+
     ### step 1 - log current time
     logger.info(f"Script: {__file__} started.")
 
@@ -147,10 +150,10 @@ def _check_watermainBreaks_for_updates() -> None:
 
     if sql_result != API_response:
         logger.info("New results; updating watermain breaks...")
-        waterMainBreaks_backfill()
+        return_code = waterMainBreaks_backfill()
 
-    ### END - log end time
-    logger.info(f"Script: {__file__} completed.")
+    ### END - return error code
+    return return_code
 
 
 
@@ -167,14 +170,17 @@ def main() -> None:
 
     # try fetch_all_layers, log error if fails
     try:
-        _check_watermainBreaks_for_updates()
+        exit_code: int = _check_watermainBreaks_for_updates()
     except Exception as e:
         msg = f"Unexpected error while running {Path(__name__).name}: {e}"
         logger.critical(msg, exc_info=True)
         raise Exception(msg)
 
     # log end
-    logger.info(f"Script: {__file__} completed.")# print statement for end of script, and current time
+    logger.info(f"Script: {__file__} completed, with exit code: {exit_code}.")
+
+    # exit with exit code
+    sys.exit(exit_code)
 
 
 # call main
