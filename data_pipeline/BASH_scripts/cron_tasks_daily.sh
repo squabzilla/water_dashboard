@@ -35,10 +35,25 @@ set -uo pipefail
 # Source - https://stackoverflow.com/a/246128
 # Posted by dogbane, modified by community. See post 'Timeline' for change history
 # Retrieved 2026-05-22, License - CC BY-SA 4.0
-BASH_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+CURRENT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # complicated line, *ensuring* we get the directory the script is located in
 # that's because the path to the script directory varies by where the git repo was cloned into
-SCRIPT_DIR="$BASH_DIR/API"
+LOCAL_ENV_NAME="01__PROJECT_DIR__BASH_scripts.env"
+LOCAL_ENV_FILEPATH="$CURRENT_DIR/$LOCAL_ENV_NAME"
+
+# import project directory variable
+set -a
+# shellcheck disable=SC1090
+source "$LOCAL_ENV_FILEPATH" # ignore that shellcheck can't confirm if <variable> is proper path or not
+set +a
+# check that the variable we want exists and is not empty
+if [[ -z "${PROJECT_DIR:-}" ]]; then
+    echo "Error: PROJECT_DIR not set in $PROJECT_DIR" >&2
+    exit 1
+fi
+
+# set directory the Python API scripts
+PYSCRIPT_API_DIR="$PROJECT_DIR/data_pipeline/API"
 
 # gets path of UV bin
 UV_BIN="$(which uv)"
@@ -61,7 +76,7 @@ fi
 # > /dev/null 2>> $BASH_LOG 
 # `2>> $BASH_LOG` sends `stderr` to my BASH log
 
-BASH_RUN_DAILY_LOG="$SCRIPT_DIR/log_files/BASH_RUN_DAILY.log"
+BASH_RUN_DAILY_LOG="$PYSCRIPT_API_DIR/log_files/BASH_RUN_DAILY.log"
 
 
 
@@ -89,16 +104,16 @@ run_job() {
 ### setup variables for fetch-daily scripts
 
 NAME__weatherData_updateDailyWeather_runDaily="weatherData_updateDailyWeather_runDaily"
-PYSCRIPT__weatherData_updateDailyWeather_runDaily="$SCRIPT_DIR/weatherData_updateDailyWeather_runDaily.py"
-JOB__weatherData_updateDailyWeather_runDaily="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateDailyWeather_runDaily 2>> $BASH_RUN_DAILY_LOG"
+PYSCRIPT__weatherData_updateDailyWeather_runDaily="$PYSCRIPT_API_DIR/weatherData_updateDailyWeather_runDaily.py"
+JOB__weatherData_updateDailyWeather_runDaily="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateDailyWeather_runDaily 2>> $BASH_RUN_DAILY_LOG"
 
 NAME__weatherData_updateHourlyWeather_runDaily="weatherData_updateHourlyWeather_runDaily"
-PYSCRIPT__weatherData_updateHourlyWeather_runDaily="$SCRIPT_DIR/weatherData_updateHourlyWeather_runDaily.py"
-JOB__weatherData_updateHourlyWeather_runDaily="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateHourlyWeather_runDaily 2>> $BASH_RUN_DAILY_LOG"
+PYSCRIPT__weatherData_updateHourlyWeather_runDaily="$PYSCRIPT_API_DIR/weatherData_updateHourlyWeather_runDaily.py"
+JOB__weatherData_updateHourlyWeather_runDaily="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateHourlyWeather_runDaily 2>> $BASH_RUN_DAILY_LOG"
 
 NAME__waterMainBreaks_checkAPI_runDaily="waterMainBreaks_checkAPI_runDaily"
-PYSCRIPT__waterMainBreaks_checkAPI_runDaily="$SCRIPT_DIR/waterMainBreaks_checkAPI_runDaily.py"
-JOB__waterMainBreaks_checkAPI_runDaily="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__waterMainBreaks_checkAPI_runDaily 2>> $BASH_RUN_DAILY_LOG"
+PYSCRIPT__waterMainBreaks_checkAPI_runDaily="$PYSCRIPT_API_DIR/waterMainBreaks_checkAPI_runDaily.py"
+JOB__waterMainBreaks_checkAPI_runDaily="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__waterMainBreaks_checkAPI_runDaily 2>> $BASH_RUN_DAILY_LOG"
 
 
 

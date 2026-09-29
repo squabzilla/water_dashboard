@@ -35,13 +35,30 @@ set -uo pipefail
 # Source - https://stackoverflow.com/a/246128
 # Posted by dogbane, modified by community. See post 'Timeline' for change history
 # Retrieved 2026-05-22, License - CC BY-SA 4.0
-BASH_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+CURRENT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # complicated line, *ensuring* we get the directory the script is located in
 # that's because the path to the script directory varies by where the git repo was cloned into
-SCRIPT_DIR="$BASH_DIR/API"
+LOCAL_ENV_NAME="01__PROJECT_DIR__BASH_scripts.env"
+LOCAL_ENV_FILEPATH="$CURRENT_DIR/$LOCAL_ENV_NAME"
+
+# import project directory variable
+set -a
+# shellcheck disable=SC1090
+source "$LOCAL_ENV_FILEPATH" # ignore that shellcheck can't confirm if <variable> is proper path or not
+set +a
+# check that the variable we want exists and is not empty
+if [[ -z "${PROJECT_DIR:-}" ]]; then
+    echo "Error: PROJECT_DIR not set in $PROJECT_DIR" >&2
+    exit 1
+fi
+
+# set directory for BASH dir, and the Python API scripts
+PYSCRIPT_API_DIR="$PROJECT_DIR/data_pipeline/API"
+BASH_DIR="$PROJECT_DIR/data_pipeline/BASH_scripts"
 
 # gets path of UV bin
 UV_BIN="$(which uv)"
+
 
 
 ####################
@@ -61,7 +78,7 @@ fi
 # > /dev/null 2>> $BASH_LOG 
 # `2>> $BASH_LOG` sends `stderr` to my BASH log
 
-BASH_BACKFILL_LOG="$SCRIPT_DIR/log_files/BASH_BACKFILL.log"
+BASH_BACKFILL_LOG="$PYSCRIPT_API_DIR/log_files/BASH_BACKFILL.log"
 
 
 ########################################################################################################################
@@ -88,33 +105,33 @@ run_job() {
 ### setup variables for backfill scripts
 
 NAME__backfill_base_city_layers="backfill_base_city_layers"
-PYSCRIPT__backfill_base_city_layers="$SCRIPT_DIR/backfill_base_city_layers.py"
-JOB__backfill_base_city_layers="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__backfill_base_city_layers 2>> $BASH_BACKFILL_LOG"
+PYSCRIPT__backfill_base_city_layers="$PYSCRIPT_API_DIR/backfill_base_city_layers.py"
+JOB__backfill_base_city_layers="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__backfill_base_city_layers 2>> $BASH_BACKFILL_LOG"
 
 NAME__waterMainBreaks_backfill="waterMainBreaks_backfill"
-PYSCRIPT__waterMainBreaks_backfill="$SCRIPT_DIR/waterMainBreaks_backfill.py"
-JOB__waterMainBreaks_backfill="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__waterMainBreaks_backfill 2>> $BASH_BACKFILL_LOG"
+PYSCRIPT__waterMainBreaks_backfill="$PYSCRIPT_API_DIR/waterMainBreaks_backfill.py"
+JOB__waterMainBreaks_backfill="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__waterMainBreaks_backfill 2>> $BASH_BACKFILL_LOG"
 
 NAME__weatherData_backfillDaily="weatherData_backfillDaily"
-PYSCRIPT__weatherData_backfillDaily="$SCRIPT_DIR/weatherData_backfillDaily.py"
-JOB__weatherData_backfillDaily="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_backfillDaily 2>> $BASH_BACKFILL_LOG"
+PYSCRIPT__weatherData_backfillDaily="$PYSCRIPT_API_DIR/weatherData_backfillDaily.py"
+JOB__weatherData_backfillDaily="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__weatherData_backfillDaily 2>> $BASH_BACKFILL_LOG"
 
 NAME__weatherData_backfillHourly="weatherData_backfillHourly"
-PYSCRIPT__weatherData_backfillHourly="$SCRIPT_DIR/weatherData_backfillHourly.py"
-JOB__weatherData_backfillHourly="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_backfillHourly 2>> $BASH_BACKFILL_LOG"
+PYSCRIPT__weatherData_backfillHourly="$PYSCRIPT_API_DIR/weatherData_backfillHourly.py"
+JOB__weatherData_backfillHourly="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__weatherData_backfillHourly 2>> $BASH_BACKFILL_LOG"
 
 NAME__weatherData_weatherStations="weatherData_weatherStations"
-PYSCRIPT__weatherData_weatherStations="$SCRIPT_DIR/weatherData_weatherStations.py"
-JOB__weatherData_weatherStations="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_weatherStations 2>> $BASH_BACKFILL_LOG"
+PYSCRIPT__weatherData_weatherStations="$PYSCRIPT_API_DIR/weatherData_weatherStations.py"
+JOB__weatherData_weatherStations="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__weatherData_weatherStations 2>> $BASH_BACKFILL_LOG"
 
 NAME__watermain_custom_GEOJSONs_import="watermain_custom_GEOJSONs_import"
-PYSCRIPT__watermain_custom_GEOJSONs_import="$SCRIPT_DIR/watermain_custom_GEOJSONs_import.py"
-JOB__watermain_custom_GEOJSONs_import="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__watermain_custom_GEOJSONs_import 2>> $BASH_BACKFILL_LOG"
+PYSCRIPT__watermain_custom_GEOJSONs_import="$PYSCRIPT_API_DIR/watermain_custom_GEOJSONs_import.py"
+JOB__watermain_custom_GEOJSONs_import="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__watermain_custom_GEOJSONs_import 2>> $BASH_BACKFILL_LOG"
 
 # backfill of hourly-swob-records to be ran with backfill as well!
 NAME__weatherData_updateHourlyWeather_runHourly="weatherData_updateHourlyWeather_runHourly"
-PYSCRIPT__weatherData_updateHourlyWeather_runHourly="$SCRIPT_DIR/weatherData_updateHourlyWeather_runHourly.py"
-JOB__weatherData_updateHourlyWeather_runHourly="cd $SCRIPT_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateHourlyWeather_runHourly -hrs 48 2>> $BASH_BACKFILL_LOG"
+PYSCRIPT__weatherData_updateHourlyWeather_runHourly="$PYSCRIPT_API_DIR/weatherData_updateHourlyWeather_runHourly.py"
+JOB__weatherData_updateHourlyWeather_runHourly="cd $PYSCRIPT_API_DIR && $UV_BIN run $PYSCRIPT__weatherData_updateHourlyWeather_runHourly -hrs 48 2>> $BASH_BACKFILL_LOG"
 # gotta remember that 48 hour backfill for new jobs!
 
 

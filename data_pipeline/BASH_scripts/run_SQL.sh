@@ -4,14 +4,14 @@
 
 
 ########################################################################################################################
-# file name: run_annual_watermain_weather_summary.sh
+# file name: run_SQL.sh
 # author: William Hovdestad
 #
-# Runs annual_watermain_weather_summary.sql against the calgary_watermains database. 
-# POSTGRES_USER and POSTGRES_PASSWORD are read from a .env file that is not committed to the repo.
+# Runs a given SQL script in our repo, given an input SQL script
+# I'll make handlers for running the actual scripts, but they can use this one
 #
 # Usage:
-#   ./run_annual_watermain_weather_summary.sh 
+#   ./run_SQL.sh <SQL_SCRIPT.sql>
 
 
 
@@ -33,20 +33,30 @@ set -euo pipefail
 ########################################################################################################################
 ### config - get project directory
 
-# Source - https://stackoverflow.com/a/246128
-# Posted by dogbane, modified by community. See post 'Timeline' for change history
-# Retrieved 2026-05-22, License - CC BY-SA 4.0
-BASH_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-PROJECT_DIR=$(dirname "$BASH_DIR")
-# complicated line, *ensuring* we get the directory the script is located in
-# that's because the path to the script directory varies by where the git repo was cloned into
+# get current dir
+CURRENT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+# setup local env variable
+LOCAL_ENV_NAME="01__PROJECT_DIR__BASH_scripts.env"
+LOCAL_ENV_FILEPATH="$CURRENT_DIR/$LOCAL_ENV_NAME"
+
+# import project directory variable
+set -a
+# shellcheck disable=SC1090
+source "$LOCAL_ENV_FILEPATH" # ignore that shellcheck can't confirm if <variable> is proper path or not
+set +a
+# check that the variable we want exists and is not empty
+if [[ -z "${PROJECT_DIR:-}" ]]; then
+    echo "Error: PROJECT_DIR not set in $PROJECT_DIR" >&2
+    exit 1
+fi
 
 
 
 ########################################################################################################################
 ### import our SQL file and `config.env` exist; import variables from `config.env`
 
-SQL_FILE="$PROJECT_DIR/data_pipeline/SQL_scripts/annual_watermain_weather_summary.sql"
+#SQL_FILE="$PROJECT_DIR/data_pipeline/SQL_scripts/annual_watermain_weather_summary.sql"
+SQL_FILE="$1"
 CONFIG_ENV_FILE="$PROJECT_DIR/config.env"
 
 # confirm SQL_FILE exists
