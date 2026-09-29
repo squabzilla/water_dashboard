@@ -12,6 +12,10 @@ and Socrata's metadata column `created_at` is updated to reflect this time
 (Because it's all done at once, the values in this column are all identical)
 So if there's a discrepancy between my most recent `created_at` value, and Socrata's meta-data `:created_at` column,
 it's time to replace - we'll ALSO do a batch job of replacing all of our data.
+
+NOTE: If this script gets run, it also needs to run the SQL script `annual_watermain_weather_summary.sql`
+so at the end of the `waterMainBreaks_backfill` function, it will run a BASH subprocess that executes that SQL script,
+and then return the error code of that bash script
 """
 
 
@@ -45,6 +49,7 @@ from shapely.geometry import shape # used to properly assign/set Geometry values
 import httpx # used for calling API
 import json # used for handling export of json data
 import logging # used to log stuff
+import subprocess # used to run BASH script
 
 
 # custom modules!
@@ -60,7 +65,19 @@ from data_pipeline.helper.helper_timezones import AB_TIME
 
 
 ########################################################################################################################
-### script-setup 3: logging config - now with a helper function!
+### script-setup 3: setup variables we'll need to run our BASH script
+
+# NOTE: The SQL file we are running
+SQL_FILE = "annual_watermain_weather_summary.sql"
+
+SQL_FILEPATH = Path(PROJECT_ROOT) / "data_pipeline" / "SQL_scripts" / SQL_FILE
+RUN_SQL = Path(PROJECT_ROOT) / "data_pipeline" / "BASH_scripts" / "./run_SQL.sh"
+PYTHON_RUN_COMMAND = f"{RUN_SQL} {SQL_FILEPATH}"
+
+
+
+########################################################################################################################
+### script-setup 4: logging config - now with a helper function!
 # NOTE: 
 # moved most logging config logic to `main()`, so we don't make duplicate `setup_logging` calls 
 # in the case that waterMainBreaks_backfill() is called from another script
@@ -73,7 +90,7 @@ logger = logging.getLogger(__name__)
 
 # NOTE: first recorded watermain break is 1956/01/01
 
-def waterMainBreaks_backfill(silent_function: bool=False) -> None:
+def waterMainBreaks_backfill(silent_function: bool=False) -> int:
     ########################################################
     # section 1.1 - set up variables for the looped-API call
     ########################################################
@@ -207,6 +224,24 @@ def waterMainBreaks_backfill(silent_function: bool=False) -> None:
         raise DBError(msg) from e
 
 
+    #####################################################################
+    # section 1.6 - execute SQL script via BASH script, return error code
+    #####################################################################
+    
+    # run bash-command that executes bash-script that executes SQL script
+    result = subprocess.run(PYTHON_RUN_COMMAND, shell=True)
+    exit_code: int = int(result.returncode)
+    
+    # double check type of `return_code`
+    exit_code_TypeError_message = f"Error: exit_code should be an integer, not {type(exit_code)}"
+    try: exit_code = int(exit_code); assert type(exit_code) is int, exit_code_TypeError_message
+    except AssertionError as e: raise TypeError(exit_code_TypeError_message)
+    
+    print(f"BASH used to run SQL logic completed with exit code: {exit_code}")
+    
+    return exit_code
+
+
 ########################################################################################################################
 ### section 2 - logic for script to run by itself if called
 
@@ -220,14 +255,18 @@ def main() -> None:
 
     # try waterMainBreaks_backfill, log error if fails
     try:
-        waterMainBreaks_backfill(silent_function=False)
+        exit_code: int = waterMainBreaks_backfill(silent_function=False)
     except Exception as e:
         msg = f"Unexpected error while running {Path(__name__).name}: {e}"
         logger.critical(msg, exc_info=True)
         raise Exception(msg)
 
+
     # log end
-    logger.info(f"Script: {__file__} complete.") # print statement for end of script, and current time
+    logger.info(f"Script: {__file__} completed, with exit code: {exit_code}.")
+
+    # exit with exit code
+    sys.exit(exit_code)
 
 
 # call main - this function will run by itself if this script is called, including the start & end time pieces
