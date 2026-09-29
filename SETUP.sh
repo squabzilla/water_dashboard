@@ -197,5 +197,4 @@ eval "$run_data_pipeline"
 run_cron_setup="$PROJECT_DIR/data_pipeline/./cron_setup.sh"
 eval "$run_cron_setup"
 
-echo "holy shit we're done setup everything worked AHHHHHHHHHHHHHH"
-echo "okay I need to rename my \`.env\` file to \`secrets.env\` lol"
+echo "Done setup, please review for errors"
