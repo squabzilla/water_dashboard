@@ -42,7 +42,7 @@ PROJECT_DIR=$BASH_DIR # setup what the project directory is
 ### confirm we're in the right directory
 WATER_DASHBOARD="water_dashboard"
 # get basename of folder, then check if it's correct
-BASH_DIR_BASENAME=$(basename $BASH_DIR)
+BASH_DIR_BASENAME=$(basename "$BASH_DIR")
 SCRIPT_NAME=$(basename "$0")
 if [[ "$BASH_DIR_BASENAME" != "$WATER_DASHBOARD" ]]; then
     echo "ERROR: \`$SCRIPT_NAME\` located in \`$BASH_DIR_BASENAME\` folder, not \`$WATER_DASHBOARD\` folder"
@@ -97,7 +97,12 @@ if [[ ! -f "$SECRET_ENV_FILE" ]]; then
     echo "ERROR: No .env found at $SECRET_ENV_FILE"
     exit 1 # we exit with error code if file not found
 fi
+
 # since we got here, now we know it it exists, we can safely grab it with `source`
+# however, `shellcheck` is a useful thing to check shell-scripts, but also, 
+# gets mad at using `source` on stuff it doesn't know is a filepath
+# so we put in the following thing, so it doesn't get mad at a specific error on the next line:
+# shellcheck disable=SC1090
 source "$SECRET_ENV_FILE"
 # source reads that entire file into current shell - can load variables, functions, execute return statements...
 # very dangerous if you don't know what your sourcing lol
@@ -191,10 +196,10 @@ eval "$check_shellcheck_version"
 setup_db="cd $PROJECT_DIR/Docker && make up"
 eval "$setup_db"
 
-run_data_pipeline="$PROJECT_DIR/data_pipeline/./bash_backfill.sh"
+run_data_pipeline="cd $PROJECT_DIR/data_pipeline/BASH_scripts/ && ./bash_backfill.sh"
 eval "$run_data_pipeline"
 
-run_cron_setup="$PROJECT_DIR/data_pipeline/./cron_setup.sh"
+run_cron_setup="cd $PROJECT_DIR/data_pipeline/BASH_scripts/ && ./cron_setup.sh"
 eval "$run_cron_setup"
 
 echo "Done setup, please review for errors"
