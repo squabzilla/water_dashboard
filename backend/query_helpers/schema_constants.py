@@ -43,6 +43,10 @@ from data_pipeline.helper.helper_SQL_tables import DatabaseTables
 
 ########################################################################################################################
 ### section 1: setup some classes and stuff
+# TODO: 
+# add "annual_watermain_breaks" and "annual_watermain_weather_summary" tables
+# add them both to the "show-full-table" portion
+# wait, that portion is only for geographic data, which these most assuredly are NOT
 
 # class containing all the data types I care about in Python code
 class ColumnCategory(StrEnum):
