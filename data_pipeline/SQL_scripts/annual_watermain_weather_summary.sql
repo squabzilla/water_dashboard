@@ -94,10 +94,12 @@ using the pipeline length and diam as input for the calculation of cylinder volu
 -- Section 01: Create table (will populate later)
 -- ==================================================================================================================================================
 
+BEGIN; -- setup transactions so things don't go wonky if they fail halfway through
+
 DROP TABLE IF EXISTS annual_watermain_weather_summary;
 
 CREATE TABLE annual_watermain_weather_summary (
-    year                        int4    PRIMARY KEY,
+    calendar_year               int4    PRIMARY KEY,
     days_in_year                int4    NOT NULL,
     is_complete_year            boolean NOT NULL,
     total_precipitation_mm      numeric,
@@ -253,3 +255,5 @@ LEFT JOIN LATERAL (
 -- `ON true` is the join-condition (for the join that starts on 222) - so instead of "JOIN IF <condition>" it just always joins
 -- because we've done a bunch of filtering in the sub-query, we don't actually need conditions here as well
 ORDER BY ys.year;
+
+COMMIT; -- end the transaction
