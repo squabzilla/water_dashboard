@@ -73,14 +73,14 @@ source "$PROJECT_CONFIG" # this gets variables from objects in that file - so no
 set +a
 
 # confirm env file exists now lol
-if [[ ! -f "$ENV_FILE" ]]; then
-    echo "ERROR: .env file not found at: $ENV_FILE" >&2
+if [[ ! -f "$SECRET_ENV_FILE" ]]; then
+    echo "ERROR: .env file not found at: $SECRET_ENV_FILE" >&2
     exit 1
 fi
 
 set -a
 # shellcheck disable=SC1090
-source "$ENV_FILE" # now we source our .env file ahahahahaha
+source "$SECRET_ENV_FILE" # now we source our .env file ahahahahaha
 set +a
 
 
@@ -90,15 +90,15 @@ set +a
 REQUIRED_VARS=(POSTGRES_USER POSTGRES_PASSWORD)
 
 # start validating the `.env` file
-echo "--> Checking \`.env\` file."
+echo "--> Checking \`SECRET_CONFIG.env\` file."
 
 # first, check that it exists at proper location
-if [[ ! -f "$ENV_FILE" ]]; then
-    echo "ERROR: No .env found at $ENV_FILE"
+if [[ ! -f "$SECRET_ENV_FILE" ]]; then
+    echo "ERROR: No .env found at $SECRET_ENV_FILE"
     exit 1 # we exit with error code if file not found
 fi
 # since we got here, now we know it it exists, we can safely grab it with `source`
-source "$ENV_FILE"
+source "$SECRET_ENV_FILE"
 # source reads that entire file into current shell - can load variables, functions, execute return statements...
 # very dangerous if you don't know what your sourcing lol
 
@@ -124,7 +124,7 @@ if [[ ${#MISSING[@]} -gt 0 ]]; then
 # the `#` means COUNT-FOLLOWING; MISSING[@] means return all elements of MISSING; so ${#MISSING[@]} counts length of array
 # `-gt` just means Greater-Then; sad we don't have `>`; so if LENGTH(ARRAY) > 0 - 
 # which means the previous loop found missing elements
-    echo "    ERROR: The following required variables are missing or empty in $ENV_FILE:"
+    echo "    ERROR: The following required variables are missing or empty in $SECRET_ENV_FILE:"
     for var in "${MISSING[@]}"; do
         echo "      - $var"
     done

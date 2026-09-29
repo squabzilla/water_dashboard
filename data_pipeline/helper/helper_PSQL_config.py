@@ -61,7 +61,7 @@ public_config_filepath = Path(PROJECT_ROOT) / "config.env"
 
 class PublicConfig_Class(BaseSettings):
     model_config = SettingsConfigDict(frozen=True, env_file=public_config_filepath)
-    ENV_FILE: str
+    SECRET_ENV_FILE: str
     POSTGRES_DB: str
     POSTGRES_HOST: str
     POSTGRES_PORT: int
@@ -70,8 +70,7 @@ class PublicConfig_Class(BaseSettings):
 PublicConfig = PublicConfig_Class() # pyright: ignore[reportCallIssue]
 # NOTE: pylance is unhapp with the above line, but it's actually fine, so comment tells pylance to ignore it
 
-# NOTE: `PublicConfig.ENV_FILE` contains file-path to SECRET `.env` file gods I need to rename this
-# TODO: rename `.env` to `secrets.env`
+# NOTE: `PublicConfig.SECRET_ENV_FILE` contains file-path to SECRET `.env` file 
 
 
 
@@ -79,7 +78,7 @@ PublicConfig = PublicConfig_Class() # pyright: ignore[reportCallIssue]
 ### section 2: variables related to sql-connection
 
 class DBConfig(BaseSettings):
-    model_config = SettingsConfigDict(frozen=True, env_file=PublicConfig.ENV_FILE)
+    model_config = SettingsConfigDict(frozen=True, env_file=PublicConfig.SECRET_ENV_FILE)
     postgres_user: str
     postgres_password: SecretStr
     api_key: SecretStr
