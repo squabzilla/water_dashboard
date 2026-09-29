@@ -188,7 +188,7 @@ eval "$check_shellcheck_version"
 # exit 0 # because I really don't want to do these right now lol
 
 #setup_db="database/./deploy.sh" #whoops, for old shit
-setup_db="cd $PROJECT_DIR/docker_test && make up"
+setup_db="cd $PROJECT_DIR/Docker && make up"
 eval "$setup_db"
 
 run_data_pipeline="$PROJECT_DIR/data_pipeline/./bash_backfill.sh"
