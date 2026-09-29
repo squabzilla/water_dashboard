@@ -222,8 +222,8 @@ SELECT
     d.days_in_year,
     ys.year < EXTRACT(YEAR FROM CURRENT_DATE)::int AS is_complete_year,
     r.total_precipitation_mm, -- NOTE: this is nullable, as year with no weather record is missing data - so NULL
-    COALESCE(pc.cumulative_length_m, 0)  AS cumulative_pipe_length_m, -- not nullable, as year prior to pipe existing
-    COALESCE(pc.cumulative_volume_m3, 0) AS cumulative_pipe_volume_m3--  means the pipe's length/volume is 0
+    COALESCE(latest_pipe_totals.cumulative_length_m, 0)  AS cumulative_pipe_length_m, -- not nullable, as year prior to pipe existing
+    COALESCE(latest_pipe_totals.cumulative_volume_m3, 0) AS cumulative_pipe_volume_m3--  means the pipe's length/volume is 0
     -- COALESCE(A, B, C,... Z, AA, AB, AC... (inf mostly) -> use A, if A NULL use B, if B NULL use C, etc
     -- basically, this helps initialize starting cumulative values to 0
 FROM year_series ys
