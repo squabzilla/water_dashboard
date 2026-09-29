@@ -193,13 +193,25 @@ eval "$check_shellcheck_version"
 # exit 0 # because I really don't want to do these right now lol
 
 #setup_db="database/./deploy.sh" #whoops, for old shit
+echo ""
 setup_db="cd $PROJECT_DIR/Docker && make up"
+echo "Setting up database..."
 eval "$setup_db"
 
+echo ""
 run_data_pipeline="cd $PROJECT_DIR/data_pipeline/BASH_scripts/ && ./bash_backfill.sh"
+echo "Running data pipeline..."
 eval "$run_data_pipeline"
 
+echo ""
 run_cron_setup="cd $PROJECT_DIR/data_pipeline/BASH_scripts/ && ./cron_setup.sh"
+echo "Running CRON setup..."
 eval "$run_cron_setup"
 
+echo ""
+setup_sql_scripts="cd $PROJECT_DIR/data_pipeline/BASH_scripts && ./SQL_setup.sh"
+echo "Running setup SQL scripts..."
+eval "$setup_sql_scripts"
+
+echo ""
 echo "Done setup, please review for errors"
