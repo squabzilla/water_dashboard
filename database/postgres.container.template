@@ -1,0 +1,75 @@
+# the file name `postgres.container` tells it to create an "object" named `postgres` of type `container`
+[Unit]
+Description=PostGIS Database for Calgary Watermains project
+# human readable meta-data for `systemd` that shows up under `systemctl status` output and logs
+# TECHNICALLY not required in the same way that documentation isn't TECHNICALLY required for code (to run)
+
+
+[Container]
+Image=docker.io/postgis/postgis:16-3.5
+# container image to use - `docker.io` is official docker registry, `postgis/postgis` is the image,
+# and `16-3.5` is pinned tag so that we use a consistent version, so that new updates don't break anything
+ContainerName=${POSTGRES_CONTAINER}
+# expanded by envsubst in deploy.sh from config.sh at deploy time, not by systemd at runtime
+
+# bug fixing for WSL2 cgroup v1:
+PodmanArgs=--cgroups=enabled --log-driver=journald
+# explanation:
+# --cgroups=enabled overrides Quadlet's default `--cgroups=split` which requires cgroup v2
+# WSL2 runs cgroup v1 by default, so this is necessary for rootless Podman to work correctly
+# --log-driver=journald sends container logs to systemd journal, viewable via `journalctl`
+
+PublishPort=127.0.0.1:${POSTGRES_PORT}:5432
+# `127.0.0.1` is IPv4 loopback address, so it's only accessible from local machine and not internet
+# ${POSTGRES_PORT} expanded by envsubst in deploy.sh from config.sh at deploy time, not by systemd at runtime
+# internal port 5432 is hardcoded — that's fixed by the Postgres image itself (`5432` was originally in `${POSTGRES_PORT}`)
+# using 5433 (defined in config.sh) externally to avoid a port conflict with any locally-installed Postgres
+
+Environment=POSTGRES_USER=${POSTGRES_USER}
+Environment=POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+Environment=POSTGRES_DB=${POSTGRES_DB}
+# these ${VAR} references are expanded by systemd from the EnvironmentFile= lines in [Service] below
+# POSTGRES_USER and POSTGRES_PASSWORD come from ~/.config/water_dashboard/.env
+# POSTGRES_DB comes from ~/.config/water_dashboard/config.sh
+
+Volume=postgres-data.volume:/var/lib/postgresql/data:Z
+# `postgres-data.volume` tells it where to store the data (or "mount the volume" I guess)
+# `/var/lib/postgresql/data` is the inside-container path where Postgres stores its data files
+# `:Z` relabels the volume for SELinux compatibility — harmless on non-SELinux systems
+
+HealthCmd=pg_isready -d calgary_watermains
+# `pg_isready` is a Postgres utility that checks if the server is accepting connections
+# `-d calgary_watermains` checks our specific database was created, not just that Postgres started
+# hardcoded rather than using ${POSTGRES_DB} — HealthCmd is processed by Quadlet at generation time,
+# so runtime variable expansion from EnvironmentFile= is not available here
+# `-U` (user) also omitted — same reasoning
+HealthInterval=10s
+# how often Podman runs the health check
+HealthTimeout=5s
+# how long Podman waits for pg_isready to respond before counting it as a failure
+HealthRetries=5
+# how many consecutive failures before the container is marked unhealthy and restarted
+HealthStartPeriod=30s
+# grace period after startup during which health check failures don't count —
+# Postgres needs time to initialize the data directory on first run
+
+
+[Service]
+# EnvironmentFile= is a systemd directive, so it lives here in [Service] rather than in [Container]
+# systemd loads both files before executing anything, so ${VAR} references in [Container] above resolve correctly
+EnvironmentFile=%h/.config/water_dashboard/.env
+# secrets: POSTGRES_USER, POSTGRES_PASSWORD
+EnvironmentFile=%h/.config/water_dashboard/config.sh
+# non-secret config: POSTGRES_DB, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_CONTAINER
+
+Restart=on-failure
+# restart the container if it exits with a non-zero exit code
+TimeoutStartSec=120
+# give systemd 120 seconds before deciding the service failed to start —
+# Postgres can take a moment on first run when initializing the data directory
+
+
+[Install]
+WantedBy=default.target
+# tells systemd to include this as part of normal user session startup,
+# which combined with `loginctl enable-linger` gives us boot persistence on a server

@@ -36,20 +36,41 @@ set -euo pipefail
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # complicated line, *ensuring* we get the directory the script is located in
 # that's because the path to the script directory varies by where the git repo was cloned into
+PROJECT_DIR=$(dirname "$SCRIPT_DIR")
 
 # set variable for Quadlet directory
 QUADLET_DIR="${HOME}/.config/containers/systemd"
 # NOTE: Quadlet is apparently hard coded to specifically check `~/.config/containers/systemd/` for its unit files
 
-# set location of `.env` file
-ENV_FILE="${HOME}/.config/water_dashboard/.env"
-# make array storing required variables in `.env` file
-REQUIRED_VARS=(POSTGRES_USER POSTGRES_PASSWORD)
+# get local (unhidden) environment variables from `.PROJECT_CONFIG`
+CONFIG_NAME=".PROJECT_CONFIG"
+PROJECT_CONFIG="$PROJECT_DIR/$CONFIG_NAME"
+# NOTE: contains variables called `ENV_FILE` that has filepath of hidden variables
+
+# `set -a` explanation: Each variable or function that is created or modified is given the export
+#                       attribute and marked for export to the environment of subsequent commands.
+set -a
+# `shellcheck` is a useful thing to check shell-scripts, but also, 
+# gets mad at using `source` on stuff it doesn't know is a filepath
+# so we put in the following thing, so it doesn't get mad at a specific error on the next line:
+# shellcheck disable=SC1090
+source "$PROJECT_CONFIG" # this gets variables from objects in that file - so now we know ENV file location...
+# this gets us ENV_FILE
+
+# shellcheck disable=SC1090
+source "$ENV_FILE" # now we source our .env file ahahahahaha
+# gets us postgres login info
+
+# `set +a` explanation: Using ‘+’ rather than ‘-’ causes these options to be turned off.
+set +a
 
 
 
 ########################################################################################################################
 ### check that `.env` file exists, and has proper variables we want
+
+# make array storing required variables in `.env` file
+REQUIRED_VARS=(POSTGRES_USER POSTGRES_PASSWORD)
 
 # start validating the `.env` file
 echo "--> Checking \`.env\` file."
@@ -95,7 +116,6 @@ fi
 echo "    .env looks good"
 
 
-
 ########################################################################################################################
 ### create symlinks to the Quadlet files
 ### Podman Quadlets is apparently hard coded to specifically check `~/.config/containers/systemd/` for its unit files,
@@ -124,6 +144,11 @@ for f in "$SCRIPT_DIR"/quadlets/*.pod \
     #echo "    Linked: $(basename "$f")"
 done
 
+echo "--> Linking config.sh..."
+ln -sf "$PROJECT_CONFIG" "${HOME}/.config/water_dashboard/$CONFIG_NAME"
+echo "    Linked: $SCRIPT_DIR/database/config.sh"
+echo "      WITH: ${HOME}/.config/water_dashboard/config.sh"
+
 
 
 ########################################################################################################################
@@ -142,8 +167,13 @@ sudo loginctl enable-linger "$USER"
 
 echo ""
 echo "Done! Postgres is available at localhost:5433"
-echo "Here are some quick console commands to test your deployment:"
+echo "If this is a server (i.e. a DigialOcean Droplet), run: \`sudo loginctl enable-linger \$USER\`"
 echo ""
+echo "Here are some quick console commands to test your deployment:"
+output="podman exec -it postgres psql -U <your_postgres_user> -d calgary_watermains -c \"\\conninfo\""
+echo "$output"
+output="podman exec -it postgres psql -U <your_postgres_user> -d calgary_watermains -c \"\\dx\""
+echo "$output"
 
 # NOTE: confirm it's working with:
 # `podman exec -it postgres psql -U <your_postgres_user> -d calgary_watermains -c "\conninfo"`
