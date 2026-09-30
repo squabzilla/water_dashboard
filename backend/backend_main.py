@@ -138,13 +138,13 @@ def get_full_table(
 NOTE: Explaining that SQL structure
 SELECT jsonb_build_object(
             'type', 'FeatureCollection',
-            'features', jsonb_agg(
+            'features', COALESCE(jsonb_agg(
                 jsonb_build_object(
                     'type', 'Feature',
                     'geometry', ST_AsGeoJSON("{geom_col}")::jsonb,
                     'properties', to_jsonb(t) - '{geom_col}'
                 )
-            )
+            ), '[]'::jsonb)
         )
 FROM "{table.value}" t
 
@@ -161,6 +161,16 @@ jsonb_agg(jsonb_build_object())
 takes a json_b_build_object, compresses all the lines in a single list
 example:
 [ {line1_keyA:line1_valueA, line1_keyB:line1_keyB}, {line2_keyA:line2_keyA, line2_keyB:line2_valueB} ]
+
+NOTE: COALESCE BUG FIX
+COALESCE(a, b, c,...)
+takes any number of objects, and returns first non-NULL result
+so the use-case here: if jsonb_agg() would return a NULL value,
+that value gets wrapped deep inside the JSON object, so there could be a NULL buried deep that causes issues
+so we wrap jsonb_agg() in COALESCE, and add a second argument to COALESCE,
+so that it returns an empty object instead of a NULL object (in the case that jsonb_agg() would otheriwse return NULL)
+NOTE: since this part was added later, it might be missing from the summary below
+
 
 ST_AsGeoJSON("INSERT_GEOMETRY_COLUMN_HERE")::jsonb
 so first off, INSERT_GEOMETRY_COLUMN_HERE is a placeholder for the geometry column of a table lol
@@ -293,3 +303,51 @@ SELECT jsonb_build_object(
 )
 
 """
+
+
+
+########################################################################################################################
+### Endpoint 4: annual-watermain-summary
+# TODO: update class definitions with the existence of this table
+
+@app.get("/api/annual-watermain-summary")
+def get_annual_watermain_summary(
+    start_year: int | None = None,
+    end_year: int | None = None,
+    conn: Connection = Depends(get_db_connection),
+):
+    # NOTE: `b` is the BREAKS-annual-summary-table, `w` is WEATHER-annual-summary-table ("weather" in this case is precipitation but whatevs)
+    
+    conditions: list[str] = [] # NOTE: empty-list is falsy, meaning `if empty_list:` evaluates to False
+    params: dict[str, int] = {}
+
+    if start_year is not None:
+        conditions.append("b.calendar_year >= :start_year")
+        params["start_year"] = start_year
+    if end_year is not None:
+        conditions.append("b.calendar_year <= :end_year")
+        params["end_year"] = end_year
+
+    where_sql = " AND ".join(conditions) if conditions else "TRUE"
+    # where-clause joins conditions with AND if conditions is non-empty list, otherwise it just becomes "TRUE"
+
+    sql = f"""
+        SELECT COALESCE(
+            jsonb_agg(
+                jsonb_build_object(
+                    'calendar_year', b.calendar_year,
+                    'days_in_year', b.days_in_year,
+                    'break_count', b.break_count,
+                    'is_complete_year', w.is_complete_year,
+                    'total_precipitation_mm', w.total_precipitation_mm,
+                    'cumulative_pipe_length_m', w.cumulative_pipe_length_m,
+                    'cumulative_pipe_volume_m3', w.cumulative_pipe_volume_m3
+                )
+                ORDER BY b.calendar_year
+            ), '[]'::jsonb
+        )
+        FROM "annual_watermain_breaks" b
+        JOIN "annual_watermain_weather_summary" w ON b.calendar_year = w.calendar_year
+        WHERE {where_sql}
+    """
+    return execute_json_scalar(conn, sql, params)
