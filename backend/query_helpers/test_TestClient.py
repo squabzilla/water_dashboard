@@ -6,6 +6,14 @@ Purpose: actually test that all that the running-APP actually works
 to be completed when I have the mental bandwidth to learn testing
 
 Claude gave me some code, I need to actually look over it and make sure I understand it...
+
+USAGE:
+uv run pytest
+uv run pytest -v # (line-by-line report)
+uv run pytest <filename.py>
+uv run pytest <filename.py>::<test_function_name>
+
+TODO: update my class definitions with my new tables...
 """
 
 
@@ -81,3 +89,35 @@ def test_summary_with_date_range_matching_no_rows():
     assert response.status_code == 200
     body = response.json()
     assert body["total_breaks"] == 0
+
+
+
+########################################################################################################################
+### adding testing for newly-added endpoint 4
+
+def test_annual_summary_returns_full_range_with_no_year_filters():
+    response = client.get("/api/annual-watermain-summary")
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body, list)
+    if body:
+        assert "break_count" in body[0] and "total_precipitation_mm" in body[0]
+
+def test_annual_summary_merges_fields_from_both_tables():
+    response = client.get("/api/annual-watermain-summary")
+    body = response.json()
+    for year_record in body:
+        assert set(year_record.keys()) == {
+            "calendar_year", "days_in_year", "break_count",
+            "is_complete_year", "total_precipitation_mm",
+            "cumulative_pipe_length_m", "cumulative_pipe_volume_m3",
+        }
+
+def test_annual_summary_with_year_range_matching_nothing():
+    response = client.get("/api/annual-watermain-summary?start_year=1800&end_year=1801")
+    assert response.status_code == 200
+    assert response.json() == []
+
+def test_annual_summary_rejects_non_integer_year():
+    response = client.get("/api/annual-watermain-summary?start_year=not-a-year")
+    assert response.status_code == 422
