@@ -50,6 +50,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
+from collections.abc import Mapping
+# used in type-checking to see if object behaves like dict, except can pass it dict with variable-type keys/values
+# basically, for REASONS, `dict[str, int]` isn't automatically `dict[str, str | int]` - but `Mapping` gets around this
 from datetime import datetime, date # for getting date-time stuff
 import logging
 from enum import StrEnum
@@ -256,7 +259,7 @@ def execute_geojson_scalar(
 def execute_json_scalar(
         conn: Connection,
         sql_command: str,
-        sql_placeholder_values: dict[str, str] | None = None,
+        sql_placeholder_values: Mapping[str, str | int] | None = None, # NOTE: hey look, here's that mapping module we imported!
 ) -> dict:
 
     """Runs a query whose single jsonb column is a plain JSON object (not
