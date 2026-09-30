@@ -6,6 +6,14 @@ Purpose: actually test that all my querying-PostGIS logic works - test this agai
 to be completed when I have the mental bandwidth to learn testing
 
 Claude gave me some code, I need to actually look over it and make sure I understand it...
+
+USAGE:
+uv run pytest
+uv run pytest -v # (line-by-line report)
+uv run pytest <filename.py>
+uv run pytest <filename.py>::<test_function_name>
+
+TODO: update my class definitions with my new tables...
 """
 
 
