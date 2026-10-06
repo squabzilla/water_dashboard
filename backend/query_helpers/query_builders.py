@@ -184,7 +184,10 @@ def build_where_clause(
 
         # create portion of SQL-clause, using placeholder syntax to prevent SQL-injection
         placeholder_item = f"p{i}"
-        clauses.append(f"{column} {OPERATOR_TO_SQL_SYMBOL[op]} %s")  # column validated against registry above
+        #clauses.append(f"{column} {OPERATOR_TO_SQL_SYMBOL[op]} %s")  # column validated against registry above
+        # this one is bad - it only works if we were using `psycopg` directly, but our surface-layer is SQLAlchemy, not psycopg
+        # worth remembering that SQLAlchemy is still build on TOP of psycopg
+        clauses.append(f"{column} {OPERATOR_TO_SQL_SYMBOL[op]} :{placeholder_item}")
         placeholders_dict[placeholder_item] = value
         # this sets things up for the SQLAlchemy Connection method for placeholders to prevent SQL-injections
 
