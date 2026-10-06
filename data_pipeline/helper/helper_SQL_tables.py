@@ -80,6 +80,14 @@ class DatabaseTables(StrEnum):
     hydrology = "Hydrology"
     city_districts = "Calgary_Communities"
     city_boundary = "CityBoundary"
+    
+    annual_watermain_breaks = "annual_watermain_breaks"
+    # my non-spatial breaks-per-year table 
+    # NOTE: named manually in SQL, editing this name will break shit
+    
+    annual_watermain_weather_summary = "annual_watermain_weather_summary"
+    # my non-spatial table with annual total-pipe length, total-pipe-volume, and total-yearly-precipitation
+    # NOTE: named manually in SQL, editing this name will break shit
 
 
 
