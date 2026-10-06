@@ -41,6 +41,7 @@ import pytest
 # custom modules!
 from backend.query_helpers.schema_constants import ColumnCategory
 from backend.query_helpers.schema_errors import FilterError
+# NOTE: if custom-errors are imported different across different files, pytest views them as different errors, thus breaking testing
 from backend.query_helpers.query_builders import build_where_clause
 
 
