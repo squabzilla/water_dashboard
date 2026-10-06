@@ -1,0 +1,42 @@
+uv run pytest test_query_builder.py
+
+uv run pytest tests/test_query_builder.py -v
+# get better per-test breakdown
+uv run pytest tests/test_query_builder.py -v --tb=no
+# stop spamming me with failed test details, I only want pass/fail information
+
+uv run pytest tests/test_query_builder.py::test_invalid_date_value_raises
+# run specific test
+
+uv run pytest test_pytest_queries.py
+uv run pytest test_pytest_queries.py -v --tb=no
+
+uv run pytest test_pytest_queries.py::test_unknown_table_raises
+uv run pytest test_pytest_queries.py::test_unknown_column_raises
+uv run pytest test_pytest_queries.py::test_geometry_column_rejected
+uv run pytest test_pytest_queries.py::test_invalid_operator_for_category_raises
+uv run pytest test_pytest_queries.py::test_default_operator_is_eq
+uv run pytest test_pytest_queries.py::test_no_filters_returns_true
+uv run pytest test_pytest_queries.py::test_invalid_date_value_raises
+uv run pytest test_pytest_queries.py::test_valid_date_value_passes
+uv run pytest test_pytest_queries.py::test_date_validation_only_applies_to_date_columns
+
+
+
+uv run pytest test_TestClient.py
+
+uv run pytest test_TestClient.py::test_full_table_rejects_non_spatial_table
+uv run pytest test_TestClient.py::test_full_table_returns_feature_collection
+uv run pytest test_TestClient.py::test_query_rejects_bad_filter
+uv run pytest test_TestClient.py::test_query_with_valid_filter
+uv run pytest test_TestClient.py::test_invalid_table_returns_422
+uv run pytest test_TestClient.py::test_query_with_no_matches_returns_empty_feature_collection
+uv run pytest test_TestClient.py::test_summary_returns_full_history_with_no_dates
+uv run pytest test_TestClient.py::test_summary_rejects_malformed_date
+uv run pytest test_TestClient.py::test_summary_with_date_range_matching_no_rows
+
+# tests for new endpoint
+uv run pytest test_TestClient.py::test_annual_summary_returns_full_range_with_no_year_filters
+uv run pytest test_TestClient.py::test_annual_summary_merges_fields_from_both_tables
+uv run pytest test_TestClient.py::test_annual_summary_with_year_range_matching_nothing
+uv run pytest test_TestClient.py::test_annual_summary_rejects_non_integer_year
