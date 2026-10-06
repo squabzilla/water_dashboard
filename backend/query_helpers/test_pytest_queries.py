@@ -37,8 +37,10 @@ if str(PROJECT_ROOT) not in sys.path:
 ########################################################################################################################
 ### script-setup 2: library imports
 import pytest
-from schema_constants import ColumnCategory
-from schema_errors import FilterError
+
+# custom modules!
+from backend.query_helpers.schema_constants import ColumnCategory
+from backend.query_helpers.schema_errors import FilterError
 from backend.query_helpers.query_builders import build_where_clause
 
 
