@@ -142,12 +142,12 @@ def load_schema_registry(conn: Connection) -> dict[str, dict[str, ColumnCategory
 # def build_where_clause(table, filters, registry) -> tuple[str, list]: pass
 
 def build_where_clause(
-        table: str, # name of table - a basic string, which is then validated against the schema that `load_schema` made
-        filters: dict[str, str], # requested filters in the form `"column__op": "value"`, which is later split into 3 parts: collumn, op, value
-        registry: dict[str, dict[str, ColumnCategory]] # this imports the output of `load_schema`, but passed instead of called
-    ) -> tuple[str, dict[str, str]]: # python returns an SQL-string and dictionary of placeholder values, packed together as a tuple
+    table: str, # name of table - a basic string, which is then validated against the schema that `load_schema` made
+    filters: dict[str, str], # requested filters in the form `"column__op": "value"`, which is later split into 3 parts: collumn, op, value
+    registry: dict[str, dict[str, ColumnCategory]], # this imports the output of `load_schema`, but passed instead of called
+) -> tuple[str, dict[str, str]]: # python returns an SQL-string and dictionary of placeholder values, packed together as a tuple
 
-    """filters: {'column__op': 'value'} or {'column': 'value'}, e.g. {'break_date__gte': '2020-01-01'} or {'break_date': '2020-01-01'"""
+    """filters: {'column__op': 'value'} or {'column': 'value'}, e.g. {'break_date__gte': '2020-01-01'} or {'break_date': '2020-01-01'}"""
 
     # remember that registry is the output of `load_schema_registry` so it's the full schema of valid items in my DB
     table_schema = registry.get(table) # .get() method retrieves value of key, but returns None instead of ERROR if key not found
@@ -155,16 +155,19 @@ def build_where_clause(
         raise FilterError(f"unknown table '{table}'")
 
     clauses: list[str] = [] # empty list for clauses that we'll `.join` together
-    placeholders: dict[str, str] = {} # empty dict for placeholder values # NOTE: used to be called 'params'
+    placeholders_dict: dict[str, str] = {} # empty dict for placeholder values # NOTE: used to be called 'params'
     for i, (key, value) in enumerate(filters.items()):
         column, _, op = key.partition("__") # turn `column__op` into: `column="column"; _="__"; op="op"`
         # NOTE: in the case of `{'column': 'value'}`, `_` and `op` will equal "", or empty-string
 
         # set op to default equal 'eq' if it wasn't defined
-        if op == '': op = 'eq' # could also do `op = op or "eq"`, but I understand the if-statement better
+        # NOTE: why we have `op` set to a default of `eq` if not defined:
         # according to "API Query Design Choice" section in Backend_README.md, 
         # if a `column` name by itself (that does not include the '__op' portion),
         # then the operation is implicitly assumed to be equals, or `eq`
+        if not op: op = "eq" # could also do `op = op or "eq"`
+        # NOTE: "truthy" and "falsy" explanation:
+        # if `op` has a "falsy" values like `None`, "", `False`, it gets set to "eq"; if "truthy" it stays as-is
 
         column_category = table_schema.get(column)
         if column_category is None: # error if we can't find the column
@@ -172,15 +175,17 @@ def build_where_clause(
         if column_category == ColumnCategory.GEOMETRY: # we can't filter GEOM columns, so ERROR if it's passed one
             raise FilterError(f"column '{column}' is a geometry column, not filterable this way")
         if op not in OPERATORS_BY_COLUMN_CATEGORY[column_category]: # error if we aren't using a valid operator for the column-type
-            raise FilterError(f"operator '{op}' not valid for column '{column}' (type={column_category})")
+            raise FilterError(f"operator '{op}' not valid for column '{column}' (category={column_category})")
         if column_category == ColumnCategory.DATE: # adding verification to make sure dates here are all good!
-            try: date.fromisoformat(value)
-            except: raise FilterError(f"invalid date value '{value}' — expected ISO-8601 format (YYYY-MM-DD)")
+            try:
+                date.fromisoformat(value)
+            except ValueError:
+                raise FilterError(f"invalid date value '{value}' — expected ISO-8601 format (YYYY-MM-DD)")
 
         # create portion of SQL-clause, using placeholder syntax to prevent SQL-injection
-        temp_placeholder = f"p{i}"
+        placeholder_item = f"p{i}"
         clauses.append(f"{column} {OPERATOR_TO_SQL_SYMBOL[op]} %s")  # column validated against registry above
-        placeholders[temp_placeholder] = value
+        placeholders_dict[placeholder_item] = value
         # this sets things up for the SQLAlchemy Connection method for placeholders to prevent SQL-injections
 
         # NOTE: 
@@ -191,7 +196,7 @@ def build_where_clause(
     # `where_sql` becomes an sql string with placeholders in it, such as: `break_date >= %s AND status = %s` (remember %s are placeholders)
     # `placeholders` holds the list of values for the placeholders, in the same order they appear
     # this lets us sanitze our SQL-input - very important!
-    return where_sql, placeholders # in python, a return statement with multiple objects packs them together into a tuple
+    return where_sql, placeholders_dict # in python, a return statement with multiple objects packs them together into a tuple
     # NOTE: when calling the function, the easiest way to unpack it is calling it as: 
     # "where_sql, placeholders = build_where_clause(table, filters, registry)" 
 
