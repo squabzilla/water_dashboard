@@ -1,3 +1,6 @@
+############################################################################################
+samples:
+
 uv run pytest test_query_builder.py
 
 uv run pytest tests/test_query_builder.py -v
@@ -7,6 +10,9 @@ uv run pytest tests/test_query_builder.py -v --tb=no
 
 uv run pytest tests/test_query_builder.py::test_invalid_date_value_raises
 # run specific test
+
+############################################################################################
+real:
 
 uv run pytest test_pytest_queries.py
 uv run pytest test_pytest_queries.py -v --tb=no
@@ -24,6 +30,7 @@ uv run pytest test_pytest_queries.py::test_date_validation_only_applies_to_date_
 
 
 uv run pytest test_TestClient.py
+uv run pytest test_TestClient.py -v --tb=no
 
 uv run pytest test_TestClient.py::test_full_table_rejects_non_spatial_table
 uv run pytest test_TestClient.py::test_full_table_returns_feature_collection
