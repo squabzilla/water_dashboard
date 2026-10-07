@@ -308,7 +308,15 @@ SELECT jsonb_build_object(
 
 ########################################################################################################################
 ### Endpoint 4: annual-watermain-summary
-# TODO: update class definitions with the existence of this table
+# NOTE: 
+# This actually combines two tables every time it's called, which in this case is probably fine,
+# as one of the tables is a derivative of "watermain_breaks", 
+# a table that needs to be rebuilt from scratch every time that the source data changes, 
+# as the source data doesn't have a real "primary-key" that lets us identify specific records so we can track changes.
+# Instead, all we can do is requery the whole API table, and overwrite our records with it.
+#
+# ANYways, this returns like... a "view" or whatever of two tables combined, and the view is called:
+# annual-watermain-summary
 
 @app.get("/api/annual-watermain-summary")
 def get_annual_watermain_summary(
