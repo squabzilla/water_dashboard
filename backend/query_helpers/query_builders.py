@@ -218,19 +218,17 @@ def get_geometry_column(
     geometry_column = "" # placeholder for geometry column
 
     # loop through col-dict to find geometry column
-    for key, value in registry.items():
+    for key, value in table_schema.items():
         column_name = key
         column_category = value
         if column_category == ColumnCategory.GEOMETRY:
             geometry_column = column_name
-            break # break once we find it
-    # error message if not found
-    if geometry_column == "": # this means its not found
-            msg = f"Error: SchemaError: could not find GEOMETRY column for table {table_name}."
-            logger.error(msg)
-            raise SchemaError(msg)
-    # return found geometry column
-    return geometry_column
+            # break # break once we find it
+            return geometry_column # finish function once we find it
+    # error message if not found - if we get here, it's not found
+    msg = f"Error: SchemaError: could not find GEOMETRY column for table {table_name}."
+    logger.error(msg)
+    raise SchemaError(msg)
 
 
 
