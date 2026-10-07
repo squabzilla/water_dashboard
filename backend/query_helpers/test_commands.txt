@@ -14,6 +14,10 @@ uv run pytest tests/test_query_builder.py::test_invalid_date_value_raises
 ############################################################################################
 real:
 
+uv run pytest -v --tb=no
+
+
+
 uv run pytest test_pytest_queries.py
 uv run pytest test_pytest_queries.py -v --tb=no
 
