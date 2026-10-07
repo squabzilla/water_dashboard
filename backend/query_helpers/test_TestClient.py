@@ -36,9 +36,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 ########################################################################################################################
 ### script-setup 2: library imports
+import pytest
 from fastapi.testclient import TestClient
 
 # custom modules!
+from data_pipeline.helper.helper_SQL_tables import DatabaseTables
 from backend.backend_main import app
 
 
@@ -46,47 +48,61 @@ from backend.backend_main import app
 ########################################################################################################################
 ### now the testing logic
 
-client = TestClient(app)
+# client = TestClient(app)
 
+@pytest.fixture # this decorator tells pytest to run this code before every test, to set it up
+def client():
+    with TestClient(app) as c:
+        yield c
+    # yield means the function stays in its current state -
+    # basically, it's ready to run more code "under" the `with` clause
+    # think of the `with` clause similar to `with open(file) as f:`, where "with" handles opening/closing of the "opened-object"
+    # NOTE: by default, pytest closes the connection after running a test function, but I could decorate it with:
+    # @pytest.fixture(scope="module")
+    # to keep it open for all tests; however, this means results from one test could "leak" into another test
 
-def test_full_table_rejects_non_spatial_table():
-    response = client.get("/api/tables/weather_daily/full")
+# while the decorator of our `client` function means pytest runs that code before testing our function,
+# the function doesn't know what any of that is unless we pass it the information
+def test_full_table_rejects_non_spatial_table(client):
+    response = client.get(f"/api/tables/{DatabaseTables.weather_daily}/full")
     assert response.status_code == 403
 
-def test_full_table_returns_feature_collection():
-    response = client.get("/api/tables/city_boundary/full")
+def test_full_table_returns_feature_collection(client):
+    response = client.get(f"/api/tables/{DatabaseTables.city_boundary}/full")
     assert response.status_code == 200
     assert response.json()["type"] == "FeatureCollection"
 
-def test_query_rejects_bad_filter():
-    response = client.get("/api/tables/watermain_breaks/query?nonsense_column__eq=x")
+def test_query_rejects_bad_filter(client):
+    response = client.get(f"/api/tables/{DatabaseTables.watermain_breaks}/query?nonsense_column__eq=x")
     assert response.status_code == 400
 
-def test_query_with_valid_filter():
-    response = client.get("/api/tables/watermain_breaks/query?status=active")
+def test_query_with_valid_filter(client):
+    response = client.get(f"/api/tables/{DatabaseTables.watermain_breaks}/query?status=active")
     assert response.status_code == 200
     assert response.json()["type"] == "FeatureCollection"
 
-def test_invalid_table_returns_422():
+def test_invalid_table_returns_422(client):
     response = client.get("/api/tables/not_a_real_table/full")
     assert response.status_code == 422
 
-def test_query_with_no_matches_returns_empty_feature_collection():
-    response = client.get("/api/tables/watermain_breaks/query?status__eq=nonexistent_status")
+def test_query_with_no_matches_returns_empty_feature_collection(client):
+    response = client.get(f"/api/tables/{DatabaseTables.watermain_breaks}/query?status__eq=nonexistent_status")
     assert response.status_code == 200
     assert response.json() == {"type": "FeatureCollection", "features": []}
 
-def test_summary_returns_full_history_with_no_dates():
+### summary tables
+
+def test_summary_returns_full_history_with_no_dates(client):
     response = client.get("/api/summary")
     assert response.status_code == 200
     body = response.json()
     assert "total_breaks" in body and "avg_breaks_per_year" in body
 
-def test_summary_rejects_malformed_date():
+def test_summary_rejects_malformed_date(client):
     response = client.get("/api/summary?start_date=not-a-date")
     assert response.status_code == 422  # caught by the `date` type annotation, not FilterError
 
-def test_summary_with_date_range_matching_no_rows():
+def test_summary_with_date_range_matching_no_rows(client):
     response = client.get("/api/summary?start_date=1900-01-01&end_date=1900-01-02")
     assert response.status_code == 200
     body = response.json()
@@ -95,9 +111,12 @@ def test_summary_with_date_range_matching_no_rows():
 
 
 ########################################################################################################################
-### adding testing for newly-added endpoint 4
+### adding testing for newly-added endpoint 4: annual-watermain-summary
+# NOTE: 
+# This endpoint returns a SELECT statement that combines two separate tables together.
+# There is no actual table in my database for "annual-watermain-summary", that name is defined in Endpoint 4's SQL code
 
-def test_annual_summary_returns_full_range_with_no_year_filters():
+def test_annual_summary_returns_full_range_with_no_year_filters(client):
     response = client.get("/api/annual-watermain-summary")
     assert response.status_code == 200
     body = response.json()
@@ -105,7 +124,7 @@ def test_annual_summary_returns_full_range_with_no_year_filters():
     if body:
         assert "break_count" in body[0] and "total_precipitation_mm" in body[0]
 
-def test_annual_summary_merges_fields_from_both_tables():
+def test_annual_summary_merges_fields_from_both_tables(client):
     response = client.get("/api/annual-watermain-summary")
     body = response.json()
     for year_record in body:
@@ -115,11 +134,11 @@ def test_annual_summary_merges_fields_from_both_tables():
             "cumulative_pipe_length_m", "cumulative_pipe_volume_m3",
         }
 
-def test_annual_summary_with_year_range_matching_nothing():
+def test_annual_summary_with_year_range_matching_nothing(client):
     response = client.get("/api/annual-watermain-summary?start_year=1800&end_year=1801")
     assert response.status_code == 200
     assert response.json() == []
 
-def test_annual_summary_rejects_non_integer_year():
+def test_annual_summary_rejects_non_integer_year(client):
     response = client.get("/api/annual-watermain-summary?start_year=not-a-year")
     assert response.status_code == 422
