@@ -121,12 +121,13 @@ def test_annual_summary_returns_full_range_with_no_year_filters(client):
     assert response.status_code == 200
     body = response.json()
     assert isinstance(body, list)
-    if body:
-        assert "break_count" in body[0] and "total_precipitation_mm" in body[0]
+    assert len(body) > 0 # confirm we actually HAVE data
+    assert "break_count" in body[0] and "total_precipitation_mm" in body[0]
 
 def test_annual_summary_merges_fields_from_both_tables(client):
     response = client.get("/api/annual-watermain-summary")
     body = response.json()
+    assert len(body) > 0 # confirm we actually HAVE data
     for year_record in body:
         assert set(year_record.keys()) == {
             "calendar_year", "days_in_year", "break_count",
