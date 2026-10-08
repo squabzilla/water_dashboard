@@ -223,6 +223,9 @@ def query_table(
     table: DatabaseTables,  # Claude switched it to this from str - to make sure it only takes items from that table?
     request: Request,
     conn: Connection = Depends(get_db_connection)): # use `Depends` because I should let FastAPI call it for me I guess???
+    
+    if table not in SPATIAL_LAYER_TABLES: # make sure table is acceptable
+        raise HTTPException(403, f"table '{table}' not available for full retrieval")
 
     filters = dict(request.query_params)  # e.g. ?break_date__gte=2020-01-01&status__eq=active
     try:
@@ -255,14 +258,14 @@ def query_table(
 
 @app.get("/api/summary")
 def get_summary(
-    start_date: date | None = None, # ensures this is a date, otherwise shit crashes
-    end_date: date | None = None, # ensures this is a date, otherwise shit crashes
+    start_date: date | None = None, # ensures this is a date, otherwise shit crashes - or, more specifically, returns `422` code
+    end_date: date | None = None, # ensures this is a date, otherwise shit crashes - or, more specifically, returns `422` code
     conn: Connection = Depends(get_db_connection),
 ):
     filters: dict[str, str] = {}
-    if start_date:
+    if start_date is not None:
         filters["break_date__gte"] = start_date.isoformat() # converts date, time, datetime in string object formatted as ISO 8601 standard
-    if end_date:
+    if end_date is not None:
         filters["break_date__lte"] = end_date.isoformat() # converts date, time, datetime in string object formatted as ISO 8601 standard
 
     where_sql, params = build_where_clause(
