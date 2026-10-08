@@ -40,7 +40,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 # custom modules!
-from data_pipeline.helper.helper_SQL_tables import DatabaseTables
+from data_pipeline.helper.helper_SQL_tables import DatabaseTables, DailyWeatherCols
 from backend.backend_main import app
 
 
@@ -72,6 +72,10 @@ def test_full_table_returns_feature_collection(client):
     assert response.status_code == 200
     assert response.json()["type"] == "FeatureCollection"
 
+def test_query_rejects_non_spatial_table(client):
+    response = client.get(f"/api/tables/{DatabaseTables.weather_daily_staging}/query?{DailyWeatherCols.dwc_local_year}=2000")
+    assert response.status_code == 403
+
 def test_query_rejects_bad_filter(client):
     response = client.get(f"/api/tables/{DatabaseTables.watermain_breaks}/query?nonsense_column__eq=x")
     assert response.status_code == 400
@@ -93,10 +97,12 @@ def test_query_with_no_matches_returns_empty_feature_collection(client):
 ### summary tables
 
 def test_summary_returns_full_history_with_no_dates(client):
+    # confirms that our summary returns the whole table if we don't specify the date-range we want
     response = client.get("/api/summary")
     assert response.status_code == 200
     body = response.json()
     assert "total_breaks" in body and "avg_breaks_per_year" in body
+    assert body["total_breaks"] > 0  # confirm we actually HAVE data
 
 def test_summary_rejects_malformed_date(client):
     response = client.get("/api/summary?start_date=not-a-date")
