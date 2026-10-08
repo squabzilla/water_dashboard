@@ -286,7 +286,7 @@ class WatermainBreaksCols(StrEnum):
     break_type = "break_type"
     status = "status"
     point = "point" # needed to get x/y coords
-    created_API_name = ":created_at"
+    created_API_name = ":created_at" # NOTE: used for API-calls, explicitly NOT used for PSQL database
     created_PSQL_name = "created_at"
 
 WATERMAIN_BREAKS_DATA_TYPES = MappingProxyType({
