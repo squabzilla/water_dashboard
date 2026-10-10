@@ -2,8 +2,7 @@
 
 1.  Executive Overview
 2.  Infrastructure & Incident Map
-3.  Weather and Watermain Breaks
-4.  Breaks Over Time / Graph-Builder
+3.  Breaks Over Time (add graph-builder later, not as MVP)
+4.  Analyzing Precipitation and Watermain Breaks
+5.  Analyzing Weather and Watermain breaks
 
-We're abandoning the temperature deep-dive page,  
-where I try to find & correlate Chinooks, freezing/thawing with watermain breaks.  
