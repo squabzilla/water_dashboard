@@ -8,5 +8,5 @@ set -euo pipefail
 CURRENT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 #cmd="uv run uvicorn backend.backend_main:app --reload --reload-dir backend --reload-dir data_pipeline"
-cmd = "cd frontend && npm run dev"
+cmd="cd frontend && npm run dev"
 eval "$cmd"
