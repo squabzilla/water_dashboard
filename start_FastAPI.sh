@@ -35,8 +35,6 @@ set -euo pipefail
 CURRENT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 # complicated line, *ensuring* we get the directory the script is located in
 # that's because the path to the script directory varies by where the git repo was cloned into
-LOCAL_ENV_NAME="01__PROJECT_DIR__BASH_scripts.env"
-LOCAL_ENV_FILEPATH="$CURRENT_DIR/$LOCAL_ENV_NAME"
 
 
 
