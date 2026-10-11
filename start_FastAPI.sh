@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # remember we need chmod +x script.sh to make executable!
 
+# usage:
+# remember to execute this in its own dedicated terminal!
+
 
 
 ########################################################################################################################
