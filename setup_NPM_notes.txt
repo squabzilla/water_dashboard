@@ -1,0 +1,12 @@
+Just some notes about console-commands used to initialize NPM during startup and create some files,
+commands which aren't run in subsequent deployments (since initialization files already exist.)
+
+```
+cd /home/willh/water_dashboard
+npm create vite@latest frontend -- --template react-ts
+```
+
+```
+cd frontend
+npm install
+```
