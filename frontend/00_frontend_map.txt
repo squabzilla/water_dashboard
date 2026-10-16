@@ -1,0 +1,46 @@
+**************************************************************************************************************
+LEGEND
+**************************************************************************************************************
+
+frontend/
+├── vite.config.ts               ✔ dev server + /api proxy to FastAPI
+├── index.html                   ✔ page shell; loads src/main.tsx
+└── src/
+    ├── main.tsx                 ✔ mounts <App /> into the page
+    ├── App.tsx                  ● root component: layout and page switching
+    │
+    ├── config/
+    │   ├── apiConfig.ts         ✔ API_BASE_PATH ("/api")
+    │   └── mapConfig.ts         ○ initial map view, layer IDs, colors
+    │
+    ├── errors/
+    │   └── apiErrors.ts         ● ApiRequestError (bad status), ApiResponseValidationError (wrong shape)
+    │
+    ├── schemas/
+    │   └── apiSchemas.ts        ● what valid API data looks like, plus types derived from it
+    │
+    ├── api/
+    │   ├── fetchValidatedJson.ts  ● fetch, check status, validate, return typed data
+    │   └── apiEndpoints.ts        ● one function per route: summary, annual summary
+    │
+    ├── hooks/
+    │   └── useApiRequest.ts     ○ runs an API call, exposes loading / error / data state
+    │
+    └── components/
+        ├── InfrastructureMapPage.tsx   ○ page 1: MapLibre map with all layers
+        ├── BreaksOverTimePage.tsx      ○ page 2: charts from the annual summary
+        ├── ExecutiveOverviewPage.tsx   ○ page 3: KPI cards from /api/summary
+        └── (map, chart, KPI pieces)    ○ smaller components the pages share
+
+
+**************************************************************************************************************
+How layers depend on each other:
+**************************************************************************************************************
+
+page component
+  → useApiRequest.ts         loading / error / data state for the UI
+      → apiEndpoints.ts          what can I ask for?
+          → fetchValidatedJson.ts    how do I ask, and check the answer?
+              → apiSchemas.ts        what does a valid answer look like?
+              → apiErrors.ts         how do I describe a failure?
+              → apiConfig.ts         where does the API live?
