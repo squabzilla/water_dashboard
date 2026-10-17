@@ -1,0 +1,13 @@
+NOTE:
+This is stuff I want to postpone until after I have a working prototype on my local machine,
+but BEFORE I move to production.
+
+ERROR_HANDLING:
+
+invalid-query-parameters
+
+not-found page
+
+loading and error UI
+
+root redirect
