@@ -1,0 +1,1 @@
+// what valid API data looks like, plus derived types

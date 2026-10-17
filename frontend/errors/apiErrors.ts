@@ -1,0 +1,1 @@
+// ApiRequestError (bad status), ApiResponseValidationError (wrong shape)

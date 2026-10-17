@@ -1,0 +1,1 @@
+// fetch, check status, validate, return typed data
