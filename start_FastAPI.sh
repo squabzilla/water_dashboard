@@ -45,4 +45,10 @@ CURRENT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 ### actual start of script
 
 cmd="uv run uvicorn backend.backend_main:app --reload --reload-dir backend --reload-dir data_pipeline"
+# NOTE: bug we encountere and fixed with `--reload`:
+# We want the uvicorn app to watch for changes, so that we can see real-time changes when working in our local test environment
+# HOWEVER, the Docker folder we setup - there's stuff in there that Docker says only Docker is allowed to read,
+# so by attemping to watch that file, stuff crashes. 
+# So the `--reload --reload-dir backend --reload-dir data_pipeline` explicitly tells it to JUST watch those two folders
+# remember that FastAPI is our backend side of things, which only `backend` and to a lesser extent `data_pipeline` interact with
 eval "$cmd"
