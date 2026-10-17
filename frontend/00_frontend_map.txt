@@ -3,44 +3,101 @@ LEGEND
 **************************************************************************************************************
 
 frontend/
-├── vite.config.ts               ✔ dev server + /api proxy to FastAPI
-├── index.html                   ✔ page shell; loads src/main.tsx
+├── package.json                      ✔ dependencies (zod ✔, chart.js ● to install)
+├── vite.config.ts                    ✔ dev server + /api proxy to FastAPI
+├── index.html                        ✔ page shell; loads src/main.tsx
 └── src/
-    ├── main.tsx                 ✔ mounts <App /> into the page
-    ├── App.tsx                  ● root component: layout and page switching
+    ├── main.tsx                      ✔ mounts <App /> into the page
+    ├── App.tsx                       ● reads the URL path, renders the matching page
     │
     ├── config/
-    │   ├── apiConfig.ts         ✔ API_BASE_PATH ("/api")
-    │   └── mapConfig.ts         ○ initial map view, layer IDs, colors
+    │   ├── apiConfig.ts              ✔ API_BASE_PATH ("/api")
+    │   ├── routeConfig.ts            ○ page paths as constants (/map, /breaks-over-time, /overview)
+    │   └── mapConfig.ts              ○ initial map view, layer IDs, colors
     │
     ├── errors/
-    │   └── apiErrors.ts         ● ApiRequestError (bad status), ApiResponseValidationError (wrong shape)
+    │   └── apiErrors.ts              ● ApiRequestError (bad status), ApiResponseValidationError (wrong shape)
     │
     ├── schemas/
-    │   └── apiSchemas.ts        ● what valid API data looks like, plus types derived from it
+    │   ├── apiSchemas.ts             ● what valid API data looks like, plus derived types
+    │   └── urlStateSchemas.ts        ○ what valid query parameters look like, per page
     │
     ├── api/
-    │   ├── fetchValidatedJson.ts  ● fetch, check status, validate, return typed data
-    │   └── apiEndpoints.ts        ● one function per route: summary, annual summary
+    │   ├── fetchValidatedJson.ts     ● fetch, check status, validate, return typed data
+    │   └── apiEndpoints.ts           ● one function per route: summary, annual summary
+    │
+    ├── routing/
+    │   └── navigation.ts             ○ pushState for page changes, replaceState for filter changes, notifies React
     │
     ├── hooks/
-    │   └── useApiRequest.ts     ○ runs an API call, exposes loading / error / data state
+    │   ├── useCurrentLocation.ts     ○ re-renders components when the URL changes
+    │   └── useApiRequest.ts          ○ loading / error / data state, cancels stale requests
     │
     └── components/
-        ├── InfrastructureMapPage.tsx   ○ page 1: MapLibre map with all layers
-        ├── BreaksOverTimePage.tsx      ○ page 2: charts from the annual summary
-        ├── ExecutiveOverviewPage.tsx   ○ page 3: KPI cards from /api/summary
-        └── (map, chart, KPI pieces)    ○ smaller components the pages share
+        ├── SiteNavigationBar.tsx         ○ links to the three pages
+        ├── NavigationLink.tsx            ○ a real <a href> that navigates without reloading
+        ├── NotFoundPage.tsx              ○ unknown URL: fail loudly, not blank
+        ├── BreaksOverTimePage.tsx        ○ page 2: reads ?start_year&end_year, fetches, draws the chart
+        ├── AnnualBreaksChart.tsx         ○ our own Chart.js wrapper: create on mount, destroy on unmount
+        ├── ExecutiveOverviewPage.tsx     ○ page 3: KPI cards from /api/summary
+        └── InfrastructureMapPage.tsx     ○ page 1: MapLibre map with all layers
 
 
 **************************************************************************************************************
-How layers depend on each other:
+Dependencies between layers
 **************************************************************************************************************
 
-page component
-  → useApiRequest.ts         loading / error / data state for the UI
-      → apiEndpoints.ts          what can I ask for?
-          → fetchValidatedJson.ts    how do I ask, and check the answer?
-              → apiSchemas.ts        what does a valid answer look like?
-              → apiErrors.ts         how do I describe a failure?
-              → apiConfig.ts         where does the API live?
+page component              reads filters from the URL, shows data
+  → useCurrentLocation.ts       what URL are we on?
+  → urlStateSchemas.ts          are these query parameters valid?
+  → useApiRequest.ts            loading / error / data, cancels stale requests
+      → apiEndpoints.ts             what can I ask for?
+          → fetchValidatedJson.ts       how do I ask, and check the answer?
+              → apiSchemas.ts               what does a valid answer look like?
+              → apiErrors.ts                how do I describe a failure?
+              → apiConfig.ts                where does the API live?
+
+component → navigation.ts       change page (pushState) or change filters (replaceState)
+                                 → notifies useCurrentLocation.ts
+
+App.tsx   → routeConfig.ts      which page component matches this path?
+
+
+**************************************************************************************************************
+Build order
+**************************************************************************************************************
+1.  `routeConfig.ts`
+    `navitation.ts`
+    `useCurrentLocation.ts`
+    `NavigationLink.tsx`
+    `SiteNavigationBar.tsx`
+    placeholder-component per age
+
+2.  API client files marked with ●
+
+3.  `useApiRequest.ts`
+
+4.  `ursStateSchema.ts`
+    `AnnualBreaksChart.tsx`
+    `BreaksOverTimePage.tsx`
+
+5.  `ExecutiveOverviewPage.tsx`
+
+6.  Map-page, with the `watermain_pipes` size test and vector-tile decision.
+
+
+**************************************************************************************************************
+Decisions we haven’t made yet
+
+Switching between pages:
+    A routing library such as React Router, or a simple state switch. Three pages is small enough that this deserves some thought.
+
+Loading and error state in components:
+    A small hand-written hook (useApiRequest) or a library like TanStack Query.
+    The hook is simpler to learn from, but the library handles caching and refetching.
+
+Charting library for the Breaks Over Time page.
+
+Map layer loading:
+    Plain GeoJSON first, vector tiles if watermain_pipes stutters.
+    The GeoJSON fetchers would join apiEndpoints.ts, with looser validation than the summary endpoints get.
