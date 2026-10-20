@@ -1,56 +1,72 @@
 **************************************************************************************************************
+STATUS KEY
+**************************************************************************************************************
+ 
+✔   done
+◐   file exists but is empty (code is written out in chat, not yet pasted in)
+○   proposed, not started
+⏸   deferred until a working local prototype exists (required before deployment)
+ 
+ 
+**************************************************************************************************************
 LEGEND
 **************************************************************************************************************
 
 frontend/
-├── package.json                      ✔ dependencies (zod ✔, chart.js ● to install)
+├── package.json                      ✔ runtime dependencies: react, react-dom, zod, chart.js (all installed)
 ├── vite.config.ts                    ✔ dev server + /api proxy to FastAPI
 ├── index.html                        ✔ page shell; loads src/main.tsx
 └── src/
-    ├── main.tsx                      ✔ mounts <App /> into the page
-    ├── App.tsx                       ● reads the URL path, renders the matching page
+    ├── main.tsx                      ✔ mounts <App /> into the page (later: root redirect runs here)
+    ├── App.tsx                       ✔ currently a temporary API test
+    │                                    next: renders BreaksOverTimePage with hard-coded years
+    │                                    later: picks the page from the URL
+    ├── index.css                     ✔ exists; replace with a minimal stylesheet of our own
     │
     ├── config/
     │   ├── apiConfig.ts              ✔ API_BASE_PATH ("/api")
-    │   ├── routeConfig.ts            ○ page paths as constants (/map, /breaks-over-time, /overview)
+    │   ├── routeConfig.ts            ○ page paths as constants (/map, /breaks-over-time, /overview),
+    │   │                                plus DEFAULT_PAGE_PATH ("/overview")
     │   └── mapConfig.ts              ○ initial map view, layer IDs, colors
     │
     ├── errors/
-    │   └── apiErrors.ts              ● ApiRequestError (bad status), ApiResponseValidationError (wrong shape)
+    │   └── apiErrors.ts              ◐ ApiRequestError (bad status), ApiResponseValidationError (wrong shape)
     │
     ├── schemas/
-    │   ├── apiSchemas.ts             ● what valid API data looks like, plus derived types
-    │   └── urlStateSchemas.ts        ○ what valid query parameters look like, per page
+    │   ├── apiSchemas.ts             ◐ what valid API data looks like, plus derived types
+    │   └── urlStateSchemas.ts        ⏸ what valid query parameters look like, per page
     │
     ├── api/
-    │   ├── fetchValidatedJson.ts     ● fetch, check status, validate, return typed data
-    │   └── apiEndpoints.ts           ● one function per route: summary, annual summary
+    │   ├── fetchValidatedJson.ts     ◐ build URL, fetch, check status, validate, return typed data
+    │   └── apiEndpoints.ts           ◐ one function per route: summary, annual summary
     │
     ├── routing/
-    │   └── navigation.ts             ○ pushState for page changes, replaceState for filter changes, notifies React
+    │   └── navigation.ts             ○ pushState for page changes, replaceState for filter changes,
+    │                                    notifies React, redirectRootToDefaultPage
     │
     ├── hooks/
     │   ├── useCurrentLocation.ts     ○ re-renders components when the URL changes
     │   └── useApiRequest.ts          ○ loading / error / data state, cancels stale requests
+    │                                    (written when the second page repeats the first page's fetch code)
     │
     └── components/
-        ├── SiteNavigationBar.tsx         ○ links to the three pages
-        ├── NavigationLink.tsx            ○ a real <a href> that navigates without reloading
-        ├── NotFoundPage.tsx              ○ unknown URL: fail loudly, not blank
         ├── BreaksOverTimePage.tsx        ○ page 2: reads ?start_year&end_year, fetches, draws the chart
         ├── AnnualBreaksChart.tsx         ○ our own Chart.js wrapper: create on mount, destroy on unmount
         ├── ExecutiveOverviewPage.tsx     ○ page 3: KPI cards from /api/summary
-        └── InfrastructureMapPage.tsx     ○ page 1: MapLibre map with all layers
+        ├── InfrastructureMapPage.tsx     ○ page 1: MapLibre map with all layers
+        ├── SiteNavigationBar.tsx         ○ links to the three pages
+        ├── NavigationLink.tsx            ○ a real <a href> that navigates without reloading
+        └── NotFoundPage.tsx              ⏸ unknown URL: fail loudly, not blank
 
 
 **************************************************************************************************************
 Dependencies between layers
 **************************************************************************************************************
 
-page component              reads filters from the URL, shows data
-  → useCurrentLocation.ts       what URL are we on?
-  → urlStateSchemas.ts          are these query parameters valid?
-  → useApiRequest.ts            loading / error / data, cancels stale requests
+page component              shows data; filters arrive as props (from the URL once the router exists)
+  → useCurrentLocation.ts       what URL are we on?                           (router step)
+  → urlStateSchemas.ts          are these query parameters valid?             (deferred)
+  → useApiRequest.ts            loading / error / data, cancels stale requests (extracted later)
       → apiEndpoints.ts             what can I ask for?
           → fetchValidatedJson.ts       how do I ask, and check the answer?
               → apiSchemas.ts               what does a valid answer look like?
@@ -66,38 +82,70 @@ App.tsx   → routeConfig.ts      which page component matches this path?
 **************************************************************************************************************
 Build order
 **************************************************************************************************************
-1.  `routeConfig.ts`
-    `navitation.ts`
-    `useCurrentLocation.ts`
-    `NavigationLink.tsx`
-    `SiteNavigationBar.tsx`
-    placeholder-component per age
-
-2.  API client files marked with ●
-
-3.  `useApiRequest.ts`
-
-4.  `ursStateSchema.ts`
-    `AnnualBreaksChart.tsx`
-    `BreaksOverTimePage.tsx`
-
-5.  `ExecutiveOverviewPage.tsx`
-
-6.  Map-page, with the `watermain_pipes` size test and vector-tile decision.
+ 
+1.  API client files (marked ◐):
+        errors/apiErrors.ts
+        schemas/apiSchemas.ts
+        api/fetchValidatedJson.ts
+        api/apiEndpoints.ts
+    Test from a temporary App.tsx; break a schema field on purpose to see the validation error.
+ 
+2.  Breaks Over Time page with hard-coded years (no routing, no hook yet):
+        npm install chart.js
+        components/AnnualBreaksChart.tsx
+        components/BreaksOverTimePage.tsx   (fetch + state written inside the page, years as props)
+ 
+3.  Executive Overview page:
+        components/ExecutiveOverviewPage.tsx
+    Extract hooks/useApiRequest.ts once this page repeats the fetch-and-state code.
+ 
+4.  Router (pages get real URLs, filters live in the query string, no reload on filter change):
+        config/routeConfig.ts
+        routing/navigation.ts
+        hooks/useCurrentLocation.ts
+        components/NavigationLink.tsx
+        components/SiteNavigationBar.tsx
+    Pages then receive their props from the URL.
+ 
+5.  Map page, with the watermain_pipes size test and the vector-tile decision:
+        components/InfrastructureMapPage.tsx
+        config/mapConfig.ts
+ 
+6.  Before deployment (deferred until a local prototype works):
+        invalid / malformed URL query parameters (schemas/urlStateSchemas.ts, visible error message)
+        components/NotFoundPage.tsx for unknown paths
+        loading and error UI in pages
+        root redirect: "/" goes to "/overview"
+        production reverse proxy serves index.html for any path that is not a real file or /api
+        run npm run build && npm run preview as a final check
 
 
 **************************************************************************************************************
-Decisions we haven’t made yet
-
-Switching between pages:
-    A routing library such as React Router, or a simple state switch. Three pages is small enough that this deserves some thought.
-
-Loading and error state in components:
-    A small hand-written hook (useApiRequest) or a library like TanStack Query.
-    The hook is simpler to learn from, but the library handles caching and refetching.
-
-Charting library for the Breaks Over Time page.
-
+Decisions made
+**************************************************************************************************************
+ 
+Dev / API connection:
+    Vite dev proxy forwards /api to FastAPI (127.0.0.1:8000); frontend uses relative URLs.
+ 
+Page switching:
+    Hand-written History API router, no router library. Paths pick the page, query string holds filters.
+    pushState for page changes, replaceState for filter changes. Bookmarkable URLs, no reload on filter change.
+ 
+Loading and error state:
+    Small hand-written hook (useApiRequest), no TanStack Query.
+ 
+Charts:
+    Drawn in the browser with Chart.js (one runtime dependency). Not generated by Python or R.
+    R may be revisited for the deferred Precipitation/Breaks and Temperature/Breaks pages
+    (pre-rendered static figures, kept out of the request path).
+ 
 Map layer loading:
-    Plain GeoJSON first, vector tiles if watermain_pipes stutters.
-    The GeoJSON fetchers would join apiEndpoints.ts, with looser validation than the summary endpoints get.
+    Plain GeoJSON first. Vector tiles (PostGIS ST_AsMVT through a FastAPI endpoint) expected to be needed
+    for watermain_pipes; decide after measuring payload size and map smoothness.
+    GeoJSON fetchers would join apiEndpoints.ts, with looser validation than the summary endpoints get.
+ 
+API data validation:
+    Zod schemas check every API response at the boundary; types are derived from the schemas.
+ 
+Dependencies:
+    Avoid where practical; measure the tree with npm ls --all before and after adding packages.
